@@ -80,9 +80,9 @@ exporters:
 service:
   pipelines:
     traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [otlp/newrelic]
+      exporters: [logging, otlp, otlp/newrelic]
+    metrics:
+      exporters: [logging, prometheus, otlp/newrelic]
 ```
 
 To define your endpoint and your license key, open the file [.env](../.env).
