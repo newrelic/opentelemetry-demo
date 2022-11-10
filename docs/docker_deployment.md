@@ -51,7 +51,8 @@ Once the images are built and containers are started you can access:
 ## Bring your New Relic account
 
 Likely you want to use the Webstore as a demo application for an observability
-backend you already have (e.g. an existing instance of Jaeger, Zipkin or New Relic).
+backend you already have (e.g. an existing instance of Jaeger, Zipkin or
+New Relic).
 
 OpenTelemetry Collector can be used to export telemetry data to multiple
 backends. By default, the collector in the demo application will merge the
@@ -64,7 +65,9 @@ To add your backend, open the file
 [src/otelcollector/otelcol-config-extras.yml](../src/otelcollector/otelcol-config-extras.yml)
 with an editor.
 
-- A new OTLP exporter for New Relic is already added for you where the New Relic endpoint and your license key are configured as environment variables.
+- A new OTLP exporter for New Relic is already added for you where the
+New Relic endpoint and your license key are configured as environment
+variables.
 
 ```yaml
 exporters:
@@ -87,9 +90,11 @@ service:
 
 To define your endpoint and your license key, open the file [.env](../.env).
 
-- Down below the file you will see the New Relic specific variables. Configure them according to the region which your account is in.
+- Down below the file you will see the New Relic specific variables. Configure
+them according to the region which your account is in.
 
-- You can directly copy/paste your license key to `NEWRELIC_OTLP_ENDPOINT` or define it in your terminal.
+- You can directly copy/paste your license key to `NEWRELIC_OTLP_ENDPOINT` or
+define it in your terminal.
 
 ```yaml
 ### New Relic
@@ -102,6 +107,6 @@ NEWRELIC_OTLP_ENDPOINT=${NEWRELIC_OTLP_ENDPOINT_US}
 NEWRELIC_LICENSE_KEY=${NEWRELIC_LICENSE_KEY}
 ```
 
-After updating the `otelcol-config-extras.yml` and `env` files, start the demo by running
-`docker compose up`. After a while, you should see the traces flowing into
-your New Relic account as well.
+After updating the `otelcol-config-extras.yml` and `env` files, start the demo
+by running `docker compose up`. After a while, you should see the traces
+flowing into your New Relic account as well.
