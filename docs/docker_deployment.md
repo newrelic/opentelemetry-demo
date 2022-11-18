@@ -108,5 +108,5 @@ NEWRELIC_LICENSE_KEY=${NEWRELIC_LICENSE_KEY}
 ```
 
 After updating the `otelcol-config-extras.yml` and `env` files, start the demo
-by running `docker compose up`. After a while, you should see the traces
-flowing into your New Relic account as well.
+by running `docker compose up`. After a while, you should see the telemetry
+data flowing into your New Relic account as well.
