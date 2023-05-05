@@ -59,6 +59,7 @@ builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddGrpcClientInstrumentation()
         .AddHttpClientInstrumentation()
+        .AddSource("cartservice")
         .AddOtlpExporter())
     .WithMetrics(builder => builder
         .SetResourceBuilder(appResourceBuilder)

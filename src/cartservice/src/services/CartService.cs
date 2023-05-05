@@ -27,6 +27,10 @@ namespace cartservice.services
         private readonly static Empty Empty = new Empty();
         private readonly static Random _random = new Random();
         private ICartStore _cartStore;
+        private static int numCalls = 0; 
+
+        public static readonly ActivitySource activitySource = new("cartservice");
+
 
         public CartService(ICartStore cartStore)
         {
@@ -50,7 +54,18 @@ namespace cartservice.services
             activity?.SetTag("app.user.id", request.UserId);
             activity?.AddEvent(new("Fetch cart"));
 
+            numCalls++;
+
             var cart = await _cartStore.GetCartAsync(request.UserId);
+
+            // every time this method is called, increase the number of times the database is called exponentially
+            int numCallsToDatabase = Convert.ToInt32(Math.Min(5000f, Math.Pow(1.10, numCalls)/10.0f));
+
+            Console.WriteLine("numCallsToDatabase: " + numCallsToDatabase); 
+            for (int i=0; i < numCallsToDatabase; i++) {
+                mockDatabaseCall();
+            }
+
             var totalCart = 0;
             foreach (var item in cart.Items)
             {
@@ -59,6 +74,16 @@ namespace cartservice.services
             activity?.SetTag("app.cart.items.count", totalCart);
 
             return cart;
+        }
+
+        private void mockDatabaseCall() {
+            // track the mock database call as a separate activity
+            using var databaseActivity = activitySource.StartActivity("DatabaseCall");
+            databaseActivity?.SetTag("db.statement", "SELECT * FROM cart WHERE user = ?");
+            databaseActivity?.SetTag("db.name", "cartdb");
+
+            int randomDelay = _random.Next(0, 20);
+            System.Threading.Thread.Sleep(randomDelay);
         }
 
         public async override Task<Empty> EmptyCart(EmptyCartRequest request, ServerCallContext context)

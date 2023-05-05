@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM confluentinc/cp-kafka:latest-ubi8
+#FROM confluentinc/cp-kafka:latest-ubi8
+FROM confluentinc/cp-kafka:7.0.9-1-ubi8
 
 USER root
 ARG version=1.23.0
@@ -38,5 +39,7 @@ ENV KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
 ENV KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
 ENV KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
 ENV KAFKA_OPTS="-javaagent:/tmp/opentelemetry-javaagent.jar -Dotel.jmx.target.system=kafka-broker"
+
+ENV CLUSTER_ID=ckjPoprWQzOf0-FuNkGfFQ
 
 ENTRYPOINT ["/bin/sh", "-c", "ls -lh /tmp && /tmp/update_run.sh && /etc/confluent/docker/run"]
