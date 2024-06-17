@@ -413,33 +413,41 @@ components:
     env:
       - name: ENVOY_PORT
         value: "8080"
-      - name: FRONTEND_PORT
-        value: "8080"
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
       - name: FRONTEND_HOST
         value: '{{ include "otel-demo.name" . }}-frontend'
-      - name: LOCUST_WEB_PORT
-        value: "8089"
-      - name: LOCUST_WEB_HOST
-        value: '{{ include "otel-demo.name" . }}-loadgenerator'
-      - name: GRAFANA_SERVICE_PORT
-        value: "80"
+      - name: FRONTEND_PORT
+        value: "8080"
       - name: GRAFANA_SERVICE_HOST
         value: '{{ include "otel-demo.name" . }}-grafana'
-      - name: JAEGER_SERVICE_PORT
-        value: "16686"
+      - name: GRAFANA_SERVICE_PORT
+        value: "80"
+      - name: IMAGE_PROVIDER_HOST
+        value: '{{ include "otel-demo.name" . }}-imageprovider'
+      - name: IMAGE_PROVIDER_PORT
+        value: "8081"
       - name: JAEGER_SERVICE_HOST
         value: '{{ include "otel-demo.name" . }}-jaeger-query'
+      - name: JAEGER_SERVICE_PORT
+        value: "16686"
+      - name: LOCUST_WEB_HOST
+        value: '{{ include "otel-demo.name" . }}-loadgenerator'
+      - name: LOCUST_WEB_PORT
+        value: "8089"
+      - name: OTEL_COLLECTOR_HOST
+        value: $(OTEL_COLLECTOR_NAME)
       - name: OTEL_COLLECTOR_PORT_GRPC
         value: "4317"
       - name: OTEL_COLLECTOR_PORT_HTTP
         value: "4318"
-      - name: OTEL_COLLECTOR_HOST
-        value: $(OTEL_COLLECTOR_NAME)
     resources:
       limits:
         memory: 50Mi
     securityContext:
-      runAsUser: 101 # envoy
+      runAsUser: 101  # envoy
       runAsGroup: 101
       runAsNonRoot: true
 
