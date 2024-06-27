@@ -38,11 +38,6 @@ docker compose up
 5. Head to your account to view the data
 6. To stop the app: `control + c`
 
-Alternatively, if you want to view data from our hosted fork in a read-only account, head to New Relic,
-log in with the following info, and select account `4494439 - Contributor Apps`:
-  * Username: demotron@newrelicuniversity.com
-  * Password: o11y-as-code 
-
 ### Roadmap
 Similar to how the Astronomy Shop is under active development, we are also actively
 developing and maintaining our fork. Here are a few things we have are working on, or 
