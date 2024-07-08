@@ -107,7 +107,8 @@ Install the New Relic Kubernetes integration (be sure to add your New Relic
  --set newrelic-logging.enabled=false \
  --set nri-kube-events.enabled=true \
  --set newrelic-prometheus-agent.enabled=true \
- --set newrelic-prometheus-agent.lowDataMode=true
+ --set newrelic-prometheus-agent.lowDataMode=true \
+ --set-json='newrelic-prometheus-agent.config.kubernetes.integrations_filter.app_values=["redis", "kafka", "postgres"]'
 ```
 
 ## Helm Chart Parameters
