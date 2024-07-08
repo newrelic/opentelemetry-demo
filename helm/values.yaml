@@ -548,6 +548,10 @@ components:
 
   recommendationService:
     enabled: true
+    # # Uncomment to enable the New Relic APM instrumented recommendationService
+    # imageOverride:
+    #   repository: bschmitt769/otel-demo
+    #   tag: 1.9.0.1-recommendationservice-nr
     useDefault:
       env: true
     service:
@@ -567,6 +571,14 @@ components:
         value: "8013"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
+      # Used by the New Relic APM agent
+      - name: NEW_RELIC_APP_NAME
+        value: recommendationservice
+      - name: NEW_RELIC_LICENSE_KEY
+        valueFrom:
+          secretKeyRef:
+            name: newrelic-key-secret
+            key: license-key
     resources:
       limits:
         memory: 500Mi            # This is high to enable supporting the recommendationCache feature flag use case
