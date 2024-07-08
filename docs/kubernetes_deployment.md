@@ -114,11 +114,10 @@ Install the New Relic Kubernetes integration (be sure to add your New Relic
 
 Chart parameters are separated in 4 general sections:
 
-- Default - Used to specify defaults applied to all demo components
-- Components - Used to configure the individual components (microservices) for
+- `default` - Used to specify defaults applied to all demo components
+- `components` - Used to configure the individual components (microservices) for
 the demo
-- Observability - Used to enable/disable dependencies
-- Sub-charts - Configuration for all sub-charts
+- `opentelemetry-collector` - Used to configure the OpenTelemetry Collector
 
 ## New Relic Configurations
 
@@ -127,10 +126,11 @@ favor of the New Relic tool suite:
 
 | Parameter                          | Description                                   | Default |
 |------------------------------------|-----------------------------------------------|---------|
-| `observability.otelcol.enabled`    | Enables the OpenTelemetry Collector sub-chart | `true`  |
-| `observability.jaeger.enabled`     | Enables the Jaeger sub-chart                  | `false`  |
-| `observability.prometheus.enabled` | Enables the Prometheus sub-chart              | `false`  |
-| `observability.grafana.enabled`    | Enables the Grafana sub-chart                 | `false`  |
+| `opentelemetry-collector.enabled`  | Enables the OpenTelemetry Collector sub-chart | `true`  |
+| `jaeger.enabled`                   | Enables the Jaeger sub-chart                  | `false`  |
+| `prometheus.enabled`               | Enables the Prometheus sub-chart              | `false`  |
+| `grafana.enabled`                  | Enables the Grafana sub-chart                 | `false`  |
+| `opensearch.enabled`               | Enables the Opensearch sub-chart              | `false`  |
 
 ### OpenTelemetry Collector
 
@@ -275,11 +275,11 @@ kubectl port-forward svc/newrelic-otel-otelcol 4318:4318
 > may need to create separate terminal sessions for each use of
 > `kubectl port-forward`, and use CTRL-C to terminate the process when done.
 
-With the frontendproxy and Collector port-forward set up, you can access:
-
-- Webstore: <http://localhost:8080/>
-- Feature Flags UI: <http://localhost:8080/feature/>
-- Load Generator UI: <http://localhost:8080/loadgen/>
+The following services are available at these paths once the proxy is exposed:
+- Webstore             http://localhost:8080/
+- Grafana              http://localhost:8080/grafana/
+- Load Generator UI    http://localhost:8080/loadgen/
+- Jaeger UI            http://localhost:8080/jaeger/ui/
 
 ### Expose services using service type configurations
 
@@ -330,5 +330,4 @@ base path for the frontendproxy. Other demo components can be accessed at the
 following sub-paths:
 
 - Webstore: `/` (base)
-- Feature Flags UI: `/feature`
 - Load Generator UI: `/loadgen/` (must include trailing slash)
