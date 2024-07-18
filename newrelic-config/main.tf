@@ -132,6 +132,7 @@ resource "newrelic_service_level" "cartservice-service-level" {
 resource "newrelic_alert_policy" "oteldemo-service-health" {
   name = "OpenTelemetry Service Health"
   incident_preference = "PER_CONDITION" 
+  account_id = var.account_id
 }
 
 # Add an alert condition for OTel service health monitoring 
@@ -215,6 +216,8 @@ resource "newrelic_nrql_alert_condition" "apm-service-levels" {
 resource "newrelic_alert_policy" "oteldemo-infra-health" {
   name = "OpenTelemetry Infrastructure Health"
   incident_preference = "PER_CONDITION" 
+  account_id = var.account_id
+}
 }
 
 # Add an alert condition for K8s daemonset state 
