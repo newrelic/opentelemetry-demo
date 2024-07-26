@@ -203,7 +203,7 @@ public final class AdService {
 
         // Throw 1/10 of the time to simulate a failure when the feature flag is enabled
         if (ffClient.getBooleanValue(ADSERVICE_FAILURE, false, evaluationContext) && random.nextInt(10) == 0) {
-          throw new StatusRuntimeException(Status.UNAVAILABLE);
+          throw new StatusRuntimeException(Status.UNAVAILABLE.withDescription("AdService failed { Unable to connect to database }"));
         }
 
         if (ffClient.getBooleanValue(ADSERVICE_MANUAL_GC_FEATURE_FLAG, false, evaluationContext)) {
@@ -216,10 +216,10 @@ public final class AdService {
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
       } catch (StatusRuntimeException e) {
-        span.addEvent(
-            "Error", Attributes.of(AttributeKey.stringKey("exception.message"), e.getMessage()));
+        span.addEvent("Error: AdService failed { Unable to connect to database }");
         span.setStatus(StatusCode.ERROR);
-        logger.log(Level.WARN, "GetAds Failed with status {}", e.getStatus());
+        span.recordException(e);
+        logger.log(Level.ERROR, "AdService failed { Unable to connect to database }", e);
         responseObserver.onError(e);
       }
     }

@@ -1,0 +1,22 @@
+components:
+  adService:
+    imageOverride:
+      repository: newrelic/otel-demo
+      tag: "1.9.0-adservice-nr"
+      pullPolicy: Always
+    env:
+      - name: AD_SERVICE_PORT
+        value: "8080"
+      - name: FLAGD_HOST
+        value: '{{ include "otel-demo.name" . }}-flagd'
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+      - name: OTEL_LOGS_EXPORTER
+        value: otlp
+      - name: NEW_RELIC_LICENSE_KEY
+        valueFrom:
+          secretKeyRef:
+            name: newrelic-license-key
+            key: license-key
