@@ -118,7 +118,7 @@ Install the New Relic Kubernetes integration (be sure to add your New Relic
  --namespace=newrelic \
  --create-namespace \
  --set newrelic-infrastructure.privileged=true \
- --set nri-metadata-injection.enable=true \
+ --set nri-metadata-injection.enabled=true \
  --set kube-state-metrics.enabled=true \
  --set newrelic-logging.enabled=false \
  --set nri-kube-events.enabled=true \
