@@ -28,5 +28,5 @@ COPY ./src/recommendation/ ./
 
 RUN opentelemetry-bootstrap -a install
 
-EXPOSE ${RECOMMENDATION_PORT}
+EXPOSE ${RECOMMENDATION_SERVICE_PORT}
 ENTRYPOINT [ "opentelemetry-instrument", "python", "recommendation_server.py" ]
