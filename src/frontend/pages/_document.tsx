@@ -1,47 +1,65 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import Document, { DocumentContext, Html, Head, Main, NextScript } from 'next/document';
-import { ServerStyleSheet } from 'styled-components';
+import Document, {DocumentContext, Html, Head, Main, NextScript} from 'next/document';
+import {ServerStyleSheet} from 'styled-components';
+import newrelic from "newrelic";
 import {context, propagation} from "@opentelemetry/api";
 
 const { ENV_PLATFORM, WEB_OTEL_SERVICE_NAME, PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT, OTEL_COLLECTOR_HOST} = process.env;
 
-export default class MyDocument extends Document<{ envString: string }> {
-  static async getInitialProps(ctx: DocumentContext) {
-    const sheet = new ServerStyleSheet();
-    const originalRenderPage = ctx.renderPage;
+type NewRelicProps = {
+    browserTimingHeader: string;
+};
 
-    try {
-      ctx.renderPage = () =>
-        originalRenderPage({
-          enhanceApp: App => props => sheet.collectStyles(<App {...props} />),
-        });
+export default class MyDocument extends Document<{ envString: string } & NewRelicProps> {
+    static async getInitialProps(ctx: DocumentContext) {
+        const initialProps = await Document.getInitialProps(ctx);
+        const sheet = new ServerStyleSheet();
+        const originalRenderPage = ctx.renderPage;
 
-      const initialProps = await Document.getInitialProps(ctx);
-      const baggage = propagation.getBaggage(context.active());
-      const isSyntheticRequest = baggage?.getEntry('synthetic_request')?.value === 'true';
+        try {
+            ctx.renderPage = () =>
+                originalRenderPage({
+                    enhanceApp: App => props => sheet.collectStyles(<App {...props} />),
+                });
 
-      const otlpTracesEndpoint = isSyntheticRequest
-          ? `http://${OTEL_COLLECTOR_HOST}:4318/v1/traces`
-          : PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
+            const baggage = propagation.getBaggage(context.active());
+            const isSyntheticRequest = baggage?.getEntry('synthetic_request')?.value === 'true';
 
-      const envString = `
-        window.ENV = {
-          NEXT_PUBLIC_PLATFORM: '${ENV_PLATFORM}',
-          NEXT_PUBLIC_OTEL_SERVICE_NAME: '${WEB_OTEL_SERVICE_NAME}',
-          NEXT_PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: '${otlpTracesEndpoint}',
-          IS_SYNTHETIC_REQUEST: '${isSyntheticRequest}',
-        };`;
-      return {
-        ...initialProps,
-        styles: [initialProps.styles, sheet.getStyleElement()],
-        envString,
-      };
-    } finally {
-      sheet.seal();
+            const otlpTracesEndpoint = isSyntheticRequest
+                ? `http://${OTEL_COLLECTOR_HOST}:4318/v1/traces`
+                : PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
+
+            const envString = `
+                window.ENV = {
+                  NEXT_PUBLIC_PLATFORM: '${ENV_PLATFORM}',
+                  NEXT_PUBLIC_OTEL_SERVICE_NAME: '${WEB_OTEL_SERVICE_NAME}',
+                  NEXT_PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: '${otlpTracesEndpoint}',
+                  IS_SYNTHETIC_REQUEST: '${isSyntheticRequest}',
+                };`;
+
+            if (newrelic.agent.collector.isConnected() === false) {
+                await new Promise((resolve) => {
+                    newrelic.agent.on("connected", resolve)
+                })
+            }
+
+            const browserTimingHeader = newrelic.getBrowserTimingHeader({
+                hasToRemoveScriptWrapper: true,
+            })
+
+
+            return {
+                ...initialProps,
+                styles: [initialProps.styles, sheet.getStyleElement()],
+                envString,
+                browserTimingHeader,
+            };
+        } finally {
+            sheet.seal();
+        }
     }
-  }
 
   render() {
     return (

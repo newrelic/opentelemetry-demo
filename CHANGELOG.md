@@ -18,6 +18,7 @@ the release.
 * [flagd-ui] increase memory to 100MB
   ([#2120](https://github.com/open-telemetry/opentelemetry-demo/pull/2120))
 
+
 ## 2.0.1
 
 * [chore] Use Linkspector to check links

@@ -36,6 +36,11 @@ guidance](./CONTRIBUTING.md).
 If you'd like to extend this demo or maintain a fork of it, read our
 [fork guidance](https://opentelemetry.io/docs/demo/forking/).
 
+## New Relic Customizations
+
+We are working on making the install and maintenance of our fork a little smoother, so please bear with us as we do some cleanup.  You can find instructions for getting up and running
+in the [newrelic](./newrelic) directory.  
+
 ## Quick start
 
 You can be up and running with the demo in a few minutes. Check out the docs for
