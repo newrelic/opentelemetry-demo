@@ -112,7 +112,7 @@ users of this demo get a working environment.
 
 ### Step 6: Push the new branch to your fork
 
-Push the `sync_fork` branch, now containing the `official` updates,  
+Push the `sync_fork` branch, now containing the `official` updates,
 to your GitHub fork.
 
 ```bash
@@ -127,5 +127,5 @@ This PR will show the changes between your New Relic's `main` branch and the
 repository.
 It will also include any changes needed to adapt New Relic's fork after changes
 are made.
-You can review the changes and merge the PR when ready,  
+You can review the changes and merge the PR when ready,
 thus syncing your fork via a PR.
