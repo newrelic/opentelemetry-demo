@@ -104,62 +104,62 @@ opentelemetry-collector:
       k8sattributes:
         extract:
           metadata:
-          - k8s.namespace.name
-          - k8s.deployment.name
-          - k8s.statefulset.name
-          - k8s.daemonset.name
-          - k8s.cronjob.name
-          - k8s.job.name
-          - k8s.node.name
-          - k8s.pod.name
-          - k8s.pod.uid
-          - k8s.pod.start_time
+            - k8s.namespace.name
+            - k8s.deployment.name
+            - k8s.statefulset.name
+            - k8s.daemonset.name
+            - k8s.cronjob.name
+            - k8s.job.name
+            - k8s.node.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.pod.start_time
         passthrough: false
         pod_association:
-        - sources:
-          - from: resource_attribute
-            name: k8s.pod.ip
-        - sources:
-          - from: resource_attribute
-            name: k8s.pod.uid
-        - sources:
-          - from: connection
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.ip
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: connection
       memory_limiter:
         check_interval: 5s
         limit_percentage: 80
         spike_limit_percentage: 25
       resource:
         attributes:
-        - action: insert
-          from_attribute: k8s.pod.name
-          key: service.instance.id
+          - action: insert
+            from_attribute: k8s.pod.name
+            key: service.instance.id
       resourcedetection/env:
         detectors:
-        - env
-        - system
+          - env
+          - system
         override: false
         system:
           hostname_sources:
-          - os
+            - os
           resource_attributes:
             host.id:
               enabled: true
       transform:
         error_mode: ignore
         log_statements:
-        - context: log
-          statements:
-          - truncate_all(attributes, 4095)
-          - truncate_all(resource.attributes, 4095)
+          - context: log
+            statements:
+              - truncate_all(attributes, 4095)
+              - truncate_all(resource.attributes, 4095)
         trace_statements:
-        - context: span
-          statements:
-          - truncate_all(attributes, 4095)
-          - truncate_all(resource.attributes, 4095)
-        - context: span
-          statements:
-          - replace_pattern(name, "\\?.*", "")
-          - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+          - context: span
+            statements:
+              - truncate_all(attributes, 4095)
+              - truncate_all(resource.attributes, 4095)
+          - context: span
+            statements:
+              - replace_pattern(name, "\\?.*", "")
+              - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
 
     receivers:
       hostmetrics:
@@ -171,46 +171,46 @@ opentelemetry-collector:
           filesystem:
             exclude_fs_types:
               fs_types:
-              - autofs
-              - binfmt_misc
-              - bpf
-              - cgroup2
-              - configfs
-              - debugfs
-              - devpts
-              - devtmpfs
-              - fusectl
-              - hugetlbfs
-              - iso9660
-              - mqueue
-              - nsfs
-              - overlay
-              - proc
-              - procfs
-              - pstore
-              - rpc_pipefs
-              - securityfs
-              - selinuxfs
-              - squashfs
-              - sysfs
-              - tracefs
+                - autofs
+                - binfmt_misc
+                - bpf
+                - cgroup2
+                - configfs
+                - debugfs
+                - devpts
+                - devtmpfs
+                - fusectl
+                - hugetlbfs
+                - iso9660
+                - mqueue
+                - nsfs
+                - overlay
+                - proc
+                - procfs
+                - pstore
+                - rpc_pipefs
+                - securityfs
+                - selinuxfs
+                - squashfs
+                - sysfs
+                - tracefs
               match_type: strict
             exclude_mount_points:
               match_type: regexp
               mount_points:
-              - /dev/*
-              - /proc/*
-              - /sys/*
-              - /run/k3s/containerd/*
-              - /var/lib/docker/*
-              - /var/lib/kubelet/*
-              - /snap/*
+                - /dev/*
+                - /proc/*
+                - /sys/*
+                - /run/k3s/containerd/*
+                - /var/lib/docker/*
+                - /var/lib/kubelet/*
+                - /snap/*
           load: null
           memory: null
           network: null
       httpcheck/frontend-proxy:
         targets:
-        - endpoint: http://frontend-proxy:8080
+          - endpoint: http://frontend-proxy:8080
       otlp:
         protocols:
           grpc:
@@ -218,74 +218,74 @@ opentelemetry-collector:
           http:
             cors:
               allowed_origins:
-              - http://*
-              - https://*
+                - http://*
+                - https://*
             endpoint: ${env:MY_POD_IP}:4318
       prometheus:
         config:
           scrape_configs:
-          - job_name: opentelemetry-collector
-            scrape_interval: 30s
-            static_configs:
-            - targets:
-              - ${env:MY_POD_IP}:8888
+            - job_name: opentelemetry-collector
+              scrape_interval: 30s
+              static_configs:
+                - targets:
+                    - ${env:MY_POD_IP}:8888
       redis:
         collection_interval: 30s
         endpoint: valkey-cart:6379
 
     service:
       extensions:
-      - health_check
+        - health_check
       pipelines:
         logs:
           exporters:
-          - otlphttp/newrelic
-          - debug
+            - otlphttp/newrelic
+            - debug
           processors:
-          - k8sattributes
-          - memory_limiter
-          - resource
-          - transform
-          - batch
+            - k8sattributes
+            - memory_limiter
+            - resource
+            - transform
+            - batch
           receivers:
-          - otlp
+            - otlp
         metrics:
           exporters:
-          - otlphttp/newrelic
-          - debug
+            - otlphttp/newrelic
+            - debug
           processors:
-          - memory_limiter
-          - resource
-          - resourcedetection/env
-          - k8sattributes
-          - cumulativetodelta
-          - batch
+            - memory_limiter
+            - resource
+            - resourcedetection/env
+            - k8sattributes
+            - cumulativetodelta
+            - batch
           receivers:
-          - hostmetrics
-          - redis
-          - otlp
+            - hostmetrics
+            - redis
+            - otlp
         traces:
           exporters:
-          - otlphttp/newrelic
-          - debug
+            - otlphttp/newrelic
+            - debug
           processors:
-          - k8sattributes
-          - memory_limiter
-          - resource
-          - resourcedetection/env
-          - transform
-          - batch
+            - k8sattributes
+            - memory_limiter
+            - resource
+            - resourcedetection/env
+            - transform
+            - batch
           receivers:
-          - otlp
+            - otlp
       telemetry:
         metrics:
           # address: ${env:MY_POD_IP}:8888
           level: basic
           readers:
-          - periodic:
-              exporter:
-                otlp:
-                  endpoint: http://${env:MY_POD_IP}:4318
-                  protocol: http/protobuf
-              interval: 30000
-              timeout: 5000
+            - periodic:
+                exporter:
+                  otlp:
+                    endpoint: http://${env:MY_POD_IP}:4318
+                    protocol: http/protobuf
+                interval: 30000
+                timeout: 5000
