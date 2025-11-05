@@ -46,6 +46,12 @@ prometheus:
 jaeger:
   enabled: false
 
+components:
+  checkout:
+    imageOverride:
+      repository: "bschmitt769/demo"
+      tag: "2.1.3-checkout-nr"
+
 opentelemetry-collector:
   enabled: true
   extraEnvs:
