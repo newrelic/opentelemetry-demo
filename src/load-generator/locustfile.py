@@ -96,15 +96,32 @@ categories = [
 
 products = [
     "0PUK6V6EV0",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
     "1YMWWN1N4O",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
     "2ZYFJ3GM2N",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
     "66VCHSJNUP",
     "6E92ZMYYFZ",
     "9SIQT8TOJO",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
     "L9ECAV7KIM",
     "LS4PSXUNUM",
     "OLJCESPC7Z",
     "HQTGWGPNH4",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
+    "OLJCESPC7Z",
 ]
 
 people_file = open('people.json')
