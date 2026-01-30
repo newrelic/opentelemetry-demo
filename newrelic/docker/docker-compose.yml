@@ -292,6 +292,13 @@ services:
       - OTEL_COLLECTOR_HOST
       - FLAGD_HOST
       - FLAGD_PORT
+    volumes:
+      - ./monkey-patch.js:/app/monkey-patch.js
+    command: 
+      - "/nodejs/bin/node"
+      - "--require=./Instrumentation.js"
+      - "--require=./monkey-patch.js"
+      - "server.js"
     depends_on:
       ad:
         condition: service_started

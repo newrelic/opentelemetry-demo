@@ -44,6 +44,55 @@ components:
       requests:
         memory: 200Mi
 
+  frontend:
+      command: 
+        - "/nodejs/bin/node"
+        - "--require=./Instrumentation.js"
+        - "--require=./monkey-patch.js"
+        - "server.js"
+
+      mountedConfigMaps:
+        - name: frontend-patch-volume
+          mountPath: /app/monkey-patch.js
+          subPath: monkey-patch.js
+          data:
+            monkey-patch.js: |
+              const snippet = `
+              <script type="text/javascript">!function(){if(navigator.sendBeacon){const n=navigator.sendBeacon,a="/v1/traces";navigator.sendBeacon=function(t,e){return!(!t||"string"!=typeof t||!t.includes(a))||n.apply(this,arguments)}}}();</script>
+              <script type="text/javascript">window.NREUM||(NREUM={});NREUM.init={session_replay:{enabled:true,block_selector:'',mask_text_selector:'*',sampling_rate:10.0,error_sampling_rate:100.0,mask_all_inputs:true,collect_fonts:true,inline_images:false,inline_stylesheet:true,fix_stylesheets:true,preload:false,mask_input_options:{}},distributed_tracing:{enabled:true,exclude_newrelic_header:true,cors_use_newrelic_header:false,cors_use_tracecontext_headers:true},performance:{capture_measures:true},browser_consent_mode:{enabled:false},privacy:{cookies_enabled:true},ajax:{deny_list:["bam.nr-data.net", ]}};NREUM.loader_config={accountID:"$ACCOUNT_ID",trustKey:"$TRUST_KEY",agentID:"$AGENT_ID",licenseKey:"$LICENSE_KEY",applicationID:"$APPLICATION_ID"};NREUM.info={beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",licenseKey:"$LICENSE_KEY",applicationID:"$APPLICATION_ID",sa:1};</script>
+              <script src="https://js-agent.nr-assets.net/nr-loader-spa-current.min.js"></script>
+              <script type="text/javascript">!function(){const t=t=>t.startsWith("/cart/checkout/")&&t.length>15?"/cart/checkout/[orderId]":t.startsWith("/product/")&&t.length>9?"/product/[productId]":void 0,e=()=>{setTimeout((()=>{if(window.newrelic&&"function"==typeof window.newrelic.interaction){const e=t(window.location.pathname);newrelic.interaction().setName(e).save(),newrelic.setCurrentRouteName(e)}}),150)},n=history.pushState;history.pushState=function(){n.apply(this,arguments),e()};const i=history.replaceState;history.replaceState=function(){i.apply(this,arguments),e()},window.addEventListener("popstate",e),window.addEventListener("load",(()=>{if(window.newrelic){const e=t(window.location.pathname);newrelic.setPageViewName(e)}}))}();</script>`;
+              
+              const http = require('http');
+              const origCreate = http.createServer;
+              http.createServer = (handler) => origCreate.call(http, (req, res) => {
+                delete req.headers['accept-encoding'];
+                const origHead = res.writeHead;
+                res.writeHead = (...args) => {
+                  res.removeHeader('content-length');
+                  res.removeHeader('etag');
+                  return origHead.apply(res, args);
+                };
+                const origWrite = res.write;
+                res.write = (chunk, ...args) => {
+                  const cType = res.getHeader('content-type');
+                  if (cType && cType.includes('text/html') && chunk) {
+                    const s = chunk.toString();
+                    if (s.includes('<head>')) {
+                      chunk = Buffer.from(s.replace('<head>', '<head>' + snippet));
+                      res.write = origWrite;
+                    }
+                  }
+                  return origWrite.call(res, chunk, ...args);
+                };
+                const origEnd = res.end;
+                res.end = (chunk, ...args) => {
+                  if (chunk) res.write(chunk);
+                  return origEnd.call(res, undefined, ...args);
+                };
+                if (handler) handler(req, res);
+              });
+
 # Disable non-NR components
 opensearch:
   enabled: false
