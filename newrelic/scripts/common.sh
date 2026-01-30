@@ -55,6 +55,24 @@ ensure_helm_repo() {
   fi
 }
 
+detect_openshift() {
+  set +u
+  if [ -z "${IS_OPENSHIFT_CLUSTER:-}" ]; then
+    echo "Detecting cluster type..."
+    # Check if the 'security.openshift.io' API group exists
+    if kubectl api-versions | grep -q "security.openshift.io"; then
+      echo "OpenShift cluster detected."
+      export IS_OPENSHIFT_CLUSTER="y"
+    else
+      echo "Standard Kubernetes cluster detected (non-OpenShift)."
+      export IS_OPENSHIFT_CLUSTER="n"
+    fi
+  else
+    echo "Using existing cluster type: IS_OPENSHIFT_CLUSTER=$IS_OPENSHIFT_CLUSTER"
+  fi
+  set -u
+}
+
 # Generic function to prompt for environment variables
 # Usage: prompt_for_env_var VAR_NAME PROMPT_TEXT REQUIRED
 prompt_for_env_var() {

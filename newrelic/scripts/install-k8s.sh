@@ -25,8 +25,7 @@ check_tool_installed kubectl
 
 prompt_for_env_var "NEW_RELIC_LICENSE_KEY" "Please enter your New Relic License Key" true
 
-prompt_for_env_var "IS_OPENSHIFT_CLUSTER" "Is this installation for an OpenShift cluster? (y/n, default: n)" false
-validate_yesno_answer "IS_OPENSHIFT_CLUSTER"
+detect_openshift
 
 install_or_upgrade_chart() {
   local release_name=$1
