@@ -66,7 +66,7 @@ def poll(
     :rtype: bool
     """
 
-    retries = 10
+    retries = 15
     success = False
 
     for attempt in range(retries):
@@ -75,6 +75,9 @@ def poll(
         )
         if fn(api_key, account_id):
             success = True
+            break
+
+        if attempt + 1 == retries:
             break
 
         print(
@@ -140,7 +143,7 @@ def check_frontend_get(api_key: str, account_id: int) -> bool:
         """
 FROM Span
 SELECT count(*)
-WHERE `k8s.cluster.name` = 'opentelemetry-demo' AND entity.name = 'frontend' AND name = 'GET'
+WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'frontend' AND name = 'GET'
 SINCE 1 minute ago
 """,
     )
@@ -165,7 +168,7 @@ def check_cart_add_item(api_key: str, account_id: int) -> bool:
         """
 FROM Span
 SELECT count(*)
-WHERE `k8s.cluster.name` = 'opentelemetry-demo' AND entity.name = 'cart' AND name='POST /oteldemo.CartService/AddItem'
+WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'cart' AND name='POST /oteldemo.CartService/AddItem'
 SINCE 1 minute ago
 """,
     )
@@ -191,7 +194,7 @@ def check_product_catalog_get_product(api_key: str, account_id: int) -> bool:
         """
 FROM Span
 SELECT count(*)
-WHERE `k8s.cluster.name` = 'opentelemetry-demo' AND entity.name = 'product-catalog' AND name='oteldemo.ProductCatalogService/GetProduct'
+WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'product-catalog' AND name='oteldemo.ProductCatalogService/GetProduct'
 SINCE 1 minute ago
 """,
     )
@@ -220,7 +223,7 @@ SELECT uniqueCount(entity.guid)
 WHERE trace.id = (
   SELECT latest(trace.id)
   FROM Span
-  WHERE `k8s.cluster.name` = 'opentelemetry-demo' AND entity.name = 'load-generator' AND name = 'user_checkout_multi'
+  WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'load-generator' AND name = 'user_checkout_multi'
   SINCE 1 minute ago
 )
 """,

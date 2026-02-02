@@ -12,7 +12,7 @@
 # Environment variables: N/a
 #
 # Dependencies:
-#   - kubectl
+#   - kubectl (if $1 = "k8s")
 #   - pip
 #   - python3
 #   - Access to the target Kubernetes cluster
@@ -23,28 +23,32 @@ set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
 # Make sure required tools are installed
-check_tool_installed kubectl
 check_tool_installed pip
 check_tool_installed python3
 
-# Function to kill the port-forward process on script exit
-function cleanup() {
-    echo "Cleaning up port-forward process with PID: $PORT_FORWARD_PID"
-    kill $PORT_FORWARD_PID 2>/dev/null
-}
+# Setup port forwarding if validating against Kubernetes
+if [ "${1:-}" = "k8s" ]; then
+  check_tool_installed kubectl
 
-# Setup port forwarding for frontend-proxy
-echo "Setting up port forwarding for frontend-proxy..."
-kubectl port-forward svc/frontend-proxy -n opentelemetry-demo 8080 &
+  # Function to kill the port-forward process on script exit
+  function cleanup() {
+      echo "Cleaning up port-forward process with PID: $PORT_FORWARD_PID"
+      kill $PORT_FORWARD_PID 2>/dev/null
+  }
 
-# Capture the PID of the port-forward process and set up trap for cleanup on
-# exit
-PORT_FORWARD_PID=$!
-trap cleanup EXIT
+  # Setup port forwarding for frontend-proxy
+  echo "Setting up port forwarding for frontend-proxy..."
+  kubectl port-forward svc/frontend-proxy -n opentelemetry-demo 8080 &
 
-# Allow some time for port forwarding to establish
-echo "Waiting for port forwarding to establish..."
-sleep 5
+  # Capture the PID of the port-forward process and set up trap for cleanup on
+  # exit
+  PORT_FORWARD_PID=$!
+  trap cleanup EXIT
+
+  # Allow some time for port forwarding to establish
+  echo "Waiting for port forwarding to establish..."
+  sleep 5
+fi
 
 # Install selenium if not already installed
 pip install selenium
