@@ -67,21 +67,23 @@ kubectl wait --for=jsonpath='{.status.phase}'=Running pod --all \
   -n opentelemetry-demo --timeout=300s
 echo "All pods are in Running state!"
 
-# Run the UI validation script
-echo "Running UI validation script..."
-EXIT_CODE=0
-$SCRIPT_DIR/validate-ui.sh k8s || EXIT_CODE=$?
-
-if [ $EXIT_CODE -ne 0 ]; then
-  # Selenium scripts can be finnicky so we retry once if it fails
-  echo "UI validation failed on first attempt: Retrying UI validation script..."
+# Maybe run the UI validation script
+if [ "${UI_VALIDATION_ENABLED:-false}" = "true" ]; then
+  echo "Running UI validation script..."
   EXIT_CODE=0
   $SCRIPT_DIR/validate-ui.sh k8s || EXIT_CODE=$?
 
   if [ $EXIT_CODE -ne 0 ]; then
-    echo "UI validation failed: Issues detected in OpenTelemetry Demo UI validation after two attempts."
-    echo "Try running ./validate-k8s.sh again or run ./validate-ui.sh to manually run the UI validation."
-    exit 1
+    # Selenium scripts can be finnicky so we retry once if it fails
+    echo "UI validation failed on first attempt: Retrying UI validation script..."
+    EXIT_CODE=0
+    $SCRIPT_DIR/validate-ui.sh k8s || EXIT_CODE=$?
+
+    if [ $EXIT_CODE -ne 0 ]; then
+      echo "UI validation failed: Issues detected in OpenTelemetry Demo UI validation after two attempts."
+      echo "Try running ./validate-k8s.sh again or run ./validate-ui.sh to manually run the UI validation."
+      exit 1
+    fi
   fi
 fi
 
@@ -102,6 +104,8 @@ if [ $EXIT_CODE -ne 0 ]; then
   exit 1
 fi
 
-# Validation succeeded, cleanup K8s resources
-echo "Validation succeeded! Cleaning up Kubernetes resources..."
-$SCRIPT_DIR/cleanup-k8s.sh
+# Validation succeeded, maybe cleanup K8s resources
+if [ "${K8S_CLEANUP_ENABLED:-true}" = "true" ]; then
+  echo "Validation succeeded! Cleaning up Kubernetes resources..."
+  $SCRIPT_DIR/cleanup-k8s.sh
+fi

@@ -89,8 +89,15 @@ def poll(
     return success
 
 
-def check_count(api_key: str, account_id: int, query: str) -> bool:
-    """Check if the count returned by a NRQL query is greater than zero.
+def check_count(
+    api_key: str,
+    account_id: int,
+    query: str,
+    attrName: str = 'count',
+    expected_condition: Callable[[int], bool] = lambda x: x > 0,
+) -> bool:
+    """Check if the value of the named attribute returned by the given NRQL
+    query is a number that meets the expected condition.
 
     :param api_key: The New Relic API key
     :type api_key: str
@@ -98,6 +105,14 @@ def check_count(api_key: str, account_id: int, query: str) -> bool:
     :type account_id: int
     :param query: The NRQL query to run
     :type query: str
+    :param attrName: The name of the attribute to check in the query result,
+                     defaults to 'count'
+    :type attrName: str
+    :param expected_condition: A callable that takes the numeric value of the
+                               named attribute as an argument and returns True
+                               if the condition is met, defaults to checking if
+                               the attribute value is > 0
+    :type expected_condition: Callable[[int], bool]
     :raises GraphQLApiError: If running the NRQL query fails.
     :return: True if the count returned by the query is greater than zero, False
              otherwise.
@@ -110,18 +125,19 @@ def check_count(api_key: str, account_id: int, query: str) -> bool:
         query,
     )
 
-    # For a count(*) query, we expect a single result with a 'count' field.
+    # For the given query, we expect a single numeric result with a field with
+    # the given attribute name.
     if len(results) != 1:
         return False
 
-    count = results[0].get('count')
+    count = results[0].get(attrName)
     if count is None:
         return False
 
     if not isinstance(count, int):
         return False
 
-    return count > 0
+    return expected_condition(count)
 
 
 def check_frontend_get(api_key: str, account_id: int) -> bool:
@@ -143,7 +159,7 @@ def check_frontend_get(api_key: str, account_id: int) -> bool:
         """
 FROM Span
 SELECT count(*)
-WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'frontend' AND name = 'GET'
+WHERE instrumentation.provider = 'opentelemetry' AND service.namespace = 'opentelemetry-demo' AND entity.name = 'frontend' AND name = 'GET'
 SINCE 1 minute ago
 """,
     )
@@ -168,7 +184,7 @@ def check_cart_add_item(api_key: str, account_id: int) -> bool:
         """
 FROM Span
 SELECT count(*)
-WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'cart' AND name='POST /oteldemo.CartService/AddItem'
+WHERE instrumentation.provider = 'opentelemetry' AND service.namespace = 'opentelemetry-demo' AND entity.name = 'cart' AND name='POST /oteldemo.CartService/AddItem'
 SINCE 1 minute ago
 """,
     )
@@ -194,7 +210,7 @@ def check_product_catalog_get_product(api_key: str, account_id: int) -> bool:
         """
 FROM Span
 SELECT count(*)
-WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'product-catalog' AND name='oteldemo.ProductCatalogService/GetProduct'
+WHERE instrumentation.provider = 'opentelemetry' AND service.namespace = 'opentelemetry-demo' AND entity.name = 'product-catalog' AND name='oteldemo.ProductCatalogService/GetProduct'
 SINCE 1 minute ago
 """,
     )
@@ -214,35 +230,68 @@ def check_user_checkout_multi(api_key: str, account_id: int) -> bool:
     :rtype: bool
     """
 
-    results = nerdgraph.run_nrql(
+    return check_count(
         api_key,
-        [account_id],
+        account_id,
         """
 FROM Span
 SELECT uniqueCount(entity.guid)
 WHERE trace.id = (
   SELECT latest(trace.id)
   FROM Span
-  WHERE service.namespace = 'opentelemetry-demo' AND entity.name = 'load-generator' AND name = 'user_checkout_multi'
+  WHERE instrumentation.provider = 'opentelemetry' AND service.namespace = 'opentelemetry-demo' AND entity.name = 'load-generator' AND name = 'user_checkout_multi'
   SINCE 1 minute ago
 )
 """,
+        'uniqueCount.entity.guid',
+        lambda x: x == 12,
     )
 
-    # For a uniqueCount query, we expect a single result with a
-    # 'uniqueCount.entity.guid' field.
-    if len(results) != 1:
+
+def check_spans_from_multiple_services(api_key: str, account_id: int) -> bool:
+    """Check that we see spans from at least 10 different opentelemetry-demo
+    services in New Relic in the last minute.
+
+    :param api_key: The New Relic API key
+    :type api_key: str
+    :param account_id: The New Relic Account ID
+    :type account_id: int
+    :return: True if we see spans from at least 10 different opentelemetry-demo
+             services in New Relic in the last minute, False otherwise.
+    :rtype: bool
+    """
+
+    results = nerdgraph.run_nrql(
+        api_key,
+        [account_id],
+        """
+FROM Span
+SELECT count(*)
+WHERE instrumentation.provider = 'opentelemetry' AND service.namespace = 'opentelemetry-demo'
+FACET service.name
+SINCE 1 minute ago
+LIMIT MAX
+""",
+    )
+
+    # For this query, we expect > 10 results, one per unique service name, each
+    # with a count of at least 1.
+
+    if len(results) < 10:
         return False
 
-    count = results[0].get('uniqueCount.entity.guid')
-    if count is None:
-        return False
+    for result in results:
+        count = result.get('count')
+        if count is None:
+            return False
 
-    if not isinstance(count, int):
-        return False
+        if not isinstance(count, int):
+            return False
 
-    return count == 12
+        if count < 1:
+            return False
 
+    return True
 
 # -----------------------------------------------------------------------------
 # Main script logic
@@ -283,3 +332,11 @@ success = poll(
     check_user_checkout_multi,
 )
 assert success, "Did not find expected GUIDs for 'user_checkout_multi' traces in New Relic after multiple attempts."
+
+# Look for spans from at least 10 opentelemetry-demo services
+success = poll(
+    api_key,
+    account_id,
+    check_spans_from_multiple_services,
+)
+assert success, "Did not find expected spans for at least 10 opentelemetry-demo services in New Relic after multiple attempts."

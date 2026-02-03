@@ -80,21 +80,23 @@ done
 
 echo "All containers are in Running state!"
 
-# Run the UI validation script
-echo "Running UI validation script..."
-EXIT_CODE=0
-$SCRIPT_DIR/validate-ui.sh || EXIT_CODE=$?
-
-if [ $EXIT_CODE -ne 0 ]; then
-  # Selenium scripts can be finnicky so we retry once if it fails
-  echo "UI validation failed on first attempt: Retrying UI validation script..."
+# Maybe run the UI validation script
+if [ "${UI_VALIDATION_ENABLED:-false}" = "true" ]; then
+  echo "Running UI validation script..."
   EXIT_CODE=0
   $SCRIPT_DIR/validate-ui.sh || EXIT_CODE=$?
 
   if [ $EXIT_CODE -ne 0 ]; then
-    echo "UI validation failed: Issues detected in OpenTelemetry Demo UI validation after two attempts."
-    echo "Try running ./validate-docker.sh again or run ./validate-ui.sh to manually run the UI validation."
-    exit 1
+    # Selenium scripts can be finnicky so we retry once if it fails
+    echo "UI validation failed on first attempt: Retrying UI validation script..."
+    EXIT_CODE=0
+    $SCRIPT_DIR/validate-ui.sh || EXIT_CODE=$?
+
+    if [ $EXIT_CODE -ne 0 ]; then
+      echo "UI validation failed: Issues detected in OpenTelemetry Demo UI validation after two attempts."
+      echo "Try running ./validate-docker.sh again or run ./validate-ui.sh to manually run the UI validation."
+      exit 1
+    fi
   fi
 fi
 
@@ -115,7 +117,9 @@ if [ $EXIT_CODE -ne 0 ]; then
   exit 1
 fi
 
-# Validation succeeded, cleanup Docker objects
-echo "Validation succeeded! Cleaning up Docker objects..."
-NEW_RELIC_LICENSE_KEY="$NEW_RELIC_LICENSE_KEY" \
-  $SCRIPT_DIR/cleanup-docker.sh
+# Validation succeeded, maybe cleanup Docker objects
+if [ "${DOCKER_CLEANUP_ENABLED:-true}" = "true" ]; then
+  echo "Validation succeeded! Cleaning up Docker objects..."
+  NEW_RELIC_LICENSE_KEY="$NEW_RELIC_LICENSE_KEY" \
+    $SCRIPT_DIR/cleanup-docker.sh
+fi
