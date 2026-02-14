@@ -2959,7 +2959,9 @@ spec:
               value: otel
           resources:
             limits:
-              memory: 100Mi
+              memory: 512Mi
+            requests:
+              memory: 256Mi  # Ensure the node reserves this
           volumeMounts:
             - name: postgresql-init
               mountPath: /docker-entrypoint-initdb.d
@@ -3043,7 +3045,7 @@ spec:
             - name: FLAGD_PORT
               value: "8013"
             - name: GOMEMLIMIT
-              value: 16MiB
+              value: 150Mi
             - name: DB_CONNECTION_STRING
               value: postgres://otelu:otelp@postgresql/otel?sslmode=disable
             - name: OTEL_SEMCONV_STABILITY_OPT_IN
@@ -3057,7 +3059,7 @@ spec:
                 k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
-              memory: 20Mi
+              memory: 300Mi
           volumeMounts:
       volumes:
 ---
