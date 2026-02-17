@@ -49,6 +49,21 @@ components:
         memory: 100Mi
       requests:
         memory: 50Mi
+    env:
+      - name: PRODUCT_CATALOG_PORT
+        value: "8080"
+      - name: FLAGD_HOST
+        value: flagd
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: GOMEMLIMIT
+        value: 80MiB
+      - name: DB_CONNECTION_STRING
+        value: postgres://otelu:otelp@postgresql/otel?sslmode=disable
+      - name: OTEL_SEMCONV_STABILITY_OPT_IN
+        value: database
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
 
 # Disable non-NR components
 opensearch:
@@ -190,52 +205,52 @@ opentelemetry-collector:
           - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
 
     receivers:
-      hostmetrics:
-        collection_interval: 10s
-        root_path: /hostfs
-        scrapers:
-          cpu: null
-          disk: null
-          filesystem:
-            exclude_fs_types:
-              fs_types:
-              - autofs
-              - binfmt_misc
-              - bpf
-              - cgroup2
-              - configfs
-              - debugfs
-              - devpts
-              - devtmpfs
-              - fusectl
-              - hugetlbfs
-              - iso9660
-              - mqueue
-              - nsfs
-              - overlay
-              - proc
-              - procfs
-              - pstore
-              - rpc_pipefs
-              - securityfs
-              - selinuxfs
-              - squashfs
-              - sysfs
-              - tracefs
-              match_type: strict
-            exclude_mount_points:
-              match_type: regexp
-              mount_points:
-              - /dev/*
-              - /proc/*
-              - /sys/*
-              - /run/k3s/containerd/*
-              - /var/lib/docker/*
-              - /var/lib/kubelet/*
-              - /snap/*
-          load: null
-          memory: null
-          network: null
+      # hostmetrics:
+      #   collection_interval: 10s
+      #   root_path: /hostfs
+      #   scrapers:
+      #     cpu: null
+      #     disk: null
+      #     filesystem:
+      #       exclude_fs_types:
+      #         fs_types:
+      #         - autofs
+      #         - binfmt_misc
+      #         - bpf
+      #         - cgroup2
+      #         - configfs
+      #         - debugfs
+      #         - devpts
+      #         - devtmpfs
+      #         - fusectl
+      #         - hugetlbfs
+      #         - iso9660
+      #         - mqueue
+      #         - nsfs
+      #         - overlay
+      #         - proc
+      #         - procfs
+      #         - pstore
+      #         - rpc_pipefs
+      #         - securityfs
+      #         - selinuxfs
+      #         - squashfs
+      #         - sysfs
+      #         - tracefs
+      #         match_type: strict
+      #       exclude_mount_points:
+      #         match_type: regexp
+      #         mount_points:
+      #         - /dev/*
+      #         - /proc/*
+      #         - /sys/*
+      #         - /run/k3s/containerd/*
+      #         - /var/lib/docker/*
+      #         - /var/lib/kubelet/*
+      #         - /snap/*
+      #     load: null
+      #     memory: null
+      #     network: null
       httpcheck/frontend-proxy:
         targets:
         - endpoint: http://frontend-proxy:8080
@@ -289,8 +304,8 @@ opentelemetry-collector:
           - cumulativetodelta
           - batch
           receivers:
-          - hostmetrics
-          - redis
+          # - hostmetrics
+          # - redis
           - otlp
         traces:
           exporters:
