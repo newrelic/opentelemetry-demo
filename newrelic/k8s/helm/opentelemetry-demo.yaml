@@ -43,6 +43,12 @@ components:
         memory: 300Mi
       requests:
         memory: 200Mi
+  product-catalog:
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        memory: 50Mi
 
 # Disable non-NR components
 opensearch:
@@ -76,7 +82,13 @@ opentelemetry-collector:
   mode: deployment
   presets:
     hostMetrics:
-      enabled: true
+      enabled: false
+    kubernetesAttributes:
+      enabled: false
+    kubeletMetrics:
+      enabled: false
+    clusterMetrics:
+      enabled: false
   resources:
     limits:
       memory: 200Mi
