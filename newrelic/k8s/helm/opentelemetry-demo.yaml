@@ -43,6 +43,12 @@ components:
         memory: 300Mi
       requests:
         memory: 200Mi
+  checkout:
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        memory: 50Mi
   product-catalog:
     resources:
       limits:
@@ -78,8 +84,6 @@ jaeger:
 opentelemetry-collector:
   enabled: true
   extraEnvs:
-    - name: INTERNAL_TELEMETRY_SERVICE_NAME
-      value: astroshop-otel-collector
     - name: KUBE_NODE_NAME
       valueFrom:
         fieldRef:
@@ -205,52 +209,6 @@ opentelemetry-collector:
           - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
 
     receivers:
-      # hostmetrics:
-      #   collection_interval: 10s
-      #   root_path: /hostfs
-      #   scrapers:
-      #     cpu: null
-      #     disk: null
-      #     filesystem:
-      #       exclude_fs_types:
-      #         fs_types:
-      #         - autofs
-      #         - binfmt_misc
-      #         - bpf
-      #         - cgroup2
-      #         - configfs
-      #         - debugfs
-      #         - devpts
-      #         - devtmpfs
-      #         - fusectl
-      #         - hugetlbfs
-      #         - iso9660
-      #         - mqueue
-      #         - nsfs
-      #         - overlay
-      #         - proc
-      #         - procfs
-      #         - pstore
-      #         - rpc_pipefs
-      #         - securityfs
-      #         - selinuxfs
-      #         - squashfs
-      #         - sysfs
-      #         - tracefs
-      #         match_type: strict
-      #       exclude_mount_points:
-      #         match_type: regexp
-      #         mount_points:
-      #         - /dev/*
-      #         - /proc/*
-      #         - /sys/*
-      #         - /run/k3s/containerd/*
-      #         - /var/lib/docker/*
-      #         - /var/lib/kubelet/*
-      #         - /snap/*
-      #     load: null
-      #     memory: null
-      #     network: null
       httpcheck/frontend-proxy:
         targets:
         - endpoint: http://frontend-proxy:8080
@@ -304,8 +262,6 @@ opentelemetry-collector:
           - cumulativetodelta
           - batch
           receivers:
-          # - hostmetrics
-          # - redis
           - otlp
         traces:
           exporters:
@@ -322,7 +278,6 @@ opentelemetry-collector:
           - otlp
       telemetry:
         metrics:
-          # address: ${env:MY_POD_IP}:8888
           level: basic
           readers:
           - periodic:
