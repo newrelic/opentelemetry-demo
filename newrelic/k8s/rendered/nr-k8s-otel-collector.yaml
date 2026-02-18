@@ -26,7 +26,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
   annotations:
 ---
 # Source: nr-k8s-otel-collector/templates/daemonset-configmap.yaml
@@ -40,7 +40,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
 data:
   daemonset-config.yaml: |
     receivers:
@@ -73,6 +73,12 @@ data:
             metrics:
               system.filesystem.utilization:
                 enabled: true
+            # Exclude container storage overlay mount to avoid permission errors when running as non-root
+            # This is only relevant for CRI-O container runtime (used by OKE, OpenShift, etc.)
+            exclude_mount_points:
+              mount_points:
+                - ^/var/lib/containers/storage/overlay$
+              match_type: regexp
           disk:
             metrics:
               system.disk.merged:
@@ -85,18 +91,6 @@ data:
             metrics:
               system.network.connections:
                 enabled: false
-          # Uncomment to enable process metrics, which can be noisy but valuable.
-          # processes:
-          # process:
-          #   metrics:
-          #     process.cpu.utilization:
-          #       enabled: true
-          #     process.cpu.time:
-          #       enabled: false
-          #   mute_process_name_error: true
-          #   mute_process_exe_error: true
-          #   mute_process_io_error: true
-          #   mute_process_user_error: true
 
       kubeletstats:
         collection_interval: 1m
@@ -430,6 +424,8 @@ data:
 
       metricstransform/hostmetrics:
         transforms:
+          # When ATP is disabled: Only include a limited subset of process metrics.
+          # This matches the original behavior before ATP was introduced.
           - include: process\.(cpu\.utilization|disk\.io|memory\.(usage|virtual))
             action: update
             match_type: regexp
@@ -626,6 +622,8 @@ data:
         detectors: [gcp, eks, ec2, aks, azure, oraclecloud]
         timeout: 2s
         override: false
+        eks:
+          node_from_env_var: KUBE_NODE_NAME
 
       resource/newrelic:
         attributes:
@@ -635,7 +633,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.0
+            value: 0.10.7
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -762,6 +760,12 @@ data:
             pipelines: [metrics/nr]
           - context: metric
             condition: instrumentation_scope.name == "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/pagingscraper"
+            pipelines: [metrics/nr]
+          - context: metric
+            condition: instrumentation_scope.name == "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper"
+            pipelines: [metrics/nr]
+          - context: metric
+            condition: instrumentation_scope.name == "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processesscraper"
             pipelines: [metrics/nr]
           - context: metric
             condition: instrumentation_scope.name == "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
@@ -905,7 +909,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
 data:
   deployment-config.yaml: |
     receivers:
@@ -1411,7 +1415,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.0
+            value: 0.10.7
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1429,7 +1433,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.0
+            value: 0.10.7
 
       transform/events:
         log_statements:
@@ -1902,7 +1906,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
 rules:
   - apiGroups:
     - ""
@@ -2007,7 +2011,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
 subjects:
   - kind: ServiceAccount
     name: nr-k8s-otel-collector
@@ -2055,7 +2059,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
 spec:
   type: ClusterIP
   ports:
@@ -2084,7 +2088,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
 spec:
   selector:
     matchLabels:
@@ -2098,7 +2102,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: daemonset
       annotations:
-        checksum/config: 2b30748172ebc1d25c34cde7dd6c3436120e74028d504248a682ba0b3fc0a9eb
+        checksum/config: 581a5a058bba11cac3cf31ef9ac8d967916a62715414d5ab3290d1649f80193a
     spec:
       serviceAccountName: nr-k8s-otel-collector
       initContainers:
@@ -2125,7 +2129,13 @@ spec:
                 export NODE_CPU_ALLOCATABLE=$(awk "BEGIN {print ${NODE_CPU_ALLOCATABLE%?} / 1000}")
               fi
 
-              export NODE_MEMORY_ALLOCATABLE=$(kubectl get node $NODE_NAME -o jsonpath='{.status.allocatable.memory}' | numfmt --from=auto)
+              export NODE_MEMORY_ALLOCATABLE=$(kubectl get node $NODE_NAME -o jsonpath='{.status.allocatable.memory}' | awk '
+                /Ki$/ {printf "%.0f\n", $1 * 1024; next}
+                /Mi$/ {printf "%.0f\n", $1 * 1024^2; next}
+                /Gi$/ {printf "%.0f\n", $1 * 1024^3; next}
+                /m$/  {printf "%.0f\n", $1 / 1000; next}
+                {print $1}
+              ')
 
               if [[ -z "NODE_MEMORY_ALLOCATABLE" ]] || [[ "NODE_MEMORY_ALLOCATABLE" == "0" ]]; then
                 echo "Could not retrieve Memory allocatable for node $NODE_NAME"
@@ -2168,7 +2178,7 @@ spec:
             - --config
             - /config/daemonset-config.yaml
             - --feature-gates
-            - metricsgeneration.MatchAttributes
+            - metricsgeneration.MatchAttributes,-processor.resourcedetection.propagateerrors
           resources:
             {}
           env:
@@ -2317,7 +2327,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.0
+    helm.sh/chart: nr-k8s-otel-collector-0.10.7
 spec:
   replicas: 1
   minReadySeconds: 5
@@ -2333,7 +2343,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: a0d06691977232bc8023b721d7ca97feb36408f8447b2b57fac3eb13881631ef
+        checksum/config: c04c38bccb0d0908831636a0397aad57a54f09b28f417f676a6fef57f459ed5d
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
