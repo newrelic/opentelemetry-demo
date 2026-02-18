@@ -36,9 +36,6 @@ deployment:
           - key: service.instance.id
             from_attribute: k8s.pod.uid
             action: insert
-          - key: brad.source
-            action: insert
-            value: astroshop
       pipelines:
         metrics/otel-demo:
           receivers:
