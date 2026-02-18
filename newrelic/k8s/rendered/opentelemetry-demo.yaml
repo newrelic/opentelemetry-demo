@@ -1,264 +1,16 @@
 ---
-# Source: opentelemetry-demo/charts/opentelemetry-collector/templates/serviceaccount.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: otel-collector
-  namespace: opentelemetry-demo
-  labels:
-    helm.sh/chart: opentelemetry-collector-0.142.2
-    app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: otel-demo
-    app.kubernetes.io/version: "0.142.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: opentelemetry-collector
-    app.kubernetes.io/component: standalone-collector
----
 # Source: opentelemetry-demo/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: otel-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     
     app.kubernetes.io/version: "2.2.0"
     app.kubernetes.io/part-of: opentelemetry-demo
     app.kubernetes.io/managed-by: Helm
----
-# Source: opentelemetry-demo/charts/opentelemetry-collector/templates/configmap.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: otel-collector
-  namespace: opentelemetry-demo
-  labels:
-    helm.sh/chart: opentelemetry-collector-0.142.2
-    app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: otel-demo
-    app.kubernetes.io/version: "0.142.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: opentelemetry-collector
-    app.kubernetes.io/component: standalone-collector
-data:
-  relay: |
-    exporters:
-      debug: {}
-      otlphttp/newrelic:
-        endpoint: https://otlp.nr-data.net:4318
-        headers:
-          api-key: ${env:NR_LICENSE_KEY}
-    extensions:
-      health_check:
-        endpoint: 0.0.0.0:13133
-      k8s_observer:
-        auth_type: serviceAccount
-        node: ${env:K8S_NODE_NAME}
-    processors:
-      batch: {}
-      cumulativetodelta: {}
-      k8sattributes:
-        extract:
-          metadata:
-          - k8s.namespace.name
-          - k8s.deployment.name
-          - k8s.statefulset.name
-          - k8s.daemonset.name
-          - k8s.cronjob.name
-          - k8s.job.name
-          - k8s.node.name
-          - k8s.pod.name
-          - k8s.pod.uid
-          - k8s.pod.start_time
-          otel_annotations: true
-        passthrough: false
-        pod_association:
-        - sources:
-          - from: resource_attribute
-            name: k8s.pod.ip
-        - sources:
-          - from: resource_attribute
-            name: k8s.pod.uid
-        - sources:
-          - from: connection
-      memory_limiter:
-        check_interval: 5s
-        limit_percentage: 80
-        spike_limit_percentage: 25
-      resource:
-        attributes:
-        - action: insert
-          from_attribute: k8s.pod.name
-          key: service.instance.id
-      resourcedetection/env:
-        detectors:
-        - env
-        - system
-        override: false
-        system:
-          hostname_sources:
-          - os
-          resource_attributes:
-            host.id:
-              enabled: true
-      transform:
-        error_mode: ignore
-        log_statements:
-        - context: log
-          statements:
-          - truncate_all(attributes, 4095)
-          - truncate_all(resource.attributes, 4095)
-        trace_statements:
-        - context: span
-          statements:
-          - truncate_all(attributes, 4095)
-          - truncate_all(resource.attributes, 4095)
-        - context: span
-          statements:
-          - replace_pattern(name, "\\?.*", "")
-          - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
-    receivers:
-      hostmetrics:
-        collection_interval: 10s
-        root_path: /hostfs
-        scrapers:
-          cpu: null
-          disk: null
-          filesystem:
-            exclude_fs_types:
-              fs_types:
-              - autofs
-              - binfmt_misc
-              - bpf
-              - cgroup2
-              - configfs
-              - debugfs
-              - devpts
-              - devtmpfs
-              - fusectl
-              - hugetlbfs
-              - iso9660
-              - mqueue
-              - nsfs
-              - overlay
-              - proc
-              - procfs
-              - pstore
-              - rpc_pipefs
-              - securityfs
-              - selinuxfs
-              - squashfs
-              - sysfs
-              - tracefs
-              match_type: strict
-            exclude_mount_points:
-              match_type: regexp
-              mount_points:
-              - /dev/*
-              - /proc/*
-              - /sys/*
-              - /run/k3s/containerd/*
-              - /var/lib/docker/*
-              - /var/lib/kubelet/*
-              - /snap/*
-          load: null
-          memory: null
-          network: null
-      httpcheck/frontend-proxy:
-        targets:
-        - endpoint: http://frontend-proxy:8080
-      k8s_cluster:
-        collection_interval: 10s
-      kubeletstats:
-        auth_type: serviceAccount
-        collection_interval: 20s
-        endpoint: ${env:K8S_NODE_IP}:10250
-      otlp:
-        protocols:
-          grpc:
-            endpoint: ${env:MY_POD_IP}:4317
-          http:
-            cors:
-              allowed_origins:
-              - http://*
-              - https://*
-            endpoint: ${env:MY_POD_IP}:4318
-      prometheus:
-        config:
-          scrape_configs:
-          - job_name: opentelemetry-collector
-            scrape_interval: 30s
-            static_configs:
-            - targets:
-              - ${env:MY_POD_IP}:8888
-      receiver_creator/metrics:
-        discovery:
-          enabled: true
-        watch_observers:
-        - k8s_observer
-      redis:
-        collection_interval: 30s
-        endpoint: valkey-cart:6379
-    service:
-      extensions:
-      - health_check
-      - k8s_observer
-      pipelines:
-        logs:
-          exporters:
-          - otlphttp/newrelic
-          - debug
-          processors:
-          - k8sattributes
-          - memory_limiter
-          - resource
-          - transform
-          - batch
-          receivers:
-          - otlp
-        metrics:
-          exporters:
-          - otlphttp/newrelic
-          - debug
-          processors:
-          - memory_limiter
-          - resource
-          - resourcedetection/env
-          - k8sattributes
-          - cumulativetodelta
-          - batch
-          receivers:
-          - hostmetrics
-          - redis
-          - otlp
-          - receiver_creator/metrics
-          - kubeletstats
-          - k8s_cluster
-        traces:
-          exporters:
-          - otlphttp/newrelic
-          - debug
-          processors:
-          - k8sattributes
-          - memory_limiter
-          - resource
-          - resourcedetection/env
-          - transform
-          - batch
-          receivers:
-          - otlp
-      telemetry:
-        metrics:
-          level: basic
-          readers:
-          - periodic:
-              exporter:
-                otlp:
-                  endpoint: http://${env:MY_POD_IP}:4318
-                  protocol: http/protobuf
-              interval: 30000
-              timeout: 5000
 ---
 # Source: opentelemetry-demo/templates/flagd-config.yaml
 apiVersion: v1
@@ -267,7 +19,7 @@ metadata:
   name: flagd-config
   namespace: opentelemetry-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     
     app.kubernetes.io/version: "2.2.0"
@@ -434,7 +186,7 @@ metadata:
   name: postgresql-init
   namespace: opentelemetry-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     
     app.kubernetes.io/version: "2.2.0"
@@ -600,122 +352,13 @@ data:
         ('6E92ZMYYFZ', 'Solar Filter', 'Enhance your viewing experience with EclipSmart Solar Filter for 8" telescopes. With two Velcro straps and four self-adhesive Velcro pads for added safety, you can be assured that the solar filter cannot be accidentally knocked off and will provide Solar Safe, ISO compliant viewing.', 'SolarFilter.jpg', 'USD', 69, 950000000, 'accessories,telescopes'),
         ('HQTGWGPNH4', 'The Comet Book', 'A 16th-century treatise on comets, created anonymously in Flanders (now northern France) and now held at the Universitätsbibliothek Kassel. Commonly known as The Comet Book (or Kometenbuch in German), its full title translates as "Comets and their General and Particular Meanings, According to Ptolomeé, Albumasar, Haly, Aliquind and other Astrologers". The image is from https://publicdomainreview.org/collection/the-comet-book, made available by the Universitätsbibliothek Kassel under a CC-BY SA 4.0 license (https://creativecommons.org/licenses/by-sa/4.0/)', 'TheCometBook.jpg', 'USD', 0, 990000000, 'books');
 ---
-# Source: opentelemetry-demo/charts/opentelemetry-collector/templates/clusterrole.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: otel-collector
-  labels:
-    helm.sh/chart: opentelemetry-collector-0.142.2
-    app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: otel-demo
-    app.kubernetes.io/version: "0.142.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: opentelemetry-collector
-    app.kubernetes.io/component: standalone-collector
-rules:
-  - apiGroups: [""]
-    resources: ["pods", "namespaces"]
-    verbs: ["get", "watch", "list"]
-  - apiGroups: ["apps"]
-    resources: ["replicasets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["extensions"]
-    resources: ["replicasets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["events", "namespaces", "namespaces/status", "nodes", "nodes/spec", "pods", "pods/status", "replicationcontrollers", "replicationcontrollers/status", "resourcequotas", "services" ]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["daemonsets", "deployments", "replicasets", "statefulsets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["extensions"]
-    resources: ["daemonsets", "deployments", "replicasets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["batch"]
-    resources: ["jobs", "cronjobs"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["autoscaling"]
-    resources: ["horizontalpodautoscalers"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["nodes/stats"]
-    verbs: ["get", "watch", "list"]
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "watch"]
----
-# Source: opentelemetry-demo/charts/opentelemetry-collector/templates/clusterrolebinding.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: otel-collector
-  labels:
-    helm.sh/chart: opentelemetry-collector-0.142.2
-    app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: otel-demo
-    app.kubernetes.io/version: "0.142.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: opentelemetry-collector
-    app.kubernetes.io/component: standalone-collector
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: otel-collector
-subjects:
-- kind: ServiceAccount
-  name: otel-collector
-  namespace: opentelemetry-demo
----
-# Source: opentelemetry-demo/charts/opentelemetry-collector/templates/service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: otel-collector
-  namespace: opentelemetry-demo
-  labels:
-    helm.sh/chart: opentelemetry-collector-0.142.2
-    app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: otel-demo
-    app.kubernetes.io/version: "0.142.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: opentelemetry-collector
-    app.kubernetes.io/component: standalone-collector
-    component: standalone-collector
-spec:
-  type: ClusterIP
-  ports:
-    
-    - name: healthcheck
-      port: 13133
-      targetPort: 13133
-      protocol: TCP
-    - name: metrics
-      port: 8888
-      targetPort: 8888
-      protocol: TCP
-    - name: otlp
-      port: 4317
-      targetPort: 4317
-      protocol: TCP
-      appProtocol: grpc
-    - name: otlp-http
-      port: 4318
-      targetPort: 4318
-      protocol: TCP
-  selector:
-    app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: otel-demo
-    component: standalone-collector
-  internalTrafficPolicy: Cluster
----
 # Source: opentelemetry-demo/templates/component.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: ad
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: ad
     
@@ -740,7 +383,7 @@ kind: Service
 metadata:
   name: cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: cart
     
@@ -765,7 +408,7 @@ kind: Service
 metadata:
   name: checkout
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: checkout
     
@@ -790,7 +433,7 @@ kind: Service
 metadata:
   name: currency
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: currency
     
@@ -815,7 +458,7 @@ kind: Service
 metadata:
   name: email
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: email
     
@@ -840,7 +483,7 @@ kind: Service
 metadata:
   name: flagd
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: flagd
     
@@ -871,7 +514,7 @@ kind: Service
 metadata:
   name: frontend
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: frontend
     
@@ -896,7 +539,7 @@ kind: Service
 metadata:
   name: frontend-proxy
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: frontend-proxy
     
@@ -921,7 +564,7 @@ kind: Service
 metadata:
   name: image-provider
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: image-provider
     
@@ -946,7 +589,7 @@ kind: Service
 metadata:
   name: kafka
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: kafka
     
@@ -974,7 +617,7 @@ kind: Service
 metadata:
   name: llm
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: llm
     
@@ -999,7 +642,7 @@ kind: Service
 metadata:
   name: load-generator
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: load-generator
     
@@ -1024,7 +667,7 @@ kind: Service
 metadata:
   name: payment
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: payment
     
@@ -1049,7 +692,7 @@ kind: Service
 metadata:
   name: postgresql
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: postgresql
     
@@ -1074,7 +717,7 @@ kind: Service
 metadata:
   name: product-catalog
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: product-catalog
     
@@ -1099,7 +742,7 @@ kind: Service
 metadata:
   name: product-reviews
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: product-reviews
     
@@ -1124,7 +767,7 @@ kind: Service
 metadata:
   name: quote
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: quote
     
@@ -1149,7 +792,7 @@ kind: Service
 metadata:
   name: recommendation
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: recommendation
     
@@ -1174,7 +817,7 @@ kind: Service
 metadata:
   name: shipping
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: shipping
     
@@ -1199,7 +842,7 @@ kind: Service
 metadata:
   name: valkey-cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: valkey-cart
     
@@ -1218,135 +861,13 @@ spec:
     
     opentelemetry.io/name: valkey-cart
 ---
-# Source: opentelemetry-demo/charts/opentelemetry-collector/templates/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: otel-collector
-  namespace: opentelemetry-demo
-  labels:
-    helm.sh/chart: opentelemetry-collector-0.142.2
-    app.kubernetes.io/name: opentelemetry-collector
-    app.kubernetes.io/instance: otel-demo
-    app.kubernetes.io/version: "0.142.0"
-    app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/part-of: opentelemetry-collector
-    app.kubernetes.io/component: standalone-collector
-spec:
-  replicas: 1
-  revisionHistoryLimit: 10
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: opentelemetry-collector
-      app.kubernetes.io/instance: otel-demo
-      component: standalone-collector
-  strategy:
-    type: RollingUpdate
-  template:
-    metadata:
-      annotations:
-        checksum/config: 442f5efe361c693cf9e14ea32495eb46afeb6a2b4156b5f461cc13318665c813
-        opentelemetry_community_demo: "true"
-        prometheus.io/scrape: "true"
-      labels:
-        app.kubernetes.io/name: opentelemetry-collector
-        app.kubernetes.io/instance: otel-demo
-        component: standalone-collector
-        
-    spec:
-      
-      serviceAccountName: otel-collector
-      automountServiceAccountToken: true
-      securityContext:
-        {}
-      containers:
-        - name: opentelemetry-collector
-          args:
-            - --config=/conf/relay.yaml
-          securityContext:
-            {}
-          image: "otel/opentelemetry-collector-contrib:0.142.0"
-          imagePullPolicy: IfNotPresent
-          ports:
-            
-            - name: healthcheck
-              containerPort: 13133
-              protocol: TCP
-            - name: metrics
-              containerPort: 8888
-              protocol: TCP
-            - name: otlp
-              containerPort: 4317
-              protocol: TCP
-            - name: otlp-http
-              containerPort: 4318
-              protocol: TCP
-          env:
-            - name: MY_POD_IP
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: status.podIP
-            - name: K8S_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: K8S_NODE_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-            - name: GOMEMLIMIT
-              value: "160MiB"
-            - name: INTERNAL_TELEMETRY_SERVICE_NAME
-              value: astroshop-otel-collector
-            - name: KUBE_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: NR_LICENSE_KEY
-              valueFrom:
-                secretKeyRef:
-                  key: license-key
-                  name: newrelic-license-key
-            - name: OTEL_CLUSTER_NAME
-              value: opentelemetry-demo
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 13133
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 13133
-          resources:
-            limits:
-              memory: 200Mi
-          volumeMounts:
-            - mountPath: /conf
-              name: opentelemetry-collector-configmap
-            - name: hostfs
-              mountPath: /hostfs
-              readOnly: true
-              mountPropagation: HostToContainer
-      volumes:
-        - name: opentelemetry-collector-configmap
-          configMap:
-            name: otel-collector
-            items:
-              - key: relay
-                path: relay.yaml
-        - name: hostfs
-          hostPath:
-            path: /
-      hostNetwork: false
----
 # Source: opentelemetry-demo/templates/component.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: accounting
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: accounting
     
@@ -1389,6 +910,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -1401,7 +926,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: KAFKA_ADDR
@@ -1416,7 +941,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 300Mi
@@ -1438,7 +963,7 @@ kind: Deployment
 metadata:
   name: ad
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: ad
     
@@ -1485,6 +1010,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -1497,7 +1026,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: AD_PORT
@@ -1514,7 +1043,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 300Mi
@@ -1527,7 +1056,7 @@ kind: Deployment
 metadata:
   name: cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: cart
     
@@ -1574,6 +1103,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -1586,7 +1119,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: CART_PORT
@@ -1605,7 +1138,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 160Mi
@@ -1626,7 +1159,7 @@ kind: Deployment
 metadata:
   name: checkout
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: checkout
     
@@ -1673,6 +1206,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -1685,7 +1222,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: CHECKOUT_PORT
@@ -1716,10 +1253,12 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
-              memory: 20Mi
+              memory: 100Mi
+            requests:
+              memory: 50Mi
           volumeMounts:
       initContainers:
         - command:
@@ -1736,7 +1275,7 @@ kind: Deployment
 metadata:
   name: currency
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: currency
     
@@ -1783,6 +1322,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -1795,7 +1338,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: CURRENCY_PORT
@@ -1810,7 +1353,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 20Mi
@@ -1823,7 +1366,7 @@ kind: Deployment
 metadata:
   name: email
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: email
     
@@ -1870,6 +1413,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -1882,7 +1429,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: EMAIL_PORT
@@ -1899,7 +1446,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 100Mi
@@ -1912,7 +1459,7 @@ kind: Deployment
 metadata:
   name: flagd
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: flagd
     
@@ -1970,6 +1517,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -1982,7 +1533,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: FLAGD_METRICS_EXPORTER
@@ -1995,7 +1546,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 75Mi
@@ -2019,6 +1570,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2031,7 +1586,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: FLAGD_METRICS_EXPORTER
@@ -2048,7 +1603,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 250Mi
@@ -2080,7 +1635,7 @@ kind: Deployment
 metadata:
   name: fraud-detection
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: fraud-detection
     
@@ -2123,6 +1678,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2135,7 +1694,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: KAFKA_ADDR
@@ -2154,7 +1713,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 300Mi
@@ -2174,7 +1733,7 @@ kind: Deployment
 metadata:
   name: frontend
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: frontend
     
@@ -2221,6 +1780,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2233,7 +1796,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: FRONTEND_PORT
@@ -2276,7 +1839,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 250Mi
@@ -2293,7 +1856,7 @@ kind: Deployment
 metadata:
   name: frontend-proxy
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: frontend-proxy
     
@@ -2345,6 +1908,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2357,7 +1924,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: ENVOY_PORT
@@ -2404,7 +1971,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 65Mi
@@ -2421,7 +1988,7 @@ kind: Deployment
 metadata:
   name: image-provider
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: image-provider
     
@@ -2474,6 +2041,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2486,7 +2057,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: IMAGE_PROVIDER_PORT
@@ -2499,7 +2070,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 50Mi
@@ -2512,7 +2083,7 @@ kind: Deployment
 metadata:
   name: kafka
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: kafka
     
@@ -2561,6 +2132,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2573,7 +2148,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: KAFKA_ADVERTISED_LISTENERS
@@ -2592,7 +2167,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 600Mi
@@ -2609,7 +2184,7 @@ kind: Deployment
 metadata:
   name: llm
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: llm
     
@@ -2656,6 +2231,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2668,7 +2247,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: FLAGD_HOST
@@ -2679,7 +2258,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             null
           volumeMounts:
@@ -2691,7 +2270,7 @@ kind: Deployment
 metadata:
   name: load-generator
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: load-generator
     
@@ -2738,6 +2317,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2750,7 +2333,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: LOCUST_WEB_HOST
@@ -2783,7 +2366,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 1500Mi
@@ -2796,7 +2379,7 @@ kind: Deployment
 metadata:
   name: payment
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: payment
     
@@ -2843,6 +2426,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -2855,7 +2442,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: PAYMENT_PORT
@@ -2872,7 +2459,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 140Mi
@@ -2889,7 +2476,7 @@ kind: Deployment
 metadata:
   name: postgresql
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: postgresql
     
@@ -2974,7 +2561,7 @@ kind: Deployment
 metadata:
   name: product-catalog
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: product-catalog
     
@@ -3021,6 +2608,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -3033,7 +2624,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: PRODUCT_CATALOG_PORT
@@ -3043,7 +2634,7 @@ spec:
             - name: FLAGD_PORT
               value: "8013"
             - name: GOMEMLIMIT
-              value: 16MiB
+              value: 80MiB
             - name: DB_CONNECTION_STRING
               value: postgres://otelu:otelp@postgresql/otel?sslmode=disable
             - name: OTEL_SEMCONV_STABILITY_OPT_IN
@@ -3054,10 +2645,12 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
-              memory: 20Mi
+              memory: 100Mi
+            requests:
+              memory: 50Mi
           volumeMounts:
       volumes:
 ---
@@ -3067,7 +2660,7 @@ kind: Deployment
 metadata:
   name: product-reviews
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: product-reviews
     
@@ -3114,6 +2707,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -3126,7 +2723,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OPENAI_API_KEY
@@ -3161,7 +2758,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 100Mi
@@ -3174,7 +2771,7 @@ kind: Deployment
 metadata:
   name: quote
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: quote
     
@@ -3221,6 +2818,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -3233,7 +2834,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: QUOTE_PORT
@@ -3250,7 +2851,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 40Mi
@@ -3267,7 +2868,7 @@ kind: Deployment
 metadata:
   name: recommendation
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: recommendation
     
@@ -3314,6 +2915,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -3326,7 +2931,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: RECOMMENDATION_PORT
@@ -3347,7 +2952,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 500Mi
@@ -3360,7 +2965,7 @@ kind: Deployment
 metadata:
   name: shipping
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: shipping
     
@@ -3407,6 +3012,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OTEL_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
             - name: OTEL_K8S_CONTAINER_NAME
               valueFrom:
                 fieldRef:
@@ -3419,7 +3028,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: otel-collector
+              value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: SHIPPING_PORT
@@ -3434,7 +3043,7 @@ spec:
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=2.2.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
-                k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+                k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
               memory: 20Mi
@@ -3447,7 +3056,7 @@ kind: Deployment
 metadata:
   name: valkey-cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.2
+    helm.sh/chart: opentelemetry-demo-0.40.3
     
     opentelemetry.io/name: valkey-cart
     
