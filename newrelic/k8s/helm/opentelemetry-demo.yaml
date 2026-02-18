@@ -10,6 +10,10 @@ default:
       valueFrom:
         fieldRef:
           fieldPath: metadata.name
+    - name: OTEL_POD_UID
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.uid
     - name: OTEL_K8S_CONTAINER_NAME
       valueFrom:
         fieldRef:
@@ -22,7 +26,7 @@ default:
     - name: OTEL_CLUSTER_NAME
       value: opentelemetry-demo
     - name: OTEL_COLLECTOR_NAME
-      value: otel-collector
+      value: nr-k8s-otel-collector-gateway
     - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       value: delta
     - name: OTEL_RESOURCE_ATTRIBUTES
@@ -33,6 +37,7 @@ default:
         service.instance.id=$(OTEL_POD_NAME),
         k8s.container.name=$(OTEL_K8S_CONTAINER_NAME),
         k8s.pod.name=$(OTEL_POD_NAME),
+        k8s.pod.uid=$(OTEL_POD_UID),
         k8s.namespace.name=$(OTEL_NAMESPACE_NAME),
         k8s.cluster.name=$(OTEL_CLUSTER_NAME)
 
@@ -43,6 +48,33 @@ components:
         memory: 300Mi
       requests:
         memory: 200Mi
+  checkout:
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        memory: 50Mi
+  product-catalog:
+    resources:
+      limits:
+        memory: 100Mi
+      requests:
+        memory: 50Mi
+    env:
+      - name: PRODUCT_CATALOG_PORT
+        value: "8080"
+      - name: FLAGD_HOST
+        value: flagd
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: GOMEMLIMIT
+        value: 80MiB
+      - name: DB_CONNECTION_STRING
+        value: postgres://otelu:otelp@postgresql/otel?sslmode=disable
+      - name: OTEL_SEMCONV_STABILITY_OPT_IN
+        value: database
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4317
 
 # Disable non-NR components
 opensearch:
@@ -53,255 +85,5 @@ prometheus:
   enabled: false
 jaeger:
   enabled: false
-
 opentelemetry-collector:
-  enabled: true
-  extraEnvs:
-    - name: INTERNAL_TELEMETRY_SERVICE_NAME
-      value: astroshop-otel-collector
-    - name: KUBE_NODE_NAME
-      valueFrom:
-        fieldRef:
-          fieldPath: spec.nodeName
-    - name: NR_LICENSE_KEY
-      valueFrom:
-        secretKeyRef:
-          name: newrelic-license-key
-          key: license-key
-    - name: OTEL_CLUSTER_NAME
-      value: opentelemetry-demo
-  image:
-    repository: "otel/opentelemetry-collector-contrib"
-  fullnameOverride: otel-collector
-  mode: deployment
-  presets:
-    hostMetrics:
-      enabled: true
-  resources:
-    limits:
-      memory: 200Mi
-  service:
-    type: ClusterIP
-  ports:
-    healthcheck:
-      enabled: true
-      containerPort: 13133
-      servicePort: 13133
-      hostPort: 13133
-      protocol: TCP
-    jaeger-compact:
-      enabled: false
-    jaeger-thrift:
-      enabled: false
-    jaeger-grpc:
-      enabled: false
-    zipkin:
-      enabled: false
-    metrics:
-      enabled: true
-  podAnnotations:
-    prometheus.io/scrape: "true"
-    opentelemetry_community_demo: "true"
-  alternateConfig:
-    exporters:
-      debug: {}
-      otlphttp/newrelic:
-        endpoint: https://otlp.nr-data.net:4318
-        headers:
-          api-key: ${env:NR_LICENSE_KEY}
-
-    extensions:
-      health_check:
-        endpoint: 0.0.0.0:13133
-
-    processors:
-      batch: {}
-      cumulativetodelta: {}
-      k8sattributes:
-        extract:
-          metadata:
-          - k8s.namespace.name
-          - k8s.deployment.name
-          - k8s.statefulset.name
-          - k8s.daemonset.name
-          - k8s.cronjob.name
-          - k8s.job.name
-          - k8s.node.name
-          - k8s.pod.name
-          - k8s.pod.uid
-          - k8s.pod.start_time
-        passthrough: false
-        pod_association:
-        - sources:
-          - from: resource_attribute
-            name: k8s.pod.ip
-        - sources:
-          - from: resource_attribute
-            name: k8s.pod.uid
-        - sources:
-          - from: connection
-      memory_limiter:
-        check_interval: 5s
-        limit_percentage: 80
-        spike_limit_percentage: 25
-      resource:
-        attributes:
-        - action: insert
-          from_attribute: k8s.pod.name
-          key: service.instance.id
-      resourcedetection/env:
-        detectors:
-        - env
-        - system
-        override: false
-        system:
-          hostname_sources:
-          - os
-          resource_attributes:
-            host.id:
-              enabled: true
-      transform:
-        error_mode: ignore
-        log_statements:
-        - context: log
-          statements:
-          - truncate_all(attributes, 4095)
-          - truncate_all(resource.attributes, 4095)
-        trace_statements:
-        - context: span
-          statements:
-          - truncate_all(attributes, 4095)
-          - truncate_all(resource.attributes, 4095)
-        - context: span
-          statements:
-          - replace_pattern(name, "\\?.*", "")
-          - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
-
-    receivers:
-      hostmetrics:
-        collection_interval: 10s
-        root_path: /hostfs
-        scrapers:
-          cpu: null
-          disk: null
-          filesystem:
-            exclude_fs_types:
-              fs_types:
-              - autofs
-              - binfmt_misc
-              - bpf
-              - cgroup2
-              - configfs
-              - debugfs
-              - devpts
-              - devtmpfs
-              - fusectl
-              - hugetlbfs
-              - iso9660
-              - mqueue
-              - nsfs
-              - overlay
-              - proc
-              - procfs
-              - pstore
-              - rpc_pipefs
-              - securityfs
-              - selinuxfs
-              - squashfs
-              - sysfs
-              - tracefs
-              match_type: strict
-            exclude_mount_points:
-              match_type: regexp
-              mount_points:
-              - /dev/*
-              - /proc/*
-              - /sys/*
-              - /run/k3s/containerd/*
-              - /var/lib/docker/*
-              - /var/lib/kubelet/*
-              - /snap/*
-          load: null
-          memory: null
-          network: null
-      httpcheck/frontend-proxy:
-        targets:
-        - endpoint: http://frontend-proxy:8080
-      otlp:
-        protocols:
-          grpc:
-            endpoint: ${env:MY_POD_IP}:4317
-          http:
-            cors:
-              allowed_origins:
-              - http://*
-              - https://*
-            endpoint: ${env:MY_POD_IP}:4318
-      prometheus:
-        config:
-          scrape_configs:
-          - job_name: opentelemetry-collector
-            scrape_interval: 30s
-            static_configs:
-            - targets:
-              - ${env:MY_POD_IP}:8888
-      redis:
-        collection_interval: 30s
-        endpoint: valkey-cart:6379
-
-    service:
-      extensions:
-      - health_check
-      pipelines:
-        logs:
-          exporters:
-          - otlphttp/newrelic
-          - debug
-          processors:
-          - k8sattributes
-          - memory_limiter
-          - resource
-          - transform
-          - batch
-          receivers:
-          - otlp
-        metrics:
-          exporters:
-          - otlphttp/newrelic
-          - debug
-          processors:
-          - memory_limiter
-          - resource
-          - resourcedetection/env
-          - k8sattributes
-          - cumulativetodelta
-          - batch
-          receivers:
-          - hostmetrics
-          - redis
-          - otlp
-        traces:
-          exporters:
-          - otlphttp/newrelic
-          - debug
-          processors:
-          - k8sattributes
-          - memory_limiter
-          - resource
-          - resourcedetection/env
-          - transform
-          - batch
-          receivers:
-          - otlp
-      telemetry:
-        metrics:
-          # address: ${env:MY_POD_IP}:8888
-          level: basic
-          readers:
-          - periodic:
-              exporter:
-                otlp:
-                  endpoint: http://${env:MY_POD_IP}:4318
-                  protocol: http/protobuf
-              interval: 30000
-              timeout: 5000
+  enabled: false
