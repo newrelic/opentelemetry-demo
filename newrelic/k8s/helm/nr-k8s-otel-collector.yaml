@@ -1,3 +1,78 @@
 cluster: "opentelemetry-demo"
 customSecretName: "newrelic-license-key"
 customSecretLicenseKey: "license-key"
+
+# This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
+# By adding this, we can disable the OTel Collector shipped as part of the OpenTelemetry Demo application,
+# and rely solely on the NRDOT K8s OTel Collector instances.
+deployment:
+  configMap:
+    extraConfig:
+      exporters: 
+        debug: {}
+      processors:
+        # Drop Python system metrics since they're duplicates of hostmetrics 
+        # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/system_metrics/system_metrics.html
+        filter/python-system-metrics:
+          error_mode: ignore
+          metrics:
+            metric:
+              - 'instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"'
+        resourcedetection/otel-demo:
+          detectors: [env]
+        # This processor is used to help limit high cardinality on next.js span names
+        # When this PR is merged (and released) we can remove this transform processor
+        # https://github.com/vercel/next.js/pull/64852
+        transform/otel-demo:
+          error_mode: ignore
+          trace_statements:
+            - context: span
+              statements:
+                # could be removed when https://github.com/vercel/next.js/pull/64852 is fixed upstream
+                - replace_pattern(name, "\\?.*", "")
+                - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+        resource/otel-demo:
+          attributes:
+          - key: service.instance.id
+            from_attribute: k8s.pod.uid
+            action: insert
+          - key: brad.source
+            action: insert
+            value: astroshop
+      pipelines:
+        metrics/otel-demo:
+          receivers:
+            - otlp
+          processors:
+            - memory_limiter
+            - filter/python-system-metrics
+            - resourcedetection/otel-demo
+            - resource/otel-demo
+            - k8sattributes/ksm
+            - batch
+          exporters:
+            - otlphttp/newrelic
+            - debug
+        traces/otel-demo:
+          receivers:
+            - otlp
+          processors:
+            - memory_limiter
+            - resourcedetection/otel-demo
+            - resource/otel-demo
+            - transform/otel-demo
+            - k8sattributes/ksm
+            - batch
+          exporters:
+            - otlphttp/newrelic
+        logs/otel-demo:
+          receivers:
+            - otlp
+          processors:
+            - memory_limiter
+            - resourcedetection/otel-demo
+            - resource/otel-demo
+            - transform/otel-demo
+            - batch
+          exporters:
+            - otlphttp/newrelic
