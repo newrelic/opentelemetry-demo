@@ -395,7 +395,10 @@ services:
     logging: *logging
   # Load Generator
   load-generator:
-    image: ${IMAGE_NAME}:${DEMO_VERSION}-load-generator
+    # Downgrading load-generator image to 2.0.2 to avoid issues with newrelic browser monitoring
+    # https://github.com/open-telemetry/opentelemetry-demo/issues/2686
+    # image: ${IMAGE_NAME}:${DEMO_VERSION}-load-generator  
+    image: ghcr.io/open-telemetry/demo:2.0.2-load-generator
     container_name: load-generator
     build:
       context: ./
