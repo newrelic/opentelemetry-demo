@@ -41,8 +41,8 @@ GOOS=windows GOARCH=amd64 go build -o nr-otel-cli .
 Ensure the binary has execution permissions (Mac/Linux) and run it:
 
 ```bash
-chmod +x otel-demo
-./otel-demo
+chmod +x nr-otel-cli
+./nr-otel-cli
 ```
 
 ## General Usage
