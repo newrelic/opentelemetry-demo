@@ -208,10 +208,10 @@ func parseArgs() (Config, []string) {
 				cfg.SubaccountName = val
 			case "TF_VAR_ADMIN_GROUP_NAME":
 				cfg.AdminGroupName = val
-			case "TF_VAR_READONLY_USER_EMAIL":
-				cfg.ReadonlyUserEmail = val
-			case "TF_VAR_READONLY_USER_NAME":
-				cfg.ReadonlyUserName = val
+			case "TF_VAR_USER_EMAIL":
+				cfg.UserEmail = val
+			case "TF_VAR_USER_NAME":
+				cfg.UserName = val
 			}
 		} else {
 			positionals = append(positionals, arg)
@@ -257,8 +257,8 @@ TERRAFORM ACCOUNT FLAGS (Required for 'account' target):
   --NEW_RELIC_ACCOUNT_ID       - New Relic Parent Account
   --TF_VAR_SUBACCOUNT_NAME     - Display name for the new sub-account
   --TF_VAR_ADMIN_GROUP_NAME    - Name of an existing group to grant Admin access
-  --TF_VAR_READONLY_USER_NAME  - Display name for the new read-only user
-  --TF_VAR_READONLY_USER_EMAIL - Email address for the new read-only user
+  --TF_VAR_USER_NAME           - Display name for the new user
+  --TF_VAR_USER_EMAIL          - Email address for the new user
 
 All flags above can also be set as environment variables.
 If required values are missing, the CLI will prompt for them interactively.

@@ -9,7 +9,7 @@ output "license_key" {
   sensitive   = true
 }
 
-output "readonly_user_email" {
-  description = "Email address of the created read-only user"
-  value       = newrelic_user.readonly_user.email_id
+output "user_email" {
+  description = "Email address of the created user"
+  value       = newrelic_user.user.email_id
 }

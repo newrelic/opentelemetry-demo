@@ -41,34 +41,34 @@ resource "terraform_data" "admin_access_grant" {
   }
 }
 
-# Get readonly authentication domain
-data "newrelic_authentication_domain" "readonly_auth_domain" {
-  name = var.readonly_authentication_domain_name
+# Get user authentication domain
+data "newrelic_authentication_domain" "user_auth_domain" {
+  name = var.user_authentication_domain_name
 }
 
-# Create read-only user
-resource "newrelic_user" "readonly_user" {
-  authentication_domain_id = data.newrelic_authentication_domain.readonly_auth_domain.id
-  email_id                 = var.readonly_user_email
-  name                     = var.readonly_user_name
+# Create user
+resource "newrelic_user" "user" {
+  authentication_domain_id = data.newrelic_authentication_domain.user_auth_domain.id
+  email_id                 = var.user_email
+  name                     = var.user_name
   user_type                = "FULL_USER_TIER"
 }
 
-# Create readonly group with user
-resource "newrelic_group" "readonly_group" {
-  authentication_domain_id = data.newrelic_authentication_domain.readonly_auth_domain.id
-  name                     = "${var.subaccount_name} - ReadOnly"
-  user_ids                 = [newrelic_user.readonly_user.id]
+# Create user group with user
+resource "newrelic_group" "user_group" {
+  authentication_domain_id = data.newrelic_authentication_domain.user_auth_domain.id
+  name                     = "${var.subaccount_name} - User"
+  user_ids                 = [newrelic_user.user.id]
 }
 
-# Grant readonly group access to the sub-account
-resource "terraform_data" "readonly_access_grant" {
+# Grant user group access to the sub-account
+resource "terraform_data" "user_access_grant" {
   triggers_replace = {
     account_id = newrelic_account_management.subaccount.id
     api_key    = var.newrelic_api_key
     region     = upper(var.newrelic_region) == "US" ? "newrelic" : "eu.newrelic"
-    group_id   = newrelic_group.readonly_group.id
-    role_name  = var.readonly_role_name
+    group_id   = newrelic_group.user_group.id
+    role_name  = var.user_role_name
   }
 
   provisioner "local-exec" {
@@ -81,7 +81,7 @@ resource "terraform_data" "readonly_access_grant" {
   }
 
   depends_on = [
-    newrelic_group.readonly_group
+    newrelic_group.user_group
   ]
 }
 

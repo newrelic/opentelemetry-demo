@@ -36,7 +36,7 @@ type Config struct {
 	LicenseKey, ApiKey, AccountId, Region, Target, Action string
 	EnableBrowser                                         *bool
 	SubaccountName, AdminGroupName                        string
-	ReadonlyUserEmail, ReadonlyUserName                   string
+	UserEmail, UserName                                   string
 }
 
 func loadConfig(cfg *Config) {
@@ -80,11 +80,11 @@ func loadConfig(cfg *Config) {
 		if cfg.AdminGroupName == "" {
 			cfg.AdminGroupName = promptUser("Existing Admin Group Name", validateNotEmpty)
 		}
-		if cfg.ReadonlyUserEmail == "" {
-			cfg.ReadonlyUserEmail = promptUser("New Read-Only User Email", validateNotEmpty)
+		if cfg.UserEmail == "" {
+			cfg.UserEmail = promptUser("New User Email", validateNotEmpty)
 		}
-		if cfg.ReadonlyUserName == "" {
-			cfg.ReadonlyUserName = promptUser("New Read-Only User Name", validateNotEmpty)
+		if cfg.UserName == "" {
+			cfg.UserName = promptUser("New User Name", validateNotEmpty)
 		}
 	}
 }

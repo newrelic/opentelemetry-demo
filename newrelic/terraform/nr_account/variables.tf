@@ -44,24 +44,24 @@ variable "admin_role_name" {
   default     = "all_product_admin"
 }
 
-variable "readonly_authentication_domain_name" {
-  description = "Authentication domain for creating the read-only user (only basic auth supported)"
+variable "user_authentication_domain_name" {
+  description = "Authentication domain for creating the user (only basic auth supported)"
   type        = string
   default     = "Default"
 }
 
-variable "readonly_role_name" {
-  description = "Role to grant the readonly group in the new account"
+variable "user_role_name" {
+  description = "Role to grant the user group in the new account"
   type        = string
   default     = "read_only"
 }
 
-variable "readonly_user_email" {
-  description = "Email address of the read-only user to create"
+variable "user_email" {
+  description = "Email address of the user to create"
   type        = string
 }
 
-variable "readonly_user_name" {
-  description = "Display name of the read-only user"
+variable "user_name" {
+  description = "Display name of the user"
   type        = string
 }

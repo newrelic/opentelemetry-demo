@@ -94,8 +94,8 @@ func buildEnvMap(cfg *Config) []string {
 		"TF_VAR_newrelic_region":            cfg.Region,
 		"TF_VAR_subaccount_name":            cfg.SubaccountName,
 		"TF_VAR_admin_group_name":           cfg.AdminGroupName,
-		"TF_VAR_readonly_user_email":        cfg.ReadonlyUserEmail,
-		"TF_VAR_readonly_user_name":         cfg.ReadonlyUserName,
+		"TF_VAR_user_email":                 cfg.UserEmail,
+		"TF_VAR_user_name":                  cfg.UserName,
 	}
 	for k, v := range mapping {
 		if v != "" {

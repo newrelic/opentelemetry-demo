@@ -99,8 +99,8 @@ All flags can be passed as command-line arguments (e.g., `--NEW_RELIC_REGION=EU`
 * `--NEW_RELIC_ACCOUNT_ID`: Your Parent Account ID.
 * `--TF_VAR_SUBACCOUNT_NAME`: Name for the new sub-account.
 * `--TF_VAR_ADMIN_GROUP_NAME`: Existing group name to grant Admin access.
-* `--TF_VAR_READONLY_USER_NAME`: Name for the new read-only user.
-* `--TF_VAR_READONLY_USER_EMAIL`: Email for the new read-only user.
+* `--TF_VAR_USER_NAME`: Name for the new user.
+* `--TF_VAR_USER_EMAIL`: Email for the new user.
 
 ### Browser Monitoring Flags
 

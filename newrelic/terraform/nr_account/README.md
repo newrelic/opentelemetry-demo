@@ -7,7 +7,7 @@ This Terraform module creates a New Relic sub-account and generates a license ke
 Use this module to:
 1. Create a dedicated New Relic sub-account for the OpenTelemetry Demo
 2. Grant admin group access to the sub-account
-3. Create a read-only user with limited access to the sub-account
+3. Create a user with configurable role access to the sub-account
 4. Generate a license key for data ingestion
 
 ## Prerequisites
@@ -22,9 +22,9 @@ Use this module to:
 - The `newrelic_api_key` must belong to a user with "Organization Manager" permissions
 - The `admin_group_name` must already exist in New Relic
 - The API key user should be a member of the group specified in `admin_group_name`
-- The `readonly_authentication_domain_name` must use basic authentication (SAML/OIDC not yet supported here)
-- A readonly group will be created automatically with the name `"{subaccount_name} - ReadOnly"`
-- A user will be added to this group, and an invitation sent to `readonly_user_email`
+- The `user_authentication_domain_name` must use basic authentication (SAML/OIDC not yet supported here)
+- A user group will be created automatically with the name `"{subaccount_name} - User"`
+- A user will be added to this group, and an invitation sent to `user_email`
 
 ## Usage
 
@@ -57,10 +57,10 @@ terraform apply
 | admin_authentication_domain_name | Authentication domain containing `admin_group_name` group                                             | `string` | `"Default"`           | no |
 | admin_group_name | Name of an existing group to grant `admin_role_name` in the new account                               | `string` | n/a                   | yes |
 | admin_role_name | Role to grant `admin_group_name`; must have permissions to create license keys                        | `string` | `"all_product_admin"` | no |
-| readonly_authentication_domain_name | Authentication domain for creating the read-only user (only basic auth supported)                     | `string` | `"Default"`           | no |
-| readonly_role_name | Role to grant the `readonly_group_name` in the new account                                             | `string` | `"read_only"`         | no |
-| readonly_user_email | Email address of the read-only user to create                                                         | `string` | n/a                   | yes |
-| readonly_user_name | Display name of the read-only user                                                                    | `string` | n/a                   | yes |
+| user_authentication_domain_name | Authentication domain for creating the user (only basic auth supported)                     | `string` | `"Default"`           | no |
+| user_role_name | Role to grant the user group in the new account                                             | `string` | `"read_only"`         | no |
+| user_email | Email address of the user to create                                                         | `string` | n/a                   | yes |
+| user_name | Display name of the user                                                                    | `string` | n/a                   | yes |
 
 Set variables using environment variables (recommended):
 - `TF_VAR_newrelic_api_key` - Your User API Key
@@ -70,10 +70,10 @@ Set variables using environment variables (recommended):
 - `TF_VAR_admin_authentication_domain_name` - Auth domain for admin (defaults to "Default")
 - `TF_VAR_admin_group_name` - Existing admin group name (required)
 - `TF_VAR_admin_role_name` - Admin role name (defaults to "all_product_admin")
-- `TF_VAR_readonly_authentication_domain_name` - Auth domain for readonly user (defaults to "Default")
-- `TF_VAR_readonly_role_name` - Readonly role name (defaults to "read_only")
-- `TF_VAR_readonly_user_email` - Email address for readonly user (required)
-- `TF_VAR_readonly_user_name` - Display name for readonly user (required)
+- `TF_VAR_user_authentication_domain_name` - Auth domain for user (defaults to "Default")
+- `TF_VAR_user_role_name` - User role name (defaults to "read_only")
+- `TF_VAR_user_email` - Email address for user (required)
+- `TF_VAR_user_name` - Display name for user (required)
 
 **Using the automated scripts**: The repository includes convenience scripts (`install-nr-account.sh`, `cleanup-nr-account.sh`) in the `scripts/` directory that handle the Terraform workflow. Variables not set via environment variables will be prompted for by Terraform interactively.
 
@@ -91,11 +91,11 @@ admin_authentication_domain_name = "Default"                           # Your au
 admin_group_name                 = "Admins"                            # Existing group to grant access
 admin_role_name                  = "all_product_admin"                 # Role for managing the account
 
-# Read-only user setup
-readonly_authentication_domain_name = "Default"                        # Auth domain for readonly user
-readonly_role_name                  = "read_only"                      # Role for readonly user
-readonly_user_email                 = "readonly@example.com"           # Email for readonly user
-readonly_user_name                  = "ReadOnly User"                  # Display name for readonly user
+# User setup
+user_authentication_domain_name = "Default"                        # Auth domain for user
+user_role_name                  = "read_only"                      # Role for user
+user_email                      = "user@example.com"               # Email for user
+user_name                       = "Demo User"                      # Display name for user
 ```
 
 ## Outputs
@@ -104,11 +104,11 @@ readonly_user_name                  = "ReadOnly User"                  # Display
 |------|-------------|:---------:|
 | account_id | The ID of the created sub-account | no |
 | license_key | The license key for data ingestion | yes |
-| readonly_user_email | Email address of the created read-only user | no |
+| user_email | Email address of the created user | no |
 
-## Read-Only User Setup
+## User Setup
 
-This module automatically creates a read-only user with full Terraform management:
+This module automatically creates a user with full Terraform management:
 
 **Important Notes:**
 - A new group is created for each sub-account automatically
