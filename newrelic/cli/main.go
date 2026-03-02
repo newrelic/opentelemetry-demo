@@ -200,10 +200,8 @@ func parseArgs() (Config, []string) {
 			case "NEW_RELIC_REGION":
 				cfg.Region = strings.ToUpper(val)
 			case "NEW_RELIC_ENABLE_BROWSER":
-				if val == "" || strings.ToLower(val) == "true" {
-					b := true
-					cfg.EnableBrowser = &b
-				}
+				b := strings.ToLower(val) == "true" || val == ""
+				cfg.EnableBrowser = &b
 			case "TF_VAR_SUBACCOUNT_NAME":
 				cfg.SubaccountName = val
 			case "TF_VAR_ADMIN_GROUP_NAME":
