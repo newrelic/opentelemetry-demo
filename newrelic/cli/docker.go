@@ -38,8 +38,12 @@ func handleDocker(action string, cfg *Config) {
 	}
 
 	// 4. Browser Setup & Terraform
-	enableBrowser := promptBool("Do you want to enable Digital Experience Monitoring (Browser)?")
-	cfg.EnableBrowser = &enableBrowser
+	// FIX: Only prompt if the flag wasn't already provided
+	if cfg.EnableBrowser == nil {
+		enableBrowser := promptBool("Do you want to enable Digital Experience Monitoring (Browser)?")
+		cfg.EnableBrowser = &enableBrowser
+	}
+
 	if *cfg.EnableBrowser {
 		if cfg.ApiKey == "" {
 			cfg.ApiKey = promptUser("User API Key (NRAK)", validateUserApiKey)
@@ -54,7 +58,7 @@ func handleDocker(action string, cfg *Config) {
 
 	// 5. Generate Permanent Patched Files
 	if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
-		fmt.Println("\n>>> 📦 Injecting Browser IDs into Docker Patch...")
+		fmt.Println("\n>>> Injecting Browser IDs into Docker Patch...")
 
 		tfPath := Paths["tf-browser"]
 		tfEnv := buildEnvMap(cfg)
@@ -99,7 +103,7 @@ func handleDocker(action string, cfg *Config) {
 		os.WriteFile(injectedPatchPath, []byte(content), 0644)
 
 		overrideYamlPath := filepath.Join(filepath.Dir(basePath), "docker-compose-browser.yaml")
-		overrideContent := fmt.Sprintf(`
+		overrideContent := `
 services:
   frontend:
     volumes:
@@ -108,7 +112,7 @@ services:
       - "--require=./Instrumentation.js"
       - "--require=./monkey-patch.js"
       - "server.js"
-`)
+`
 		os.WriteFile(overrideYamlPath, []byte(overrideContent), 0644)
 
 		// Tell Docker to use this new file

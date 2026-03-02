@@ -18,9 +18,12 @@ func handleK8s(action string, cfg *Config) {
 		runCommand("kubectl", []string{"delete", "ns", ns}, nil)
 		return
 	}
-    // Explicitly ask if the user wants to enable Browser Monitoring every time.
-    enableBrowser := promptBool("Do you want to enable Digital Experience Monitoring (Browser)?")
-    cfg.EnableBrowser = &enableBrowser
+	// Explicitly ask if the user wants to enable Browser Monitoring every time.
+	// FIX: Only prompt if the flag wasn't already provided
+	if cfg.EnableBrowser == nil {
+		enableBrowser := promptBool("Do you want to enable Digital Experience Monitoring (Browser)?")
+		cfg.EnableBrowser = &enableBrowser
+	}
 
 	if *cfg.EnableBrowser {
 		if cfg.ApiKey == "" {
@@ -47,10 +50,10 @@ func handleK8s(action string, cfg *Config) {
 	installChart("nr-k8s", []string{Paths["nr-k8s-values"]}, cfg)
 
 	otelValues := []string{Paths["otel-values"]}
-    	if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
-    		otelValues = append(otelValues, Paths["otel-browser-values"])
-    	}
-    	installChart("otel-demo", otelValues, cfg)
+	if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
+		otelValues = append(otelValues, Paths["otel-browser-values"])
+	}
+	installChart("otel-demo", otelValues, cfg)
 }
 
 func installChart(key string, values []string, cfg *Config) {
