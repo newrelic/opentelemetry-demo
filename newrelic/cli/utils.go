@@ -9,6 +9,9 @@ import (
 )
 
 func runCommand(name string, args []string, env []string) error {
+	fmt.Printf("\x1b[?2004l")
+	defer fmt.Printf("\x1b[?2004h")
+
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -32,38 +35,8 @@ func checkTools(tools ...string) {
 	}
 }
 
-// createPatchedTempFile reads a template, applies replacements, and returns the path to a temp file.
-// The caller is responsible for calling the returned cleanup function.
-func createPatchedTempFile(originalPath string, replacements map[string]string) (string, func(), error) {
-	content, err := os.ReadFile(originalPath)
-	if err != nil {
-		return "", nil, fmt.Errorf("could not read template %s: %v", originalPath, err)
-	}
-
-	newContent := string(content)
-	for oldStr, newStr := range replacements {
-		newContent = strings.ReplaceAll(newContent, oldStr, newStr)
-	}
-
-	tmpFile, err := os.CreateTemp("", "nr-otel-tmp-*")
-	if err != nil {
-		return "", nil, fmt.Errorf("could not create temp file: %v", err)
-	}
-
-	if _, err := tmpFile.Write([]byte(newContent)); err != nil {
-		os.Remove(tmpFile.Name())
-		return "", nil, fmt.Errorf("could not write to temp file: %v", err)
-	}
-	tmpFile.Close()
-
-	cleanup := func() { os.Remove(tmpFile.Name()) }
-	return tmpFile.Name(), cleanup, nil
-}
-
-// -- Input & Validation Helpers --
-
 func promptUser(label string, validator func(string) error) string {
-	fmt.Printf("\x1b[?2004l") // Disable bracketed paste
+	fmt.Printf("\x1b[?2004l")
 	defer fmt.Printf("\x1b[?2004h")
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -123,4 +96,35 @@ func validateNotEmpty(val string) error {
 		return fmt.Errorf("value is required")
 	}
 	return nil
+}
+
+func saveConfigToEnv(cfg *Config) {
+	envMap := map[string]string{
+		"NEW_RELIC_LICENSE_KEY":             cfg.LicenseKey,
+		"NEW_RELIC_API_KEY":                 cfg.ApiKey,
+		"NEW_RELIC_ACCOUNT_ID":              cfg.AccountId,
+		"NEW_RELIC_REGION":                  cfg.Region,
+		"TF_VAR_newrelic_api_key":           cfg.ApiKey,
+		"TF_VAR_newrelic_account_id":        cfg.SubAccountId,
+		"TF_VAR_newrelic_parent_account_id": cfg.ParentAccountId,
+		"TF_VAR_subaccount_name":            cfg.SubaccountName,
+		"TF_VAR_admin_group_name":           cfg.AdminGroupName,
+		"TF_VAR_readonly_user_email":        cfg.ReadonlyUserEmail,
+		"TF_VAR_readonly_user_name":         cfg.ReadonlyUserName,
+		"BROWSER_LICENSE_KEY":               cfg.BrowserLicenseKey,
+		"BROWSER_APPLICATION_ID":            cfg.BrowserAppID,
+		"BROWSER_ACCOUNT_ID":                cfg.BrowserAccountID,
+		"BROWSER_TRUST_KEY":                 cfg.BrowserTrustKey,
+		"BROWSER_AGENT_ID":                  cfg.BrowserAgentID,
+	}
+
+	var lines []string
+	for k, v := range envMap {
+		if v != "" {
+			lines = append(lines, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
+	os.WriteFile(".env", []byte(strings.Join(lines, "\n")+"\n"), 0644)
+	fmt.Println("\n>>> Configuration updated in .env")
 }

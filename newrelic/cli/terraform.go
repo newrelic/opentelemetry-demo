@@ -1,15 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
-	"text/template"
 )
 
-// BrowserConfig structure to parse the 'js_config' output from Terraform
 type BrowserConfig struct {
 	Info struct {
 		AppID interface{} `json:"applicationID"`
@@ -22,7 +19,6 @@ type BrowserConfig struct {
 	} `json:"loader_config"`
 }
 
-// TemplateData holds the finalized strings to inject into the YAML
 type TemplateData struct {
 	LicenseKey string
 	AppID      string
@@ -31,16 +27,18 @@ type TemplateData struct {
 	AgentID    string
 }
 
-func handleTerraform(action, target string, cfg *Config) {
+func handleTerraform(action string, cfg *Config) {
 	checkTools("terraform", "jq")
 
 	var tfPath string
-	switch target {
+	switch cfg.Target {
 	case "account":
 		tfPath = Paths["tf-account"]
 	case "resources":
 		tfPath = Paths["tf-resources"]
 	case "browser":
+		tfPath = Paths["tf-browser"]
+	default:
 		tfPath = Paths["tf-browser"]
 	}
 
@@ -50,6 +48,66 @@ func handleTerraform(action, target string, cfg *Config) {
 
 	if action == "uninstall" {
 		runCommand("terraform", append(tfArgs, "destroy", autoApprove), env)
+
+		if cfg.Target == "account" {
+			fmt.Println("\n>>> Restoring environment and clearing sub-account/browser metadata...")
+
+			// 1. Memory Cleanup
+			keysToClear := []string{
+				"NEW_RELIC_ACCOUNT_ID", "NEW_RELIC_LICENSE_KEY",
+				"TF_VAR_SUBACCOUNT_NAME", "TF_VAR_ADMIN_GROUP_NAME",
+				"TF_VAR_READONLY_USER_NAME", "TF_VAR_READONLY_USER_EMAIL",
+				"BROWSER_LICENSE_KEY", "BROWSER_APPLICATION_ID",
+				"BROWSER_ACCOUNT_ID", "BROWSER_TRUST_KEY", "BROWSER_AGENT_ID",
+			}
+			for _, k := range keysToClear {
+				os.Unsetenv(k)
+			}
+
+			// 2. Restoration Logic (Flag > Initial Capture > Reset)
+			cmdCfg, _ := parseArgs()
+
+			// Account ID
+			if cmdCfg.AccountId != "" {
+				cfg.AccountId = cmdCfg.AccountId
+			} else if InitialAccountId != "" {
+				cfg.AccountId = InitialAccountId
+			} else {
+				cfg.AccountId = ""
+			}
+
+			// License Key
+			if cmdCfg.LicenseKey != "" {
+				cfg.LicenseKey = cmdCfg.LicenseKey
+			} else if InitialLicenseKey != "" {
+				cfg.LicenseKey = InitialLicenseKey
+			} else {
+				cfg.LicenseKey = ""
+			}
+
+			// 3. Struct Reset
+			cfg.SubAccountId = ""
+			cfg.ParentAccountId = ""
+			cfg.SubaccountName = ""
+			cfg.AdminGroupName = ""
+			cfg.ReadonlyUserName = ""
+			cfg.ReadonlyUserEmail = ""
+			cfg.BrowserLicenseKey = ""
+			cfg.BrowserAppID = ""
+			cfg.BrowserAccountID = ""
+			cfg.BrowserTrustKey = ""
+			cfg.BrowserAgentID = ""
+
+			// Update process memory for UI
+			if cfg.AccountId != "" {
+				os.Setenv("NEW_RELIC_ACCOUNT_ID", cfg.AccountId)
+			}
+			if cfg.LicenseKey != "" {
+				os.Setenv("NEW_RELIC_LICENSE_KEY", cfg.LicenseKey)
+			}
+
+			saveConfigToEnv(cfg)
+		}
 		return
 	}
 
@@ -57,11 +115,14 @@ func handleTerraform(action, target string, cfg *Config) {
 		return
 	}
 
-	if target == "account" {
+	if cfg.Target == "account" {
 		runCommand("terraform", append(tfArgs, "apply", "-target=newrelic_account_management.subaccount", autoApprove), env)
 		out, _ := exec.Command("terraform", append(tfArgs, "output", "-raw", "account_id")...).Output()
 		if id := strings.TrimSpace(string(out)); id != "" {
-			fmt.Printf("Captured New Sub-Account ID: %s\n", id)
+			if cfg.ParentAccountId == "" {
+				cfg.ParentAccountId = cfg.AccountId
+			}
+			cfg.SubAccountId = id
 			cfg.AccountId = id
 			env = buildEnvMap(cfg)
 		}
@@ -71,26 +132,28 @@ func handleTerraform(action, target string, cfg *Config) {
 		return
 	}
 
-	if target == "account" {
-		out, err := exec.Command("terraform", append(tfArgs, "output", "-raw", "license_key")...).Output()
-		if err == nil {
-			licenseKey := strings.TrimSpace(string(out))
-			if licenseKey != "" {
-				cfg.LicenseKey = licenseKey
-				os.Setenv("NEW_RELIC_LICENSE_KEY", licenseKey)
-			}
-		}
-	} else if target == "browser" {
-		injectBrowserConfig(tfArgs, env)
+	if cfg.Target == "account" {
+		out, _ := exec.Command("terraform", append(tfArgs, "output", "-raw", "license_key")...).Output()
+		cfg.LicenseKey = strings.TrimSpace(string(out))
+	} else if cfg.Target == "browser" {
+		fetchBrowserConfigFromTF(tfArgs, env, cfg)
 	}
+
+	saveConfigToEnv(cfg)
 }
 
 func buildEnvMap(cfg *Config) []string {
+	parentID := cfg.ParentAccountId
+	if parentID == "" {
+		parentID = cfg.AccountId
+	}
+
 	env := os.Environ()
+	// Keys MUST match variables.tf suffixes in lowercase
 	mapping := map[string]string{
 		"TF_VAR_newrelic_api_key":           cfg.ApiKey,
-		"TF_VAR_newrelic_parent_account_id": cfg.AccountId,
-		"TF_VAR_newrelic_account_id":        cfg.AccountId,
+		"TF_VAR_newrelic_parent_account_id": parentID,
+		"TF_VAR_newrelic_account_id":        cfg.SubAccountId,
 		"TF_VAR_newrelic_region":            cfg.Region,
 		"TF_VAR_subaccount_name":            cfg.SubaccountName,
 		"TF_VAR_admin_group_name":           cfg.AdminGroupName,
@@ -105,7 +168,6 @@ func buildEnvMap(cfg *Config) []string {
 	return env
 }
 
-// formatID handles the float64 scientific notation issue
 func formatID(v interface{}) string {
 	switch val := v.(type) {
 	case float64:
@@ -115,74 +177,4 @@ func formatID(v interface{}) string {
 	default:
 		return fmt.Sprintf("%v", val)
 	}
-}
-
-func injectBrowserConfig(tfArgs []string, env []string) {
-	fmt.Println("\n>>> 📦 Configuring Browser Monitoring...")
-
-	// 1. Fetch from Terraform
-	cmd := exec.Command("terraform", append(tfArgs, "output", "-json", "browser_js_config")...)
-	cmd.Env = env
-	out, err := cmd.Output()
-	if err != nil {
-		fmt.Printf("Error reading browser_js_config: %v\n", err)
-		return
-	}
-
-	var tfOutput string
-	if err := json.Unmarshal(out, &tfOutput); err != nil {
-		tfOutput = string(out)
-	}
-
-	var nrConfig BrowserConfig
-	if err := json.Unmarshal([]byte(tfOutput), &nrConfig); err != nil {
-		fmt.Printf("Error parsing js_config JSON: %v\n", err)
-		return
-	}
-
-	cmdKey := exec.Command("terraform", append(tfArgs, "output", "-raw", "browser_license_key")...)
-	cmdKey.Env = env
-	outKey, _ := cmdKey.Output()
-	licenseKey := strings.TrimSpace(string(outKey))
-
-	// 2. Prepare Template Data
-	data := TemplateData{
-		LicenseKey: licenseKey,
-		AppID:      formatID(nrConfig.Info.AppID),
-		AccountID:  formatID(nrConfig.LoaderConfig.AccountID),
-		TrustKey:   formatID(nrConfig.LoaderConfig.TrustKey),
-		AgentID:    formatID(nrConfig.LoaderConfig.AgentID),
-	}
-
-	// 3. Process Template
-	yamlPath := Paths["otel-browser-values"] // e.g., newrelic/k8s/helm/nr-browser.yaml
-	tmplPath := yamlPath + ".tmpl"           // e.g., newrelic/k8s/helm/nr-browser.yaml.tmpl
-
-	// Check if template exists
-	if _, err := os.Stat(tmplPath); os.IsNotExist(err) {
-		fmt.Printf("Template file not found at %s. Please create it.\n", tmplPath)
-		return
-	}
-
-	tmpl, err := template.ParseFiles(tmplPath)
-	if err != nil {
-		fmt.Printf("Error parsing template: %v\n", err)
-		return
-	}
-
-	// Output to the real YAML file
-	outFile, err := os.Create(yamlPath)
-	if err != nil {
-		fmt.Printf("Error creating output YAML file: %v\n", err)
-		return
-	}
-	defer outFile.Close()
-
-	if err := tmpl.Execute(outFile, data); err != nil {
-		fmt.Printf("Error executing template: %v\n", err)
-		return
-	}
-
-	fmt.Printf("Successfully generated %s from template!\n", yamlPath)
-	fmt.Println("Ready! Run 'install k8s' to deploy.")
 }
