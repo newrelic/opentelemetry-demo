@@ -20,7 +20,5 @@ provider "newrelic" {
 locals {
    service_metric_filter = "FROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name, entity.guid"
    service_span_filter = "FROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') FACET service.name"
-   metric_policy_id = 7181242
-   span_policy_id = 7197063
 }
 

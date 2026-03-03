@@ -1,3 +1,9 @@
+## Metric Alert Policy
+resource "newrelic_alert_policy" "metric_alert_policy" {
+  name = "Astronomy Service Metric Health"
+  incident_preference = "PER_CONDITION_AND_TARGET"
+}
+
 ##############################
 ## Anomaly Alerts
 ## 
@@ -5,7 +11,7 @@
 # Errors
 resource "newrelic_nrql_alert_condition" "metric_error_rate_anomaly" {
   account_id = var.newrelic_account_id
-  policy_id = local.metric_policy_id
+  policy_id = newrelic_alert_policy.metric_alert_policy.id
   type = "baseline"
   name = "Service ErrorRate Anomaly"
   enabled = true
@@ -34,14 +40,14 @@ resource "newrelic_nrql_alert_condition" "metric_error_rate_anomaly" {
 ## Throughput
 resource "newrelic_nrql_alert_condition" "metric_throughput_anomaly" {
     account_id = var.newrelic_account_id
-    policy_id = local.metric_policy_id
+    policy_id = newrelic_alert_policy.metric_alert_policy.id
     type = "baseline"
     name = "Service Throughput Anomaly"
     enabled = true
     violation_time_limit_seconds = 259200
 
   nrql {
-    query = "SELECT sum(apm.service.error.count['count']) ${local.service_metric_filter}"
+    query = "SELECT sum(apm.service.transaction.duration['count']) ${local.service_metric_filter}"
     data_account_id = var.newrelic_account_id
   }
 
@@ -63,7 +69,7 @@ resource "newrelic_nrql_alert_condition" "metric_throughput_anomaly" {
 ## Latency
 resource "newrelic_nrql_alert_condition" "metric_latency_anomaly" {
     account_id = var.newrelic_account_id
-    policy_id = local.metric_policy_id
+    policy_id = newrelic_alert_policy.metric_alert_policy.id
     type = "baseline"
     name = "Service Latency Anomaly"
     enabled = true
@@ -96,7 +102,7 @@ resource "newrelic_nrql_alert_condition" "metric_latency_anomaly" {
 ## Errors
 resource "newrelic_nrql_alert_condition" "service_error_rate_threshold" {
   account_id = var.newrelic_account_id
-  policy_id = local.metric_policy_id
+  policy_id = newrelic_alert_policy.metric_alert_policy.id
   type = "static"
   name = "Service Error Rate Threshold"
   enabled = true

@@ -1,3 +1,9 @@
+## Span Alert Policy
+resource "newrelic_alert_policy" "span_alert_policy" {
+  name = "Astronomy Service Span Health"
+  incident_preference = "PER_CONDITION_AND_TARGET"
+}
+
 ##############################
 ## Anomaly Alerts
 ## 
@@ -5,7 +11,7 @@
 # Errors
 resource "newrelic_nrql_alert_condition" "span_error_rate_anomaly" {
   account_id = var.newrelic_account_id
-  policy_id = local.span_policy_id
+  policy_id = newrelic_alert_policy.span_alert_policy.id
   type = "baseline"
   name = "Service ErrorRate Anomaly"
   enabled = true
@@ -34,7 +40,7 @@ resource "newrelic_nrql_alert_condition" "span_error_rate_anomaly" {
 # Throughput
 resource "newrelic_nrql_alert_condition" "span_throughput_anomaly" {
     account_id = var.newrelic_account_id
-    policy_id = local.span_policy_id
+    policy_id = newrelic_alert_policy.span_alert_policy.id
  type = "baseline"
   name = "Service Throughput Anomaly"
   enabled = true
@@ -63,7 +69,7 @@ resource "newrelic_nrql_alert_condition" "span_throughput_anomaly" {
 # Latency
 resource "newrelic_nrql_alert_condition" "span_latency_anomaly" {
     account_id = var.newrelic_account_id
-    policy_id = local.span_policy_id
+    policy_id = newrelic_alert_policy.span_alert_policy.id
  type = "baseline"
   name = "Service Latency Anomaly"
   enabled = true
@@ -96,7 +102,7 @@ resource "newrelic_nrql_alert_condition" "span_latency_anomaly" {
 # Span based
 resource "newrelic_nrql_alert_condition" "span_error_rate_threshold" {
   account_id = var.newrelic_account_id
-  policy_id = local.span_policy_id
+  policy_id = newrelic_alert_policy.span_alert_policy.id
   type = "static"
   name = "Service ErrorRate Threshold"
   enabled = true
