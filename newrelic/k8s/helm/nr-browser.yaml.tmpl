@@ -20,32 +20,13 @@ components:
         subPath: monkey-patch.js
         data:
           monkey-patch.js: |
-            const https = require('https');
             const http = require('http');
-
-            let nrsnippet = '';
-
-            // 1. Fetch the authentic, un-truncated New Relic agent directly from the CDN
-            https.get('https://js-agent.nr-assets.net/nr-loader-spa-1.260.0.min.js', (res) => {
-              let agentCode = '';
-              res.on('data', chunk => agentCode += chunk);
-              res.on('end', () => {
-                nrsnippet = `
-                <script type="text/javascript">
-                window.NREUM||(NREUM={});
-                NREUM.info={"beacon":"bam.nr-data.net","errorBeacon":"bam.nr-data.net","licenseKey":"{{ .LicenseKey }}","applicationID":"{{ .AppID }}","sa":1};
-                NREUM.init={privacy:{cookies_enabled:true},ajax:{deny_list:["bam.nr-data.net"]},distributed_tracing:{enabled:true}};
-                NREUM.loader_config={accountID:"{{ .AccountID }}",trustKey:"{{ .TrustKey }}",agentID:"{{ .AgentID }}",licenseKey:"{{ .LicenseKey }}",applicationID:"{{ .AppID }}"};
-                </script>
-                <script type="text/javascript">
-                ${agentCode}
-                </script>
-                `;
-                console.log("New Relic Browser Agent successfully loaded into memory.");
-              });
-            }).on('error', (e) => {
-              console.error("Failed to fetch NR Agent:", e);
-            });
+            const nrSnippet = `
+              <script type="text/javascript">!function(){if(navigator.sendBeacon){const n=navigator.sendBeacon,a="/v1/traces";navigator.sendBeacon=function(t,e){return!(!t||"string"!=typeof t||!t.includes(a))||n.apply(this,arguments)}}}();</script>
+              <script type="text/javascript">window.NREUM||(NREUM={});NREUM.init={session_replay:{enabled:true,block_selector:'',mask_text_selector:'*',sampling_rate:10.0,error_sampling_rate:100.0,mask_all_inputs:true,collect_fonts:true,inline_images:false,inline_stylesheet:true,fix_stylesheets:true,preload:false,mask_input_options:{}},distributed_tracing:{enabled:true,exclude_newrelic_header:true,cors_use_newrelic_header:false,cors_use_tracecontext_headers:true},performance:{capture_measures:true},browser_consent_mode:{enabled:false},privacy:{cookies_enabled:true},ajax:{deny_list:["bam.nr-data.net", ]}};NREUM.loader_config={accountID:"{{ .AccountID }}",trustKey:"{{ .TrustKey }}",agentID:"{{ .AgentID }}",licenseKey:"{{ .LicenseKey }}",applicationID:"{{ .AppID }}"};NREUM.info={beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",licenseKey:"{{ .LicenseKey }}",applicationID:"{{ .AppID }}",sa:1};</script>
+              <script src="https://js-agent.nr-assets.net/nr-loader-spa-current.min.js"></script>
+              <script type="text/javascript">!function(){const t=t=>t.startsWith("/cart/checkout/")&&t.length>15?"/cart/checkout/[orderId]":t.startsWith("/product/")&&t.length>9?"/product/[productId]":void 0,e=()=>{setTimeout((()=>{if(window.newrelic&&"function"==typeof window.newrelic.interaction){const e=t(window.location.pathname);newrelic.interaction().setName(e).save(),newrelic.setCurrentRouteName(e)}}),150)},n=history.pushState;history.pushState=function(){n.apply(this,arguments),e()};const i=history.replaceState;history.replaceState=function(){i.apply(this,arguments),e()},window.addEventListener("popstate",e),window.addEventListener("load",(()=>{if(window.newrelic){const e=t(window.location.pathname);newrelic.setPageViewName(e)}}))}();</script>
+            `;
 
             // 2. Intercept the HTTP Stream
             const origCreate = http.createServer;
@@ -72,11 +53,11 @@ components:
               res.write = function(chunk, ...args) {
                 const cType = this.getHeader('content-type');
                 // Only inject if the script has finished downloading
-                if (!injected && nrsnippet !== '' && cType && cType.includes('text/html') && chunk) {
+                if (!injected && nrSnippet !== '' && cType && cType.includes('text/html') && chunk) {
                   let s = chunk.toString();
                   // Inject directly into the <head> tag
                   if (/(<head[^>]*>)/i.test(s)) {
-                    s = s.replace(/(<head[^>]*>)/i, '$1\n' + nrsnippet);
+                    s = s.replace(/(<head[^>]*>)/i, '$1\n' + nrSnippet);
                     chunk = Buffer.from(s);
                     injected = true;
                   }
