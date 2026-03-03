@@ -125,3 +125,56 @@ resource "newrelic_nrql_alert_condition" "service_error_rate_threshold" {
   aggregation_delay = 120
   title_template = "{{conditionName}} Affecting {{service.name}}"
 }
+
+resource "newrelic_entity_tags" "tag1" {
+  guid = newrelic_nrql_alert_condition.metric_error_rate_anomaly.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["metric"]
+  }
+}
+resource "newrelic_entity_tags" "tag2" {
+  guid = newrelic_nrql_alert_condition.metric_throughput_anomaly.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["metric"]
+  }
+}
+resource "newrelic_entity_tags" "tag3" {
+  guid = newrelic_nrql_alert_condition.metric_latency_anomaly.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["metric"]
+  }
+}
+resource "newrelic_entity_tags" "tag4" {
+  guid = newrelic_nrql_alert_condition.service_error_rate_threshold.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["metric"]
+  }
+}

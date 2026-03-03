@@ -22,9 +22,3 @@ variable "newrelic_account_id" {
   type        = string
 }
 
-# Alert policy id
-variable "alert_policy_id" {
-  description = "The ID of the alert policy to which the alert condition will be added"
-  type        = string
-}
-

@@ -125,3 +125,56 @@ resource "newrelic_nrql_alert_condition" "span_error_rate_threshold" {
   aggregation_delay = 120
   title_template = "{{conditionName}} Affecting {{service.name}}"
 }
+
+resource "newrelic_entity_tags" "tag5" {
+  guid = newrelic_nrql_alert_condition.span_error_rate_anomaly.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["span"]
+  }
+}
+resource "newrelic_entity_tags" "tag6" {
+  guid = newrelic_nrql_alert_condition.span_throughput_anomaly.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["span"]
+  }
+}
+resource "newrelic_entity_tags" "tag7" {
+  guid = newrelic_nrql_alert_condition.span_latency_anomaly.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["span"]
+  }
+}
+resource "newrelic_entity_tags" "tag8" {
+  guid = newrelic_nrql_alert_condition.span_error_rate_threshold.entity_guid
+
+  tag {
+    key    = "author"
+    values = ["khickey"]
+  }
+
+  tag {
+    key    = "data-type"
+    values = ["span"]
+  }
+}
