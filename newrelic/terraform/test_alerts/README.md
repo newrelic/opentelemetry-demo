@@ -15,6 +15,7 @@ Baseline dashboard json
 To be used to set thresholds 
 
 Work left
-* Better threshold alerts? 
+* Detailed threshold alerts? 
 * Showcase back to team?
 * Fold into resources folder? 
+* Use modules to make it easier to manage many alerts?
