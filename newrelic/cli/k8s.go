@@ -39,7 +39,7 @@ func handleK8s(action string, cfg *Config) {
 
 	runCommand("helm", []string{"repo", "add", "newrelic", "https://helm-charts.newrelic.com"}, nil)
 	runCommand("helm", []string{"repo", "add", "open-telemetry", "https://open-telemetry.github.io/opentelemetry-helm-charts"}, nil)
-	runCommand("helm", []string{"repo", "update"}, nil)
+	runCommand("helm", []string{"repo", "update", "newrelic", "open-telemetry"}, nil)
 
 	detectOpenShift()
 	exec.Command("kubectl", "create", "ns", ns).Run()
