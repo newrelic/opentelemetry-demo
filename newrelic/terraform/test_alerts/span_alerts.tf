@@ -34,7 +34,7 @@ resource "newrelic_nrql_alert_condition" "span_error_rate_anomaly" {
   aggregation_delay = 120
   baseline_direction = "upper_only"
   signal_seasonality = "none"
-  title_template = "{{conditionName}} Affecting {{service.name}} - {{priority}}"
+  title_template = local.title_template
 }
  
 # Throughput
@@ -63,7 +63,7 @@ resource "newrelic_nrql_alert_condition" "span_throughput_anomaly" {
   aggregation_delay = 120
   baseline_direction = "upper_and_lower"
   signal_seasonality = "none"
-  title_template = "{{conditionName}} Affecting {{service.name}}"
+  title_template = local.title_template
 }   
 
 # Latency
@@ -92,7 +92,7 @@ resource "newrelic_nrql_alert_condition" "span_latency_anomaly" {
   aggregation_delay = 120
   baseline_direction = "upper_and_lower"
   signal_seasonality = "none"
-  title_template = "{{conditionName}} Affecting {{service.name}}"
+  title_template = local.title_template
 }   
 
 ##
@@ -123,7 +123,7 @@ resource "newrelic_nrql_alert_condition" "span_error_rate_threshold" {
   aggregation_window = 60
   aggregation_method = "event_flow"
   aggregation_delay = 120
-  title_template = "{{conditionName}} Affecting {{service.name}}"
+  title_template = local.title_template
 }
 
 resource "newrelic_entity_tags" "tag5" {
