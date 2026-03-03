@@ -19,7 +19,7 @@ To compile the project into a single binary for your corresponding to your opera
 
 **macOS (Apple Silicon / M1 / M2)**
 ```bash
-GOOS=darwin GOARCH=arm64 go build -o onr-otel-cli .
+GOOS=darwin GOARCH=arm64 go build -o nr-otel-cli .
 ```
 1
 **macOS (Intel)**
