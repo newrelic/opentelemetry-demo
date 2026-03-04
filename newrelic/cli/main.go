@@ -19,6 +19,7 @@ const (
 )
 
 func main() {
+	CaptureInitialEnv() // Capture inherited environment at startup
 	config, positionals := parseArgs()
 
 	if len(os.Args) > 1 && (os.Args[1] == "-h" || os.Args[1] == "--help") {
@@ -44,7 +45,7 @@ func runHandler(action, target string, cfg *Config) {
 	loadConfig(cfg)
 	switch target {
 	case "account", "resources", "browser":
-		handleTerraform(action, target, cfg)
+		handleTerraform(action, cfg)
 	case "docker":
 		handleDocker(action, cfg)
 	case "k8s":
@@ -177,12 +178,11 @@ func parseArgs() (Config, []string) {
 		arg := args[i]
 		if strings.HasPrefix(arg, "-") {
 			cleanArg := strings.TrimLeft(arg, "-")
-			if cleanArg == "h" || cleanArg == "help" {
-				printUsage()
-				os.Exit(0)
-			}
 			parts := strings.SplitN(cleanArg, "=", 2)
-			key := parts[0]
+
+			// Normalize to UPPERCASE for internal mapping
+			key := strings.ToUpper(parts[0])
+
 			val := ""
 			if len(parts) == 2 {
 				val = parts[1]
@@ -190,6 +190,7 @@ func parseArgs() (Config, []string) {
 				val = args[i+1]
 				i++
 			}
+
 			switch key {
 			case "NEW_RELIC_LICENSE_KEY":
 				cfg.LicenseKey = val
@@ -200,8 +201,8 @@ func parseArgs() (Config, []string) {
 			case "NEW_RELIC_REGION":
 				cfg.Region = strings.ToUpper(val)
 			case "NEW_RELIC_ENABLE_BROWSER":
-				b := strings.ToLower(val) == "true" || val == ""
-				cfg.EnableBrowser = &b
+				enable := strings.ToLower(val) == "true" || val == ""
+				cfg.EnableBrowser = &enable
 			case "TF_VAR_SUBACCOUNT_NAME":
 				cfg.SubaccountName = val
 			case "TF_VAR_ADMIN_GROUP_NAME":
@@ -210,6 +211,16 @@ func parseArgs() (Config, []string) {
 				cfg.ReadonlyUserEmail = val
 			case "TF_VAR_READONLY_USER_NAME":
 				cfg.ReadonlyUserName = val
+			case "BROWSER_LICENSE_KEY":
+				cfg.BrowserLicenseKey = val
+			case "BROWSER_APPLICATION_ID":
+				cfg.BrowserAppID = val
+			case "BROWSER_ACCOUNT_ID":
+				cfg.BrowserAccountID = val
+			case "BROWSER_TRUST_KEY":
+				cfg.BrowserTrustKey = val
+			case "BROWSER_AGENT_ID":
+				cfg.BrowserAgentID = val
 			}
 		} else {
 			positionals = append(positionals, arg)

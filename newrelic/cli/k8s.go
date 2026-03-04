@@ -1,40 +1,81 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
+	"text/template"
 )
 
+// fetchBrowserConfigFromTF retrieves browser monitoring metadata from Terraform outputs.
+func fetchBrowserConfigFromTF(tfArgs []string, env []string, cfg *Config) {
+	cmd := exec.Command("terraform", append(tfArgs, "output", "-json", "browser_js_config")...)
+	cmd.Env = env
+	out, _ := cmd.Output()
+
+	var tfOutput string
+	json.Unmarshal(out, &tfOutput)
+	var nrConfig BrowserConfig
+	json.Unmarshal([]byte(tfOutput), &nrConfig)
+
+	cmdKey := exec.Command("terraform", append(tfArgs, "output", "-raw", "browser_license_key")...)
+	cmdKey.Env = env
+	outKey, _ := cmdKey.Output()
+
+	cfg.BrowserLicenseKey = strings.TrimSpace(string(outKey))
+	cfg.BrowserAppID = formatID(nrConfig.Info.AppID)
+	cfg.BrowserAccountID = formatID(nrConfig.LoaderConfig.AccountID)
+	cfg.BrowserTrustKey = formatID(nrConfig.LoaderConfig.TrustKey)
+	cfg.BrowserAgentID = formatID(nrConfig.LoaderConfig.AgentID)
+}
+
+// generateBrowserYaml populates the nr-browser.yaml file using a template.
+func generateBrowserYaml(cfg *Config) {
+	data := TemplateData{
+		LicenseKey: cfg.BrowserLicenseKey,
+		AppID:      cfg.BrowserAppID,
+		AccountID:  cfg.BrowserAccountID,
+		TrustKey:   cfg.BrowserTrustKey,
+		AgentID:    cfg.BrowserAgentID,
+	}
+
+	yamlPath := Paths["otel-browser-values"]
+	tmpl, err := template.ParseFiles(yamlPath + ".tmpl")
+	if err != nil {
+		fmt.Printf("Error: Template file not found at %s.tmpl\n", yamlPath)
+		return
+	}
+	outFile, _ := os.Create(yamlPath)
+	defer outFile.Close()
+	tmpl.Execute(outFile, data)
+}
+
+// handleK8s manages the Kubernetes installation, upgrade, and uninstallation workflows.
 func handleK8s(action string, cfg *Config) {
 	checkTools("kubectl", "helm")
-	// Namespace
 	ns := Charts["otel-demo"].NS
 
 	if action == "uninstall" {
-		// Use runCommand so output is visible to the user
 		runCommand("helm", []string{"uninstall", Charts["otel-demo"].Name, "-n", ns}, nil)
 		runCommand("helm", []string{"uninstall", Charts["nr-k8s"].Name, "-n", ns}, nil)
 		runCommand("kubectl", []string{"delete", "ns", ns}, nil)
 		return
 	}
-	// Explicitly ask if the user wants to enable Browser Monitoring every time.
-	// FIX: Only prompt if the flag wasn't already provided
-	if cfg.EnableBrowser == nil {
-		enableBrowser := promptBool("Do you want to enable Digital Experience Monitoring (Browser)?")
-		cfg.EnableBrowser = &enableBrowser
-	}
 
-	if *cfg.EnableBrowser {
-		if cfg.ApiKey == "" {
-			// Make sure we have the keys BEFORE calling Terraform to avoid broken prompts
-			cfg.ApiKey = promptUser("Enter your User API Key (NRAK)", validateNotEmpty)
+	// Browser setup logic: executes only if enabled and config is missing
+	if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
+		if cfg.BrowserAppID == "" {
+			fmt.Println("\n>>> Setting up Browser Monitoring (Terraform)...")
+			oldTarget := cfg.Target
+			cfg.Target = "browser"
+			handleTerraform("install", cfg)
+			cfg.Target = oldTarget
+			generateBrowserYaml(cfg)
+		} else {
+			generateBrowserYaml(cfg)
 		}
-		if cfg.AccountId == "" {
-			cfg.AccountId = promptUser("Enter your New Relic Account ID", validateNotEmpty)
-		}
-		fmt.Println("\n>>> Setting up Browser Monitoring (Terraform)...")
-		handleTerraform("install", "browser", cfg)
 	}
 
 	runCommand("helm", []string{"repo", "add", "newrelic", "https://helm-charts.newrelic.com"}, nil)
@@ -47,16 +88,17 @@ func handleK8s(action string, cfg *Config) {
 	exec.Command("kubectl", "delete", "secret", "newrelic-license-key", "-n", ns).Run()
 	runCommand("kubectl", []string{"create", "secret", "generic", "newrelic-license-key", "--from-literal=license-key=" + cfg.LicenseKey, "-n", ns}, nil)
 
-	installChart("nr-k8s", []string{Paths["nr-k8s-values"]}, cfg)
+	installChart("nr-k8s", []string{Paths["nr-k8s-values"]})
 
 	otelValues := []string{Paths["otel-values"]}
 	if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
 		otelValues = append(otelValues, Paths["otel-browser-values"])
 	}
-	installChart("otel-demo", otelValues, cfg)
+	installChart("otel-demo", otelValues)
 }
 
-func installChart(key string, values []string, cfg *Config) {
+// installChart executes the helm upgrade --install command for a given chart.
+func installChart(key string, values []string) {
 	c := Charts[key]
 	args := []string{"upgrade", "--install", c.Name, c.Repo, "--version", c.Version, "-n", c.NS}
 	for _, v := range values {
@@ -74,6 +116,7 @@ func installChart(key string, values []string, cfg *Config) {
 	runCommand("helm", args, nil)
 }
 
+// detectOpenShift checks the cluster for OpenShift-specific API versions.
 func detectOpenShift() {
 	out, err := exec.Command("kubectl", "api-versions").Output()
 	if err == nil && strings.Contains(string(out), "security.openshift.io") {
