@@ -8,8 +8,9 @@ This Terraform module creates New Relic resources to showcase New Relic capabili
 ## Purpose
 
 This module demonstrates various New Relic features and capabilities including:
+- **Alerts** - Creates alerts for the Astronomy apps. Expect these to be tuned over time. Web and Infrastructure based alerts to be added.
 - **Service Level Objectives (SLOs)** - Currently creates an SLO for the checkout service
-- **Future additions** - Alerts, dashboards, teams, scorecards, and other resources to showcase New Relic's observability platform
+- **Future additions** - Dashboards, teams, scorecards, and other resources to showcase New Relic's observability platform
 
 ## Prerequisites
 
@@ -32,6 +33,7 @@ export TF_VAR_checkout_service_name="checkout"  # Optional, defaults to "checkou
 
 # Initialize and apply
 terraform init
+terraform plan (optional)
 terraform apply
 ```
 
@@ -62,12 +64,34 @@ checkout_service_name = "checkout"
 
 ## What Gets Created
 
+### Alerts
+#### Metric Based
+Initially, we have metrics only for the following services: ad, cart, checkout, frontend, product-catalog, and shipping.   
+Alerts:
+- **Error rate anomaly** - Faceted by service name
+- **Throughput anomaly** - Faceted by service name
+- **Latency anomaly** - Faceted by service name
+- **Error rate threshold** - Faceted by service name, for now.
+
+Source: metric_alerts.tf
+
+#### Span Based
+Covers Alerts for services where only span data is available. 
+- **Error rate anomaly** - Faceted by service name 
+- **Throughput anomaly** - Faceted by service name
+- **Latency anomaly** - Faceted by service name
+- **Error rate threshold** - Faceted by service name, for now.
+
+Source: span_alerts.tf
+
 ### Service Level Objectives (SLOs)
 
 Currently, this module creates an SLO for the checkout service with:
 - **Target**: 99.5% availability
 - **Time Window**: 1-day rolling window
 - **Metric**: Server-side spans without errors
+
+Source: slos.tf
 
 ### Future Resources
 
