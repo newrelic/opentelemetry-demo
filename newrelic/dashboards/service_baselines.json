@@ -59,7 +59,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-                  4494439
+                  7752455
                 ],
                 "query": "SELECT sum(apm.service.error.count['count']) / count(apm.service.transaction.duration)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
@@ -112,7 +112,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-                  4494439
+                  7752455
                 ],
                 "query": "SELECT sum(apm.service.transaction.duration['count'])\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
@@ -165,7 +165,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-                  4494439
+                  7752455
                 ],
                 "query": "SELECT percentile(apm.service.transaction.duration, 95)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
@@ -218,7 +218,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-                  4494439
+                  7752455
                 ],
                 "query": "SELECT percentage(count(*), WHERE error = true)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 hours AGO"
               }
@@ -259,7 +259,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-                  4494439
+                  7752455
                 ],
                 "query": "SELECT count(*)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 hours AGO"
               }
@@ -312,7 +312,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-                  4494439
+                  7752455
                 ],
                 "query": "SELECT percentile(duration.ms, 95)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 hours AGO"
               }
