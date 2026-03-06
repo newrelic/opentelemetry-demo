@@ -7,7 +7,8 @@ provider "newrelic" {
 ## Reusable variables
 locals {
    service_metric_filter = "FROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name, entity.guid"
-   service_span_filter = "FROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') FACET service.name"
-   title_template = "{{conditionName}} Affecting {{tags.service.name}} - {{priority}}"
+   service_span_filter = "FROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping', 'load-generator', 'fladg') FACET service.name"
+   anomaly_title_template = "{{tags.service.name}} [{{conditionName}}] {{priority}}"
+   title_template = "{{tags.service.name}} [{{conditionName}}] {{priority}}"
 }
 

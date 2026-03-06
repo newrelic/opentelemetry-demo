@@ -1,4 +1,8 @@
-# Look up the checkout service entity
+##
+## Checkout Service SLO
+##
+
+# Looks up the checkout service entity
 data "newrelic_entity" "checkout_service" {
   name   = var.checkout_service_name
   type   = "SERVICE"
@@ -10,7 +14,7 @@ data "newrelic_entity" "checkout_service" {
   }
 }
 
-# Create SLO for the checkout service
+# Creates SLO for the checkout service
 resource "newrelic_service_level" "checkout_slo" {
   guid        = data.newrelic_entity.checkout_service.guid
   name        = "Checkout Service Availability"
@@ -31,6 +35,52 @@ resource "newrelic_service_level" "checkout_slo" {
 
   objective {
     target = 99.5
+    time_window {
+      rolling {
+        count = 1
+        unit  = "DAY"
+      }
+    }
+  }
+}
+
+##
+## Product Catalog Service SLO
+##
+
+# Looks up the product catalog service entity
+data "newrelic_entity" "product_catalog_service" {
+  name   = var.product_catalog_service_name
+  type   = "SERVICE"
+  domain = "EXT"    
+
+    tag {
+    key   = "accountId"
+    value = var.newrelic_account_id
+  }
+}
+
+# Creates SLO for the product catalog service
+resource "newrelic_service_level" "product_catalog_slo" {
+  guid        = data.newrelic_entity.product_catalog_service.guid
+  name        = "Product Catalog Service Availability"
+  description = "Availability SLO for the product catalog service in the OpenTelemetry Demo"
+
+  events {
+    account_id = var.newrelic_account_id
+    valid_events {
+      from  = "Span"
+      where = "entity.guid = '${data.newrelic_entity.checkout_service.guid}' AND span.kind = 'server'"
+    }
+
+    bad_events {
+      from  = "Span"
+      where = "entity.guid = '${data.newrelic_entity.checkout_service.guid}' AND span.kind = 'server' AND otel.status_code = 'ERROR'"
+    }
+  }
+
+  objective {
+    target = 99.9
     time_window {
       rolling {
         count = 1
