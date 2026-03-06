@@ -25,13 +25,13 @@ resource "newrelic_nrql_alert_condition" "span_error_rate_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 180
+    threshold_duration = 60
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 120
+  aggregation_delay = 60
   baseline_direction = "upper_only"
   signal_seasonality = "none"
   title_template = local.title_template
@@ -54,13 +54,13 @@ resource "newrelic_nrql_alert_condition" "span_throughput_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 300
+    threshold_duration = 60
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 120
+  aggregation_delay = 60
   baseline_direction = "upper_and_lower"
   signal_seasonality = "none"
   title_template = local.title_template
@@ -83,13 +83,13 @@ resource "newrelic_nrql_alert_condition" "span_latency_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 300
+    threshold_duration = 60
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 120
+  aggregation_delay = 60
   baseline_direction = "upper_and_lower"
   signal_seasonality = "none"
   title_template = local.title_template
@@ -116,13 +116,13 @@ resource "newrelic_nrql_alert_condition" "span_error_rate_threshold" {
   critical {
     operator = "above"
     threshold = 1
-    threshold_duration = 300
+    threshold_duration = 60
     threshold_occurrences = "all"
   }
   fill_option = "none"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 120
+  aggregation_delay = 60
   title_template = local.title_template
 }
 
