@@ -61,6 +61,7 @@
                 "accountIds": [
                   4494439
                 ],
+
                 "query": "SELECT sum(apm.service.error.count['count']) / count(apm.service.transaction.duration)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
             ],
@@ -112,7 +113,8 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-                  7752455
+
+                  4494439
                 ],
                 "query": "SELECT sum(apm.service.transaction.duration['count'])\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
@@ -168,6 +170,7 @@
                   4494439
                 ],
                 "query": "SELECT percentile(apm.service.transaction.duration, 95)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
+
               }
             ],
             "platformOptions": {

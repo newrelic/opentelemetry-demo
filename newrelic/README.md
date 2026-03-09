@@ -18,6 +18,7 @@ This repository contains a fork of the OpenTelemetry Astronomy Shop, a microserv
   - [Terraform Automation (Optional)](#terraform-automation-optional)
 - [Validating the Install](#validating-the-install)
 - [Accessing the Flagd UI](#accessing-the-flagd-ui)
+- [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
@@ -423,3 +424,11 @@ kubectl -n opentelemetry-demo port-forward svc/frontend-proxy 9999:8080
 After setting up port forwarding, you can access the Flagd UI at [http://localhost:8080/feature](http://localhost:8080/feature).
 
 ![flagdui](./images/flagdui.png)
+
+## Troubleshooting
+
+In some cases, the `flagd` pod may consistently be OOMKilled regardless of how much memory you provide it.  We have found that reverting to version `2.0.0` of the `flagd-ui` container resolves the issue.  Run the following patch command in your cluster to do so:
+
+```bash
+kubectl patch deployment flagd -n opentelemetry-demo -p '{"spec":{"template":{"spec":{"containers":[{"name":"flagd-ui","image":"ghcr.io/open-telemetry/demo:2.0.0-flagd-ui"}]}}}}'
+```
