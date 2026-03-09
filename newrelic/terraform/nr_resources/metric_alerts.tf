@@ -25,13 +25,13 @@ resource "newrelic_nrql_alert_condition" "metric_error_rate_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 120
+    threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 60
+  aggregation_delay = local.aggregation_delay
   baseline_direction = "upper_only"
   signal_seasonality = "none"
   title_template = local.title_template
@@ -54,13 +54,13 @@ resource "newrelic_nrql_alert_condition" "metric_throughput_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 120
+    threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 60
+  aggregation_delay = local.aggregation_delay
   baseline_direction = "upper_and_lower"
   signal_seasonality = "none"
   title_template = local.title_template
@@ -83,13 +83,13 @@ resource "newrelic_nrql_alert_condition" "metric_latency_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 120
+    threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 60
+  aggregation_delay = local.aggregation_delay
   baseline_direction = "upper_and_lower"
   signal_seasonality = "none"
   title_template = local.title_template
@@ -116,13 +116,13 @@ resource "newrelic_nrql_alert_condition" "service_error_rate_threshold" {
   critical {
     operator = "above"
     threshold = 0.1
-    threshold_duration = 120
+    threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
   fill_option = "none"
   aggregation_window = 60
   aggregation_method = "event_flow"
-  aggregation_delay = 60
+  aggregation_delay = local.aggregation_delay
   title_template = local.title_template
 }
 
