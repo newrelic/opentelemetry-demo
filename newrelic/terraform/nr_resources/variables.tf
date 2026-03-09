@@ -45,3 +45,43 @@ variable "web_app_name" {
   type        = string
   default     = "astroshop-frontend"
 }
+
+## 
+## Maps services to expected thresholds
+##
+variable "metric_alert_map" {
+    type = map(object({
+            service_name = string
+            service_title_name = string
+            throughput_lower_threshold = number
+            throughput_upper_threshold = number
+            latency_threshold = number
+            error_rate_threshold = number
+    })) 
+    default = {
+        key1 = {
+            service_name = "checkout"
+            service_title_name = "Checkout Service"
+            throughput_lower_threshold = 1
+            throughput_upper_threshold = 30
+            latency_threshold = 75
+            error_rate_threshold = 50.3
+        }
+        key2 = {
+            service_name = "product-catalog"
+            service_title_name = "Product Catalog Service"
+            throughput_lower_threshold = 150
+            throughput_upper_threshold = 600
+            latency_threshold = 50
+            error_rate_threshold = 0.1
+        }
+        key3 = {
+            service_name = "cart"
+            service_title_name = "Cart Service"
+            throughput_lower_threshold = 300
+            throughput_upper_threshold = 600
+            latency_threshold = 10
+            error_rate_threshold = 0.01
+        }
+    }
+} 
