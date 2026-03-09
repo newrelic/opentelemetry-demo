@@ -25,7 +25,7 @@ resource "newrelic_nrql_alert_condition" "metric_error_rate_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 60
+    threshold_duration = 120
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
@@ -54,7 +54,7 @@ resource "newrelic_nrql_alert_condition" "metric_throughput_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 60
+    threshold_duration = 120
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
@@ -83,7 +83,7 @@ resource "newrelic_nrql_alert_condition" "metric_latency_anomaly" {
   critical {
     operator = "above"
     threshold = 3
-    threshold_duration = 60
+    threshold_duration = 120
     threshold_occurrences = "all"
   }
   fill_option = "last_value"
@@ -116,7 +116,7 @@ resource "newrelic_nrql_alert_condition" "service_error_rate_threshold" {
   critical {
     operator = "above"
     threshold = 0.1
-    threshold_duration = 60
+    threshold_duration = 120
     threshold_occurrences = "all"
   }
   fill_option = "none"
