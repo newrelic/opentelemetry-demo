@@ -33,3 +33,15 @@ variable "product_catalog_service_name" {
   type        = string
   default     = "product-catalog"
 }
+
+variable "cart_service_name" {
+  description = "Name of the checkout service entity in New Relic"
+  type        = string
+  default     = "cart"
+}
+
+variable "web_app_name" {
+  description = "Name of the frontend web application in New Relic"
+  type        = string
+  default     = "astroshop-frontend"
+}
