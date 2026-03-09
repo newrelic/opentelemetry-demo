@@ -61,7 +61,8 @@
                 "accountIds": [
                   4494439
                 ],
-                "query": "SELECT sum(apm.service.error.count['count']) / count(apm.service.transaction.duration)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
+
+                "query": "SELECT sum(apm.service.error.count['count']) / count(apm.service.transaction.duration)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
             ],
             "platformOptions": {
@@ -112,9 +113,10 @@
             "nrqlQueries": [
               {
                 "accountIds": [
+
                   4494439
                 ],
-                "query": "SELECT sum(apm.service.transaction.duration['count'])\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
+                "query": "SELECT sum(apm.service.transaction.duration['count'])\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
             ],
             "platformOptions": {
@@ -167,7 +169,8 @@
                 "accountIds": [
                   4494439
                 ],
-                "query": "SELECT percentile(apm.service.transaction.duration, 95)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
+                "query": "SELECT percentile(apm.service.transaction.duration, 95)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
+
               }
             ],
             "platformOptions": {
@@ -220,7 +223,7 @@
                 "accountIds": [
                   4494439
                 ],
-                "query": "SELECT percentage(count(*), WHERE error = true)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name \nTIMESERIES AUTO\nSINCE 3 hours AGO"
+                "query": "SELECT percentage(count(*), WHERE error = true)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 hours AGO"
               }
             ]
           }
@@ -261,7 +264,7 @@
                 "accountIds": [
                   4494439
                 ],
-                "query": "SELECT count(*)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name \nTIMESERIES AUTO\nSINCE 3 hours AGO"
+                "query": "SELECT count(*)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 hours AGO"
               }
             ],
             "platformOptions": {
@@ -314,7 +317,7 @@
                 "accountIds": [
                   4494439
                 ],
-                "query": "SELECT percentile(duration.ms, 95)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name \nTIMESERIES AUTO\nSINCE 3 hours AGO"
+                "query": "SELECT percentile(duration.ms, 95)\nFROM Span WHERE service.name NOT IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping') \nFACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 hours AGO"
               }
             ],
             "platformOptions": {

@@ -1,4 +1,8 @@
-# Look up the checkout service entity
+##
+## Checkout Service SLO
+##
+
+# Looks up the checkout service entity
 data "newrelic_entity" "checkout_service" {
   name   = var.checkout_service_name
   type   = "SERVICE"
@@ -10,7 +14,7 @@ data "newrelic_entity" "checkout_service" {
   }
 }
 
-# Create SLO for the checkout service
+# Creates SLO for the checkout service
 resource "newrelic_service_level" "checkout_slo" {
   guid        = data.newrelic_entity.checkout_service.guid
   name        = "Checkout Service Availability"

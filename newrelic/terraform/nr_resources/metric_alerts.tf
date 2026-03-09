@@ -126,52 +126,33 @@ resource "newrelic_nrql_alert_condition" "service_error_rate_threshold" {
   title_template = local.title_template
 }
 
-resource "newrelic_entity_tags" "tag1" {
+
+resource "newrelic_entity_tags" "tag_metric_error_rate_anomaly" {
   guid = newrelic_nrql_alert_condition.metric_error_rate_anomaly.entity_guid
 
   tag {
-    key    = "author"
-    values = ["khickey"]
-  }
-
-  tag {
     key    = "data-type"
     values = ["metric"]
   }
 }
-resource "newrelic_entity_tags" "tag2" {
+resource "newrelic_entity_tags" "tag_metric_throughput_anomaly" {
   guid = newrelic_nrql_alert_condition.metric_throughput_anomaly.entity_guid
 
   tag {
-    key    = "author"
-    values = ["khickey"]
-  }
-
-  tag {
     key    = "data-type"
     values = ["metric"]
   }
 }
-resource "newrelic_entity_tags" "tag3" {
+resource "newrelic_entity_tags" "tag_metric_latency_anomaly" {
   guid = newrelic_nrql_alert_condition.metric_latency_anomaly.entity_guid
 
   tag {
-    key    = "author"
-    values = ["khickey"]
-  }
-
-  tag {
     key    = "data-type"
     values = ["metric"]
   }
 }
-resource "newrelic_entity_tags" "tag4" {
+resource "newrelic_entity_tags" "tag_service_error_rate_threshold" {
   guid = newrelic_nrql_alert_condition.service_error_rate_threshold.entity_guid
-
-  tag {
-    key    = "author"
-    values = ["khickey"]
-  }
 
   tag {
     key    = "data-type"

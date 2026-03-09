@@ -27,3 +27,9 @@ variable "checkout_service_name" {
   type        = string
   default     = "checkout"
 }
+
+variable "product_catalog_service_name" {
+  description = "Name of the product catalog service entity in New Relic"
+  type        = string
+  default     = "product-catalog"
+}

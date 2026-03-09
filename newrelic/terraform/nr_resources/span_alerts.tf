@@ -126,52 +126,32 @@ resource "newrelic_nrql_alert_condition" "span_error_rate_threshold" {
   title_template = local.title_template
 }
 
-resource "newrelic_entity_tags" "tag5" {
+resource "newrelic_entity_tags" "tag_span_error_rate_anomaly" {
   guid = newrelic_nrql_alert_condition.span_error_rate_anomaly.entity_guid
 
   tag {
-    key    = "author"
-    values = ["khickey"]
-  }
-
-  tag {
     key    = "data-type"
     values = ["span"]
   }
 }
-resource "newrelic_entity_tags" "tag6" {
+resource "newrelic_entity_tags" "tag_span_throughput_anomaly" {
   guid = newrelic_nrql_alert_condition.span_throughput_anomaly.entity_guid
 
   tag {
-    key    = "author"
-    values = ["khickey"]
-  }
-
-  tag {
     key    = "data-type"
     values = ["span"]
   }
 }
-resource "newrelic_entity_tags" "tag7" {
+resource "newrelic_entity_tags" "tag_span_latency_anomaly" {
   guid = newrelic_nrql_alert_condition.span_latency_anomaly.entity_guid
 
   tag {
-    key    = "author"
-    values = ["khickey"]
-  }
-
-  tag {
     key    = "data-type"
     values = ["span"]
   }
 }
-resource "newrelic_entity_tags" "tag8" {
+resource "newrelic_entity_tags" "tag_span_error_rate_threshold" {
   guid = newrelic_nrql_alert_condition.span_error_rate_threshold.entity_guid
-
-  tag {
-    key    = "author"
-    values = ["khickey"]
-  }
 
   tag {
     key    = "data-type"
