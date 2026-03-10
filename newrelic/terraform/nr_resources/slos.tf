@@ -80,7 +80,7 @@ resource "newrelic_service_level" "latency_slo" {
 
 # Alert Policy
 resource "newrelic_alert_policy" "gameday_policy" {
-  name                = "OTel Demo Gameday - Feature Flags"
+  name                = "Gameday Service Level Alerts"
   incident_preference = "PER_CONDITION"
 }
 
@@ -98,7 +98,7 @@ resource "newrelic_nrql_alert_condition" "throughput_burn_rate" {
   account_id                   = var.newrelic_account_id
   policy_id                    = newrelic_alert_policy.gameday_policy.id
   type                         = "static"
-  name                         = "${each.value.name} - Fast Burn"
+  name                         = "SL :${each.value.name} - Fast Burn"
   description                  = "High failure rate in throughput detected. Check flagd for active failure flags."
   enabled                      = true
   violation_time_limit_seconds = 86400
@@ -129,7 +129,7 @@ resource "newrelic_nrql_alert_condition" "latency_burn_rate" {
   account_id                   = var.newrelic_account_id
   policy_id                    = newrelic_alert_policy.gameday_policy.id
   type                         = "static"
-  name                         = "${each.value.name} - Fast Burn"
+  name                         = "SL: ${each.value.name} - Fast Burn"
   description                  = "High latency detected. Check flagd for active degradation flags."
   enabled                      = true
   violation_time_limit_seconds = 86400
