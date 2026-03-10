@@ -6,7 +6,7 @@ resource "newrelic_alert_policy" "metric_alert_policy" {
  
 
 ##############################
-## Threshold Alerts 
+## Metric Threshold Alerts 
 ##
 
 ## Errors
@@ -35,7 +35,7 @@ resource "newrelic_nrql_alert_condition" "service_error_rate" {
   aggregation_window = 60
   aggregation_method = "event_flow"
   aggregation_delay = local.aggregation_delay
-  title_template = local.service_title_template
+  title_template = "[{{conditionName}}] {{priority}}"
 }
 
 ## Latency
@@ -63,17 +63,17 @@ resource "newrelic_nrql_alert_condition" "service_latency" {
   aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay = local.aggregation_delay
-  title_template = local.specific_service_title_template
+  title_template = "[{{conditionName}}] {{priority}}"
 }
 
-## Throughput
+## Low Throughput
 resource "newrelic_nrql_alert_condition" "service_low_throughput" {
   for_each    = var.metric_alert_map
   account_id = var.newrelic_account_id
   policy_id = newrelic_alert_policy.metric_alert_policy.id
   type = "static"
-  name = "${each.value.service_title_name} Throughput Below Threshold"
-  enabled = true
+  name = "${each.value.service_title_name} Low Throughput"
+  enabled = var.low_throughput_alert_enabled
   violation_time_limit_seconds = 259200
 
   nrql {
@@ -91,15 +91,16 @@ resource "newrelic_nrql_alert_condition" "service_low_throughput" {
   aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay = local.aggregation_delay
-  title_template = local.specific_service_title_template
+  title_template = "[{{conditionName}}] {{priority}}"
 }
 
+## High Throughput
 resource "newrelic_nrql_alert_condition" "service_high_throughput" {
   for_each    = var.metric_alert_map
   account_id = var.newrelic_account_id
   policy_id = newrelic_alert_policy.metric_alert_policy.id
   type = "static"
-  name = "${each.value.service_title_name} Throughput Above Threshold"
+  name = "${each.value.service_title_name} High Throughput"
   enabled = true
   violation_time_limit_seconds = 259200
 
@@ -118,10 +119,14 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
   aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay = local.aggregation_delay
-  title_template = local.specific_service_title_template
+  title_template = "[{{conditionName}}] {{priority}}"
 }
 
-resource "newrelic_entity_tags" "tag_service_error_rate" {
+##
+## Tags for Metric Alert Conditions
+##
+
+resource "newrelic_entity_tags" "tag_metric_service_error_rate" {
   for_each    = var.metric_alert_map
   guid = newrelic_nrql_alert_condition.service_error_rate[each.key].entity_guid
 
@@ -129,9 +134,13 @@ resource "newrelic_entity_tags" "tag_service_error_rate" {
     key    = "data-type"
     values = ["metric"]
   }
+  tag {
+    key    = "golden-signal"
+    values = ["errors"]
+  }
 }
 
-resource "newrelic_entity_tags" "tag_service_latency" {
+resource "newrelic_entity_tags" "tag_metric_service_latency" {
   for_each    = var.metric_alert_map
   guid = newrelic_nrql_alert_condition.service_latency[each.key].entity_guid
 
@@ -139,9 +148,13 @@ resource "newrelic_entity_tags" "tag_service_latency" {
     key    = "data-type"
     values = ["metric"]
   }
+    tag {
+    key    = "golden-signal"
+    values = ["latency"]
+  }
 }
 
-resource "newrelic_entity_tags" "tag_service_low_throughput" {
+resource "newrelic_entity_tags" "tag_metric_service_low_throughput" {
   for_each    = var.metric_alert_map
   guid = newrelic_nrql_alert_condition.service_low_throughput[each.key].entity_guid
 
@@ -149,9 +162,13 @@ resource "newrelic_entity_tags" "tag_service_low_throughput" {
     key    = "data-type"
     values = ["metric"]
   }
+  tag {
+    key    = "golden-signal"
+    values = ["throughput"]
+  }
 }
 
-resource "newrelic_entity_tags" "tag_service_high_throughput" {
+resource "newrelic_entity_tags" "tag_metric_service_high_throughput" {
   for_each    = var.metric_alert_map
   guid = newrelic_nrql_alert_condition.service_high_throughput[each.key].entity_guid
 
@@ -159,5 +176,9 @@ resource "newrelic_entity_tags" "tag_service_high_throughput" {
   tag {
     key    = "data-type"
     values = ["metric"]
+  }
+  tag {
+    key    = "golden-signal"
+    values = ["throughput"]
   }
 }
