@@ -60,14 +60,38 @@ variable "metric_alert_map" {
     })) 
     default = {
         key1 = {
+            service_name = "ad"
+            service_title_name = "Ad Service"
+            throughput_lower_threshold = 100
+            throughput_upper_threshold = 400
+            latency_threshold = 10
+            error_rate_threshold = 0.01
+        }
+        key2 = {
+            service_name = "cart"
+            service_title_name = "Cart Service"
+            throughput_lower_threshold = 300
+            throughput_upper_threshold = 600
+            latency_threshold = 10
+            error_rate_threshold = 0.01
+        }
+        key3 = {
             service_name = "checkout"
             service_title_name = "Checkout Service"
             throughput_lower_threshold = 1
             throughput_upper_threshold = 30
-            latency_threshold = 75
-            error_rate_threshold = 50.3
+            latency_threshold = 1000
+            error_rate_threshold = 0.55
         }
-        key2 = {
+        key4 = {
+            service_name = "frontend"
+            service_title_name = "Frontend Service"
+            throughput_lower_threshold = 1000
+            throughput_upper_threshold = 4000
+            latency_threshold = 50
+            error_rate_threshold = 0.1
+        }
+        key5 = {
             service_name = "product-catalog"
             service_title_name = "Product Catalog Service"
             throughput_lower_threshold = 150
@@ -75,13 +99,13 @@ variable "metric_alert_map" {
             latency_threshold = 50
             error_rate_threshold = 0.1
         }
-        key3 = {
-            service_name = "cart"
-            service_title_name = "Cart Service"
-            throughput_lower_threshold = 300
-            throughput_upper_threshold = 600
-            latency_threshold = 10
-            error_rate_threshold = 0.01
+        key6 = {
+            service_name = "shipping"
+            service_title_name = "Shipping Service"
+            throughput_lower_threshold = 15000
+            throughput_upper_threshold = 25000
+            latency_threshold = 2000
+            error_rate_threshold = 0.1
         }
     }
 } 
