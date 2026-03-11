@@ -6,6 +6,28 @@ components:
       # https://github.com/open-telemetry/opentelemetry-demo/issues/2686
       repository: ghcr.io/open-telemetry/demo
       tag: "2.0.2-load-generator"
+    extraVolumes:
+      - name: patched-locustfile
+        emptyDir: {}
+    extraVolumeMounts:
+      - name: patched-locustfile
+        mountPath: /usr/src/app/locustfile.py
+        subPath: locustfile.py
+    initContainers:
+      - name: patch-locustfile
+        image: ghcr.io/open-telemetry/demo:2.0.2-load-generator
+        command:
+          - python
+          - -c
+          - |
+            with open('/usr/src/app/locustfile.py', 'r') as f:
+                content = f.read()
+            content = content.replace('await page.wait_for_timeout(2000)', 'await page.wait_for_timeout(5000)')
+            with open('/patched/locustfile.py', 'w') as f:
+                f.write(content)
+        volumeMounts:
+          - name: patched-locustfile
+            mountPath: /patched
 
   frontend:
     command:
