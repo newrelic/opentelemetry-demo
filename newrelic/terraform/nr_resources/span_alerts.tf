@@ -5,176 +5,187 @@ resource "newrelic_alert_policy" "span_alert_policy" {
 }
 
 ##############################
-## Anomaly Alerts
+## Span Threshold Alerts
 ## 
 
-# Errors
-resource "newrelic_nrql_alert_condition" "span_error_rate_anomaly" {
+# Low Throughput
+resource "newrelic_nrql_alert_condition" "span_service_low_throughput" {
+  for_each    = var.span_alert_map
   account_id = var.newrelic_account_id
   policy_id = newrelic_alert_policy.span_alert_policy.id
-  type = "baseline"
-  name = "Service ErrorRate Anomaly"
+
+  type = "static"
+  name = "${each.value.service_title_name} Low Throughput"
+  enabled = var.low_throughput_alert_enabled
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query = "SELECT count(*) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator = "below"
+    threshold = each.value.throughput_lower_threshold
+    threshold_duration = local.threshold_duration
+    threshold_occurrences = "all"
+  }
+  
+  fill_option = "none"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay = local.aggregation_delay
+  title_template = "[{{conditionName}}] {{priority}}"
+}  
+
+# High Throughput
+resource "newrelic_nrql_alert_condition" "span_service_high_throughput" {
+  for_each    = var.span_alert_map
+  account_id = var.newrelic_account_id
+  policy_id = newrelic_alert_policy.span_alert_policy.id
+
+  type = "static"
+  name = "${each.value.service_title_name} High Throughput"
   enabled = true
   violation_time_limit_seconds = 259200
 
   nrql {
-    query = "SELECT percentage(count(*), WHERE error = true) ${local.service_span_filter}"
+    query = "SELECT count(*) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
   critical {
     operator = "above"
-    threshold = 3
-    threshold_duration = 120
+    threshold = each.value.throughput_upper_threshold
+    threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
+  
   fill_option = "last_value"
-  aggregation_window = 60
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
-  aggregation_delay = 60
-  baseline_direction = "upper_only"
-  signal_seasonality = "none"
-  title_template = local.title_template
-}
- 
-# Throughput
-resource "newrelic_nrql_alert_condition" "span_throughput_anomaly" {
-    account_id = var.newrelic_account_id
-    policy_id = newrelic_alert_policy.span_alert_policy.id
- type = "baseline"
-  name = "Service Throughput Anomaly"
-  enabled = true
-  violation_time_limit_seconds = 259200
-
-  nrql {
-    query = "SELECT count(*) ${local.service_span_filter}"
-    data_account_id = var.newrelic_account_id
-  }
-
-  critical {
-    operator = "above"
-    threshold = 3
-    threshold_duration = 120
-    threshold_occurrences = "all"
-  }
-  fill_option = "last_value"
-  aggregation_window = 60
-  aggregation_method = "event_flow"
-  aggregation_delay = 60
-  baseline_direction = "upper_and_lower"
-  signal_seasonality = "none"
-  title_template = local.title_template
-}   
+  aggregation_delay = local.aggregation_delay
+  title_template = "[{{conditionName}}] {{priority}}"
+} 
 
 # Latency
-resource "newrelic_nrql_alert_condition" "span_latency_anomaly" {
-    account_id = var.newrelic_account_id
-    policy_id = newrelic_alert_policy.span_alert_policy.id
- type = "baseline"
-  name = "Service Latency Anomaly"
+resource "newrelic_nrql_alert_condition" "span_service_latency" {
+  for_each    = var.span_alert_map
+  account_id = var.newrelic_account_id
+  policy_id = newrelic_alert_policy.span_alert_policy.id
+  
+  type = "static"
+  name = "${each.value.service_title_name} Latency"
   enabled = true
   violation_time_limit_seconds = 259200
 
+
   nrql {
-    query = "SELECT percentile(duration.ms, 95) ${local.service_span_filter}"
+    query = "SELECT percentile(duration.ms, 95) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
   critical {
     operator = "above"
-    threshold = 3
-    threshold_duration = 120
+    threshold = each.value.latency_threshold
+    threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
+  
   fill_option = "last_value"
-  aggregation_window = 60
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
-  aggregation_delay = 60
-  baseline_direction = "upper_and_lower"
-  signal_seasonality = "none"
-  title_template = local.title_template
+  aggregation_delay = local.aggregation_delay
+  title_template = "[{{conditionName}}] {{priority}}"
 }   
 
-##
-## Threshold Alerts - Errors
-##
-
-# Span based
-resource "newrelic_nrql_alert_condition" "span_error_rate_threshold" {
+# Errors
+resource "newrelic_nrql_alert_condition" "span_service_error_percent" {
+  for_each    = var.span_alert_map
   account_id = var.newrelic_account_id
   policy_id = newrelic_alert_policy.span_alert_policy.id
   type = "static"
-  name = "Service ErrorRate Threshold"
+  name = "${each.value.service_title_name} High Error Percent"
   enabled = true
   violation_time_limit_seconds = 259200
 
   nrql {
-    query = "SELECT percentage(count(*), WHERE error = true) ${local.service_span_filter}"
+    query = "SELECT percentage(count(*), WHERE error = true) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
   critical {
     operator = "above"
-    threshold = 1
-    threshold_duration = 120
+    threshold = each.value.error_percent_threshold
+    threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
-  fill_option = "none"
-  aggregation_window = 60
+  fill_option = "last_value"
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
-  aggregation_delay = 60
-  title_template = local.title_template
+  aggregation_delay = local.aggregation_delay
+  title_template = "[{{conditionName}}] {{priority}}"
 }
+ 
 
-resource "newrelic_entity_tags" "tag5" {
-  guid = newrelic_nrql_alert_condition.span_error_rate_anomaly.entity_guid
+##
+## Tags
+##
 
-  tag {
-    key    = "author"
-    values = ["khickey"]
-  }
+
+resource "newrelic_entity_tags" "tag_span_service_error_rate" {
+  for_each    = var.span_alert_map
+  guid = newrelic_nrql_alert_condition.span_service_error_percent[each.key].entity_guid
 
   tag {
     key    = "data-type"
     values = ["span"]
   }
-}
-resource "newrelic_entity_tags" "tag6" {
-  guid = newrelic_nrql_alert_condition.span_throughput_anomaly.entity_guid
-
   tag {
-    key    = "author"
-    values = ["khickey"]
+    key    = "golden-signal"
+    values = ["errors"]
   }
+}
+
+resource "newrelic_entity_tags" "tag_span_service_latency" {
+  for_each    = var.span_alert_map
+  guid = newrelic_nrql_alert_condition.span_service_latency[each.key].entity_guid
 
   tag {
     key    = "data-type"
     values = ["span"]
   }
-}
-resource "newrelic_entity_tags" "tag7" {
-  guid = newrelic_nrql_alert_condition.span_latency_anomaly.entity_guid
-
   tag {
-    key    = "author"
-    values = ["khickey"]
+    key    = "golden-signal"
+    values = ["latency"]
   }
+}
+
+resource "newrelic_entity_tags" "tag_span_service_low_throughput" {
+  for_each    = var.span_alert_map
+  guid = newrelic_nrql_alert_condition.span_service_low_throughput[each.key].entity_guid
 
   tag {
     key    = "data-type"
     values = ["span"]
   }
-}
-resource "newrelic_entity_tags" "tag8" {
-  guid = newrelic_nrql_alert_condition.span_error_rate_threshold.entity_guid
-
   tag {
-    key    = "author"
-    values = ["khickey"]
+    key    = "golden-signal"
+    values = ["throughput"]
   }
+}
+
+resource "newrelic_entity_tags" "tag_span_service_high_throughput" {
+  for_each    = var.span_alert_map
+  guid = newrelic_nrql_alert_condition.span_service_high_throughput[each.key].entity_guid
+
 
   tag {
     key    = "data-type"
     values = ["span"]
+  }
+  tag {
+    key    = "golden-signal"
+    values = ["throughput"]
   }
 }
