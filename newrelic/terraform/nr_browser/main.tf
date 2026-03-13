@@ -15,7 +15,7 @@ provider "newrelic" {
 }
 
 resource "newrelic_browser_application" "otel_demo" {
-  name        = var.app_name
+  name        = var.web_app_name
   account_id  = var.newrelic_account_id
   loader_type = "SPA"
 }
@@ -26,5 +26,5 @@ resource "newrelic_api_access_key" "browser_key" {
   account_id  = var.newrelic_account_id
   key_type    = "INGEST"
   ingest_type = "BROWSER"
-  name        = "Browser Key - ${var.app_name}"
+  name        = "Browser Key - ${var.web_app_name}"
 }
