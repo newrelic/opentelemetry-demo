@@ -20,7 +20,7 @@ resource "newrelic_nrql_alert_condition" "span_service_low_throughput" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query = "SELECT count(*) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
+    query = "SELECT count(*) FROM Span WHERE service.name = '${each.value.service_name}' AND span.kind = 'server' FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
@@ -50,7 +50,7 @@ resource "newrelic_nrql_alert_condition" "span_service_high_throughput" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query = "SELECT count(*) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
+    query = "SELECT count(*) FROM Span WHERE service.name = '${each.value.service_name}' AND span.kind = 'server' FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
@@ -81,7 +81,7 @@ resource "newrelic_nrql_alert_condition" "span_service_latency" {
 
 
   nrql {
-    query = "SELECT percentile(duration.ms, 95) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
+    query = "SELECT percentile(duration.ms, 95) FROM Span WHERE service.name = '${each.value.service_name}' AND span.kind = 'server' FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
@@ -110,7 +110,7 @@ resource "newrelic_nrql_alert_condition" "span_service_error_percent" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query = "SELECT percentage(count(*), WHERE error = true) FROM Span WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
+    query = "SELECT percentage(count(*), WHERE error = true) FROM Span WHERE service.name = '${each.value.service_name}' AND span.kind = 'server' FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
