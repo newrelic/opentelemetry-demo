@@ -78,7 +78,7 @@ resource "newrelic_nrql_alert_condition" "web_ajax_image_latency" {
 
   critical {
     operator = "above"
-    threshold = 1.0
+    threshold = 3.0
     threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }
@@ -105,7 +105,7 @@ resource "newrelic_nrql_alert_condition" "web_ajax_api_latency" {
 
   critical {
     operator = "above"
-    threshold = 1.0
+    threshold = 3.0
     threshold_duration = local.threshold_duration
     threshold_occurrences = "all"
   }

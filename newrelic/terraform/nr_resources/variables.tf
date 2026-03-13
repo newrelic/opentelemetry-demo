@@ -25,7 +25,7 @@ variable "newrelic_account_id" {
 variable "web_app_name" {
   description = "Name of the frontend web application in New Relic"
   type        = string
-  default     = "astroshop-frontend"
+  default     = "frontend"
 }
 
 ##
