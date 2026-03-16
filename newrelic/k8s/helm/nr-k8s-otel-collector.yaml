@@ -22,29 +22,30 @@ deployment:
           metrics_flush_interval: 30s
           aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
           dimensions:
-          - name: http.method
-          - name: http.request.method
-          - name: http.route
-          - name: rpc.system
-          - name: rpc.service
-          - name: rpc.method
-          - name: db.system
-          - name: db.operation
-          - name: db.sql.table
-          - name: db.collection.name
-          - name: db.operation.name
-          - name: db.system.name
-          - name: db.stored_procedure.name
-          - name: db.query.summary
-          - name: messaging.operation
-          - name: messaging.destination.template
-          - name: messaging.destination.name
-          - name: error.type
-          - name: server.address
-          - name: net.peer.name
+            - name: http.method
+            - name: http.request.method
+            - name: http.route
+            - name: http.status_code
+            - name: http.response.status_code
+            - name: rpc.system
+            - name: rpc.service
+            - name: rpc.method
+            - name: rpc.response.status_code
+            - name: rpc.status_code
+            - name: db.system
+            - name: db.operation
+            - name: db.sql.table
+            - name: db.system.name
+            - name: error.type
+            - name: server.address
+            - name: net.peer.name
           exclude_dimensions:
-          - span.name
-          - status.code
+            - span.name
+            - status.code
+          resource_metrics_key_attributes:
+            - service.name
+            - telemetry.sdk.language
+            - telemetry.sdk.name
 
       exporters: 
         debug: {}
@@ -96,10 +97,6 @@ deployment:
                 - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"], "\\/api\\/products\\/.*")  # e.g. /api/products/1YMWWN1N4O
                 - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"], "\\/api\\/recommendations")  # e.g. # /api/recommendations?productIds=...
                 - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"], "\\/api\\/data.*")  # e.g. # " /api/data?contextKeys=telescopes" or /api/data/?contextKeys=cameras
-            - context: span
-              statements:
-                # SANITIZE ALL SPAN NAMES TO PREVENT CARDINALITY EXPLOSION
-                - set_semconv_span_name("1.37.0", "unsanitized_span_name")
 
         resource/otel-demo:
           attributes:
