@@ -1,0 +1,84 @@
+# NRDOT K8s OTel Collector image does not ship with the spanmetrics connector. Using contrib instead.
+images:
+  collector:
+    registry: ""
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.145.0"
+    pullPolicy: IfNotPresent
+
+# This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
+# By adding this, we can disable the OTel Collector shipped as part of the OpenTelemetry Demo application,
+# and rely solely on the NRDOT K8s OTel Collector instances.
+deployment:
+  configMap:
+    extraConfig:
+      connectors:
+        spanmetrics:
+          metrics_flush_interval: 30s
+          aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
+          dimensions:
+          - name: http.method
+          - name: http.request.method
+          - name: http.route
+          - name: rpc.system
+          - name: rpc.service
+          - name: rpc.method
+          - name: db.system
+          - name: db.operation
+          - name: db.sql.table
+          - name: db.collection.name
+          - name: db.operation.name
+          - name: db.system.name
+          - name: db.stored_procedure.name
+          - name: db.query.summary
+          - name: messaging.operation
+          - name: messaging.destination.template
+          - name: messaging.destination.name
+          - name: error.type
+          - name: server.address
+          - name: net.peer.name
+          exclude_dimensions:
+          - span.name
+          - status.code
+
+      processors:
+        # Drop spanmetrics metrics for services that publish metrics by default
+        filter/drop-spanmetrics-services:
+          metrics:
+            datapoint:
+            - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+            - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+
+        # Required to enable spanmetrics in the New Relic summary UI
+        resource/newrelic_spanmetrics_flag:
+          attributes:
+          - action: upsert
+            key: newrelic.spanmetrics.enabled
+            value: true
+
+      pipelines:
+        metrics/spanmetrics:
+          exporters:
+          - otlphttp/newrelic
+          - debug
+          processors:
+          - memory_limiter
+          - filter/drop-spanmetrics-services
+          - resource/newrelic_spanmetrics_flag
+          - batch
+          receivers:
+          - spanmetrics
+
+        traces/otel-demo:
+          exporters:
+          - spanmetrics
+          - otlphttp/newrelic
+          processors:
+          - memory_limiter
+          - resourcedetection/otel-demo
+          - resource/otel-demo
+          - transform/otel-demo
+          - k8sattributes/ksm
+          - batch
+          receivers:
+          - otlp
