@@ -2,14 +2,54 @@ cluster: "opentelemetry-demo"
 customSecretName: "newrelic-license-key"
 customSecretLicenseKey: "license-key"
 
+# NRDOT K8s OTel Collector image does not ship with the spanmetrics connector. Using contrib instead.
+# Will remove if/when spanmetrics is added to NRDOT.
+images:
+  collector:
+    registry: ""
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.145.0"
+    pullPolicy: IfNotPresent
+
 # This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
 # By adding this, we can disable the OTel Collector shipped as part of the OpenTelemetry Demo application,
 # and rely solely on the NRDOT K8s OTel Collector instances.
 deployment:
   configMap:
     extraConfig:
+      connectors:
+        spanmetrics:
+          metrics_flush_interval: 30s
+          aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
+          dimensions:
+            - name: http.method
+            - name: http.request.method
+            - name: http.route
+            - name: http.status_code
+            - name: http.response.status_code
+            - name: rpc.system
+            - name: rpc.service
+            - name: rpc.method
+            - name: rpc.response.status_code
+            - name: rpc.status_code
+            - name: db.system
+            - name: db.operation
+            - name: db.sql.table
+            - name: db.system.name
+            - name: error.type
+            - name: server.address
+            - name: net.peer.name
+          exclude_dimensions:
+            - span.name
+            - status.code
+          resource_metrics_key_attributes:
+            - service.name
+            - telemetry.sdk.language
+            - telemetry.sdk.name
+
       exporters: 
         debug: {}
+
       processors:
         # Drop Python system metrics since they're duplicates of hostmetrics 
         # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/system_metrics/system_metrics.html
@@ -18,25 +58,66 @@ deployment:
           metrics:
             metric:
               - 'instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"'
+
+        # Drop spanmetrics metrics for services that DO publish metrics by default
+        filter/drop-spanmetrics-services:
+          metrics:
+            datapoint:
+            - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+            - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+
+        # Required to enable spanmetrics in the New Relic summary UI
+        resource/newrelic_spanmetrics_flag:
+          attributes:
+          - action: upsert
+            key: newrelic.spanmetrics.enabled
+            value: true
+
         resourcedetection/otel-demo:
           detectors: [env]
+
         # This processor is used to help limit high cardinality on next.js span names
         # When this PR is merged (and released) we can remove this transform processor
         # https://github.com/vercel/next.js/pull/64852
         transform/otel-demo:
           error_mode: ignore
           trace_statements:
+            # Sanitize spans to prevent span metrics cardinality explosion
+            # caused by non-compliant high cardinality span names:
+            # 1. Define missing http.route on key HTTP operations for meaningful operation names
+            # 2. Then normalize span names; http server spans lacking http.route default to operations "GET", "POST", etc.
             - context: span
+              # FRONTEND SERVICE
+              conditions:
+                - span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "frontend" and span.attributes["http.route"] == nil
               statements:
-                # could be removed when https://github.com/vercel/next.js/pull/64852 is fixed upstream
-                - replace_pattern(name, "\\?.*", "")
-                - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+                # Workaround for Next.js high cardinality span name issue: https://github.com/vercel/next.js/issues/54694
+                - set(span.attributes["http.route"], "/api/cart") where IsMatch(span.attributes["http.target"], "\\/api\\/cart")  # e.g. # /api/cart
+                - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"], "\\/api\\/checkout")  # e.g. # /api/checkout
+                - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"], "\\/api\\/products\\/.*")  # e.g. /api/products/1YMWWN1N4O
+                - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"], "\\/api\\/recommendations")  # e.g. # /api/recommendations?productIds=...
+                - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"], "\\/api\\/data.*")  # e.g. # " /api/data?contextKeys=telescopes" or /api/data/?contextKeys=cameras
+
         resource/otel-demo:
           attributes:
           - key: service.instance.id
             from_attribute: k8s.pod.uid
             action: insert
+
       pipelines:
+
+        # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
+        metrics/spanmetrics:
+          exporters:
+            - otlphttp/newrelic
+          processors:
+            - memory_limiter
+            - filter/drop-spanmetrics-services
+            - resource/newrelic_spanmetrics_flag
+            - batch
+          receivers:
+            - spanmetrics
+
         metrics/otel-demo:
           receivers:
             - otlp
@@ -49,10 +130,11 @@ deployment:
             - batch
           exporters:
             - otlphttp/newrelic
-            - debug
+
         traces/otel-demo:
-          receivers:
-            - otlp
+          exporters:
+            - spanmetrics
+            - otlphttp/newrelic
           processors:
             - memory_limiter
             - resourcedetection/otel-demo
@@ -60,8 +142,9 @@ deployment:
             - transform/otel-demo
             - k8sattributes/ksm
             - batch
-          exporters:
-            - otlphttp/newrelic
+          receivers:
+            - otlp
+
         logs/otel-demo:
           receivers:
             - otlp
