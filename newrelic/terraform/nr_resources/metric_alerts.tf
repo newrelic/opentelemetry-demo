@@ -21,7 +21,7 @@ resource "newrelic_nrql_alert_condition" "service_error_rate" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query = "SELECT sum(apm.service.error.count['count']) / count(apm.service.transaction.duration) FROM Metric WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
+    query = "SELECT (sum(apm.service.error.count['count']) / count(apm.service.transaction.duration)) * 100 FROM Metric WHERE service.name = '${each.value.service_name}' AND (transactionType = 'Web') FACET service.name, entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
