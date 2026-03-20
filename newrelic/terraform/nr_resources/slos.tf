@@ -79,69 +79,71 @@ resource "newrelic_service_level" "latency_slo" {
 }
 
 # Alert Policy
-resource "newrelic_alert_policy" "gameday_policy" {
-  name                = "Gameday Service Level Alerts"
-  incident_preference = "PER_CONDITION"
-}
+## Disabling, will reevaluate at another date
 
-# Burn Rate Alerts - Throughput
-data "newrelic_service_level_alert_helper" "throughput_fast_burn" {
-  for_each   = newrelic_service_level.throughput_slo
-  alert_type = "fast_burn"
-  sli_guid   = each.value.sli_guid
-  slo_target = 99.5
-  slo_period = 1
-}
+# resource "newrelic_alert_policy" "gameday_policy" {
+#   name                = "Gameday Service Level Alerts"
+#   incident_preference = "PER_CONDITION"
+# }
 
-resource "newrelic_nrql_alert_condition" "throughput_burn_rate" {
-  for_each                     = newrelic_service_level.throughput_slo
-  account_id                   = var.newrelic_account_id
-  policy_id                    = newrelic_alert_policy.gameday_policy.id
-  type                         = "static"
-  name                         = "SL :${each.value.name} - Fast Burn"
-  description                  = "High failure rate in throughput detected. Check flagd for active failure flags."
-  enabled                      = true
-  violation_time_limit_seconds = 86400
+# # Burn Rate Alerts - Throughput
+# data "newrelic_service_level_alert_helper" "throughput_fast_burn" {
+#   for_each   = newrelic_service_level.throughput_slo
+#   alert_type = "fast_burn"
+#   sli_guid   = each.value.sli_guid
+#   slo_target = 99.5
+#   slo_period = 1
+# }
 
-  nrql {
-    query = data.newrelic_service_level_alert_helper.throughput_fast_burn[each.key].nrql
-  }
+# resource "newrelic_nrql_alert_condition" "throughput_burn_rate" {
+#   for_each                     = newrelic_service_level.throughput_slo
+#   account_id                   = var.newrelic_account_id
+#   policy_id                    = newrelic_alert_policy.gameday_policy.id
+#   type                         = "static"
+#   name                         = "SL :${each.value.name} - Fast Burn"
+#   description                  = "High failure rate in throughput detected. Check flagd for active failure flags."
+#   enabled                      = true
+#   violation_time_limit_seconds = 86400
 
-  critical {
-    operator              = "above"
-    threshold             = data.newrelic_service_level_alert_helper.throughput_fast_burn[each.key].threshold
-    threshold_duration    = data.newrelic_service_level_alert_helper.throughput_fast_burn[each.key].evaluation_period
-    threshold_occurrences = "all"
-  }
-}
+#   nrql {
+#     query = data.newrelic_service_level_alert_helper.throughput_fast_burn[each.key].nrql
+#   }
 
-# Burn Rate Alerts - Latency
-data "newrelic_service_level_alert_helper" "latency_fast_burn" {
-  for_each   = newrelic_service_level.latency_slo
-  alert_type = "fast_burn"
-  sli_guid   = each.value.sli_guid
-  slo_target = 95.0
-  slo_period = 1
-}
+#   critical {
+#     operator              = "above"
+#     threshold             = data.newrelic_service_level_alert_helper.throughput_fast_burn[each.key].threshold
+#     threshold_duration    = data.newrelic_service_level_alert_helper.throughput_fast_burn[each.key].evaluation_period
+#     threshold_occurrences = "all"
+#   }
+# }
 
-resource "newrelic_nrql_alert_condition" "latency_burn_rate" {
-  for_each                     = newrelic_service_level.latency_slo
-  account_id                   = var.newrelic_account_id
-  policy_id                    = newrelic_alert_policy.gameday_policy.id
-  type                         = "static"
-  name                         = "SL: ${each.value.name} - Fast Burn"
-  description                  = "High latency detected. Check flagd for active degradation flags."
-  enabled                      = true
-  violation_time_limit_seconds = 86400
+# # Burn Rate Alerts - Latency
+# data "newrelic_service_level_alert_helper" "latency_fast_burn" {
+#   for_each   = newrelic_service_level.latency_slo
+#   alert_type = "fast_burn"
+#   sli_guid   = each.value.sli_guid
+#   slo_target = 95.0
+#   slo_period = 1
+# }
 
-  nrql {
-    query = data.newrelic_service_level_alert_helper.latency_fast_burn[each.key].nrql
-  }
+# resource "newrelic_nrql_alert_condition" "latency_burn_rate" {
+#   for_each                     = newrelic_service_level.latency_slo
+#   account_id                   = var.newrelic_account_id
+#   policy_id                    = newrelic_alert_policy.gameday_policy.id
+#   type                         = "static"
+#   name                         = "SL: ${each.value.name} - Fast Burn"
+#   description                  = "High latency detected. Check flagd for active degradation flags."
+#   enabled                      = true
+#   violation_time_limit_seconds = 86400
 
-  critical {
-    operator              = "above"
-    threshold             = data.newrelic_service_level_alert_helper.latency_fast_burn[each.key].threshold
-    threshold_duration    = data.newrelic_service_level_alert_helper.latency_fast_burn[each.key].evaluation_period
-    threshold_occurrences = "all"
-  }
-}
+#   nrql {
+#     query = data.newrelic_service_level_alert_helper.latency_fast_burn[each.key].nrql
+#   }
+
+#   critical {
+#     operator              = "above"
+#     threshold             = data.newrelic_service_level_alert_helper.latency_fast_burn[each.key].threshold
+#     threshold_duration    = data.newrelic_service_level_alert_helper.latency_fast_burn[each.key].evaluation_period
+#     threshold_occurrences = "all"
+#   }
+# }
