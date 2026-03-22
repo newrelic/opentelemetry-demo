@@ -26,7 +26,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
   annotations:
 ---
 # Source: nr-k8s-otel-collector/templates/daemonset-configmap.yaml
@@ -40,7 +40,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
 data:
   daemonset-config.yaml: |
     receivers:
@@ -639,7 +639,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.13
+            value: 0.10.14
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -912,7 +912,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
 data:
   deployment-config.yaml: |
     receivers:
@@ -1047,11 +1047,23 @@ data:
                 replacement: scheduler
 
     processors:
+      filter/drop-spanmetrics-services:
+        metrics:
+          datapoint:
+          - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"],
+            "(currency|quote|payment|product-reviews|recommendation)")
+          - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"],
+            "(currency|quote|payment|product-reviews|recommendation)")
       filter/python-system-metrics:
         error_mode: ignore
         metrics:
           metric:
           - instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"
+      resource/newrelic_spanmetrics_flag:
+        attributes:
+        - action: upsert
+          key: newrelic.spanmetrics.enabled
+          value: true
       resource/otel-demo:
         attributes:
         - action: insert
@@ -1063,10 +1075,21 @@ data:
       transform/otel-demo:
         error_mode: ignore
         trace_statements:
-        - context: span
+        - conditions:
+          - span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "frontend"
+            and span.attributes["http.route"] == nil
+          context: span
           statements:
-          - replace_pattern(name, "\\?.*", "")
-          - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+          - set(span.attributes["http.route"], "/api/cart") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/cart")
+          - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/checkout")
+          - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/products\\/.*")
+          - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/recommendations")
+          - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/data.*")
       
 
       transform/promote_job_label:
@@ -1430,7 +1453,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.13
+            value: 0.10.14
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1448,7 +1471,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.10.13
+            value: 0.10.14
 
       transform/events:
         log_statements:
@@ -1610,7 +1633,34 @@ data:
           api-key: ${env:NR_LICENSE_KEY}
 
     connectors:
-      
+      spanmetrics:
+        aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
+        dimensions:
+        - name: http.method
+        - name: http.request.method
+        - name: http.route
+        - name: http.status_code
+        - name: http.response.status_code
+        - name: rpc.system
+        - name: rpc.service
+        - name: rpc.method
+        - name: rpc.response.status_code
+        - name: rpc.status_code
+        - name: db.system
+        - name: db.operation
+        - name: db.sql.table
+        - name: db.system.name
+        - name: error.type
+        - name: server.address
+        - name: net.peer.name
+        exclude_dimensions:
+        - span.name
+        - status.code
+        metrics_flush_interval: 30s
+        resource_metrics_key_attributes:
+        - service.name
+        - telemetry.sdk.language
+        - telemetry.sdk.name
 
       routing/nr_logs_pipelines:
         default_pipelines: [logs/pipeline]
@@ -1669,7 +1719,6 @@ data:
         metrics/otel-demo:
           exporters:
           - otlphttp/newrelic
-          - debug
           processors:
           - memory_limiter
           - filter/python-system-metrics
@@ -1679,8 +1728,19 @@ data:
           - batch
           receivers:
           - otlp
+        metrics/spanmetrics:
+          exporters:
+          - otlphttp/newrelic
+          processors:
+          - memory_limiter
+          - filter/drop-spanmetrics-services
+          - resource/newrelic_spanmetrics_flag
+          - batch
+          receivers:
+          - spanmetrics
         traces/otel-demo:
           exporters:
+          - spanmetrics
           - otlphttp/newrelic
           processors:
           - memory_limiter
@@ -1956,7 +2016,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
 rules:
   - apiGroups:
     - ""
@@ -2061,7 +2121,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
 subjects:
   - kind: ServiceAccount
     name: nr-k8s-otel-collector
@@ -2109,7 +2169,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
 spec:
   type: ClusterIP
   ports:
@@ -2138,7 +2198,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
 spec:
   selector:
     matchLabels:
@@ -2152,7 +2212,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: daemonset
       annotations:
-        checksum/config: c3484efca1875e4181ab7e86ec05ee88df316f426ce2bab26a917eba632280bf
+        checksum/config: f1fc42f401d6cf9b422a64a17658216de8f93013c2b9ecbe4fcbd25af731a49d
     spec:
       serviceAccountName: nr-k8s-otel-collector
       initContainers:
@@ -2222,7 +2282,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/newrelic/nrdot-collector-k8s:1.8.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.145.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2377,7 +2437,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.2.0
-    helm.sh/chart: nr-k8s-otel-collector-0.10.13
+    helm.sh/chart: nr-k8s-otel-collector-0.10.14
 spec:
   replicas: 1
   minReadySeconds: 5
@@ -2393,7 +2453,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 22918cbf87c7ab02f00038fcc8aea7bc0b126da44f5039e2a9afba24a3bda604
+        checksum/config: b94523e342add5059508b5f3e7a0e10e5ff572fb4ba053a4285d90d8c8717660
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2407,7 +2467,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/newrelic/nrdot-collector-k8s:1.8.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.145.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
