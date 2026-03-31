@@ -9,6 +9,6 @@ locals {
    web_title_template = "{{tags.appName}} [{{conditionName}}] {{priority}}"
    aggregation_window = 60
    aggregation_delay = 60
-   threshold_duration = 120
+   threshold_duration = 60
 }
 
