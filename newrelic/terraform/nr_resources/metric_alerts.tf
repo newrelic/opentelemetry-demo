@@ -29,10 +29,10 @@ resource "newrelic_nrql_alert_condition" "service_error_rate" {
     operator = "above"
     threshold = each.value.error_rate_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   fill_option = "none"
-  aggregation_window = 60
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay = local.aggregation_delay
   title_template = "[{{conditionName}}] {{priority}}"
@@ -57,7 +57,7 @@ resource "newrelic_nrql_alert_condition" "service_latency" {
     operator = "above"
     threshold = each.value.latency_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   fill_option = "last_value"
   aggregation_window = local.aggregation_window
@@ -85,7 +85,7 @@ resource "newrelic_nrql_alert_condition" "service_low_throughput" {
     operator = "below"
     threshold = each.value.throughput_lower_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   fill_option = "none"
   aggregation_window = local.aggregation_window
@@ -113,7 +113,7 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
     operator = "above"
     threshold = each.value.throughput_upper_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   fill_option = "none"
   aggregation_window = local.aggregation_window

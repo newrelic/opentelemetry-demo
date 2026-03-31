@@ -28,7 +28,7 @@ resource "newrelic_nrql_alert_condition" "span_service_low_throughput" {
     operator = "below"
     threshold = each.value.throughput_lower_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   
   fill_option = "none"
@@ -58,7 +58,7 @@ resource "newrelic_nrql_alert_condition" "span_service_high_throughput" {
     operator = "above"
     threshold = each.value.throughput_upper_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   
   fill_option = "last_value"
@@ -89,7 +89,7 @@ resource "newrelic_nrql_alert_condition" "span_service_latency" {
     operator = "above"
     threshold = each.value.latency_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   
   fill_option = "last_value"
@@ -118,7 +118,7 @@ resource "newrelic_nrql_alert_condition" "span_service_error_percent" {
     operator = "above"
     threshold = each.value.error_percent_threshold
     threshold_duration = local.threshold_duration
-    threshold_occurrences = "all"
+    threshold_occurrences = "at_least_once"
   }
   fill_option = "last_value"
   aggregation_window = local.aggregation_window

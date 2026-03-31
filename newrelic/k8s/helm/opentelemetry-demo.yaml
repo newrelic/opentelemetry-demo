@@ -40,6 +40,8 @@ default:
         k8s.pod.uid=$(OTEL_POD_UID),
         k8s.namespace.name=$(OTEL_NAMESPACE_NAME),
         k8s.cluster.name=$(OTEL_CLUSTER_NAME)
+    - name: OTEL_METRIC_EXPORT_INTERVAL
+      value: 10000
 
 components:
   accounting:
