@@ -10,19 +10,25 @@
 #   (Run from the newrelic/scripts directory)
 #
 # Environment variables:
+#   NEW_RELIC_REGION        Your New Relic region (will prompt if not set,
+#                           default: US)
+#                           (used by CLI install docker, validate-newrelic.sh,
+#                           and CLI uninstall docker)
 #   NEW_RELIC_LICENSE_KEY   Your New Relic license key (will prompt if not set)
-#                           (used by install-docker.sh)
+#                           (used by CLI install docker, docker compose
+#                           commands, and CLI uninstall docker)
 #   NEW_RELIC_API_KEY       Your New Relic User API key (will prompt if not set)
 #                           (used by validate-newrelic.sh)
 #   NEW_RELIC_ACCOUNT_ID    Your New Relic Account ID (will prompt if not set)
 #                           (used by validate-newrelic.sh)
 #
 # Dependencies:
-#   - Docker
-#   - Docker Compose v2+
+#   - Docker (used by CLI install docker, docker compose commands,
+#     and CLI uninstall docker)
+#   - Docker Compose v2+ (used by CLI install docker, docker compose commands,
+#     and CLI uninstall docker)
 #   - .env and .env.override files in the project root
-#   - pip (used by validate-ui.sh)
-#   - python3 (used by validate-ui.sh and validate-newrelic.sh)
+#   - python3 (used by validate-newrelic.sh)
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
@@ -30,8 +36,9 @@ set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
 # Make sure tools required by all scripts are installed
-check_tool_installed docker
-check_tool_installed pip
+# Note: The CLI install docker command will check for Docker so we don't need
+# to do that here, but we do need to check for python3 since it's required by
+# the validate-newrelic.sh script.
 check_tool_installed python3
 
 # Load environment variables from .env if it exists
@@ -41,14 +48,18 @@ fi
 
 # Ensure environment variables required for all scripts are set, prompting
 # the user if necessary
+prompt_for_region
 prompt_for_license_key
 prompt_for_api_key
 prompt_for_account_id
 
 # Run the install script
 echo "Installing OpenTelemetry Demo on Docker..."
-NEW_RELIC_LICENSE_KEY="$NEW_RELIC_LICENSE_KEY" \
-  $SCRIPT_DIR/install-docker.sh
+cd "$SCRIPT_DIR/../cli" && \
+  NEW_RELIC_REGION="$NEW_RELIC_REGION" \
+  NEW_RELIC_LICENSE_KEY="$NEW_RELIC_LICENSE_KEY" \
+  NEW_RELIC_ENABLE_BROWSER=false \
+  go run . install docker
 
 # Begin validation
 echo "Validating OpenTelemetry Demo Docker installation..."
@@ -80,26 +91,6 @@ done
 
 echo "All containers are in Running state!"
 
-# Maybe run the UI validation script
-if [ "${UI_VALIDATION_ENABLED:-false}" = "true" ]; then
-  echo "Running UI validation script..."
-  EXIT_CODE=0
-  $SCRIPT_DIR/validate-ui.sh || EXIT_CODE=$?
-
-  if [ $EXIT_CODE -ne 0 ]; then
-    # Selenium scripts can be finnicky so we retry once if it fails
-    echo "UI validation failed on first attempt: Retrying UI validation script..."
-    EXIT_CODE=0
-    $SCRIPT_DIR/validate-ui.sh || EXIT_CODE=$?
-
-    if [ $EXIT_CODE -ne 0 ]; then
-      echo "UI validation failed: Issues detected in OpenTelemetry Demo UI validation after two attempts."
-      echo "Try running ./validate-docker.sh again or run ./validate-ui.sh to manually run the UI validation."
-      exit 1
-    fi
-  fi
-fi
-
 # Pause briefly to allow data to propagate to New Relic
 echo "Pausing to allow data to propagate to New Relic..."
 sleep 30
@@ -107,7 +98,8 @@ sleep 30
 # Run the New Relic validation script
 echo "Running New Relic validation script..."
 EXIT_CODE=0
-NEW_RELIC_API_KEY="$NEW_RELIC_API_KEY" \
+NEW_RELIC_REGION="$NEW_RELIC_REGION" \
+  NEW_RELIC_API_KEY="$NEW_RELIC_API_KEY" \
   NEW_RELIC_ACCOUNT_ID="$NEW_RELIC_ACCOUNT_ID" \
   $SCRIPT_DIR/validate-newrelic.sh || EXIT_CODE=$?
 
@@ -120,6 +112,6 @@ fi
 # Validation succeeded, maybe cleanup Docker objects
 if [ "${DOCKER_CLEANUP_ENABLED:-true}" = "true" ]; then
   echo "Validation succeeded! Cleaning up Docker objects..."
-  NEW_RELIC_LICENSE_KEY="$NEW_RELIC_LICENSE_KEY" \
-    $SCRIPT_DIR/cleanup-docker.sh
+  cd "$SCRIPT_DIR/../cli" && \
+    go run . uninstall docker
 fi

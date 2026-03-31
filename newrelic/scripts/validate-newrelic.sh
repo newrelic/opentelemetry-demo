@@ -10,6 +10,7 @@
 #   (Run from the newrelic/scripts directory)
 #
 # Environment variables:
+#   NEW_RELIC_REGION        Your New Relic region (will prompt if not set, default: US)
 #   NEW_RELIC_API_KEY       Your New Relic User API key (will prompt if not set)
 #   NEW_RELIC_ACCOUNT_ID    Your New Relic Account ID (will prompt if not set)
 #
@@ -31,13 +32,15 @@ fi
 
 # Ensure New Relic API key and account ID are set, prompting the user if
 # necessary
+prompt_for_region
 prompt_for_api_key
 prompt_for_account_id
 
 # Run the validation script to check data in New Relic
 echo "Running New Relic validation script..."
 EXIT_CODE=0
-NEW_RELIC_API_KEY="$NEW_RELIC_API_KEY" \
+NEW_RELIC_REGION="$NEW_RELIC_REGION" \
+  NEW_RELIC_API_KEY="$NEW_RELIC_API_KEY" \
   NEW_RELIC_ACCOUNT_ID="$NEW_RELIC_ACCOUNT_ID" \
   python3 "$SCRIPT_DIR/test_otel_demo_newrelic.py" || EXIT_CODE=$?
 
