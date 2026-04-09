@@ -175,3 +175,5 @@ prometheus:
   enabled: false
 jaeger:
   enabled: false
+opentelemetry-collector:
+  enabled: false
