@@ -79,6 +79,94 @@ components:
         value: http://$(OTEL_COLLECTOR_NAME):4317
 
 # Disable non-NR components
+  load-generator:
+    resources:
+      limits:
+        memory: 8Gi
+    envOverrides:
+      - name: LOCUST_USERS
+        value: "10"
+    additionalVolumes:
+      - name: patched-locustfile
+        emptyDir: {}
+    additionalVolumeMounts:
+      - name: patched-locustfile
+        mountPath: /usr/src/app/locustfile.py
+        subPath: locustfile.py
+    initContainers:
+      - name: patch-locustfile
+        image: ghcr.io/open-telemetry/demo:2.0.2-load-generator
+        command:
+          - python
+          - -c
+          - |
+            with open('/usr/src/app/locustfile.py', 'r') as f:
+                content = f.read()
+
+            # Indent vars
+            indent4sp = '    '
+            indent8sp = indent4sp+indent4sp
+            indent12sp = indent4sp+indent8sp
+            indent16sp = indent8sp+indent8sp
+            indent20sp = indent16sp+indent4sp
+            indent24sp = indent16sp+indent8sp
+
+            #
+            # Original text sections
+            #
+
+            # Going to insert a task above this task and disable this one
+            orig_text1 = indent8sp + 'async def open_cart_page_and_change_currency(self, page: PageWithRetry):'
+
+            # Keeping the browser add to cart task but applying patch from https://github.com/open-telemetry/opentelemetry-demo/pull/3171/changes
+            orig_text2 = indent12sp + 'with self.tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+            orig_text3 = indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')'
+
+            #
+            # Changes
+            #
+
+            new_text1 =  indent8sp + 'async def open_product_detail_page(self, page: PageWithRetry):\n'
+            new_text1 += indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+            new_text1 += indent12sp + 'with self.tracer.start_as_current_span("browser_pdp", context=Context()):\n'
+            new_text1 += indent16sp + 'try:\n'
+            new_text1 += indent20sp + 'page.on("console", lambda msg: print(msg.text))\n'
+            new_text1 += indent20sp + 'await page.route(\'**/*\', add_baggage_header)\n'
+            new_text1 += indent20sp + 'await page.goto("/product/HQTGWGPNH4", wait_until="domcontentloaded")\n'                 
+            new_text1 += indent20sp + 'await page.wait_for_event(\n'
+            new_text1 += indent24sp + '"response",\n'
+            new_text1 += indent24sp + 'predicate=lambda r: \'/images/products/thecometbook.jpg\' in r.url and r.status == 200,\n'
+            new_text1 += indent24sp + 'timeout=15000\n'
+            new_text1 += indent20sp + ')\n'
+            new_text1 += indent20sp + 'await page.wait_for_timeout(2000)  # giving the browser time to export the traces\n'
+            new_text1 += indent20sp + 'logging.info("Product page visited successfully")\n'
+            new_text1 += indent16sp + 'except Exception as e:\n'
+            new_text1 += indent20sp + 'logging.error(f"Error in product page visit: {str(e)}")\n'
+            new_text1 += '\n'
+            new_text1 += indent8sp + '# @task\n'
+            new_text1 += indent8sp + '@pw\n'
+            new_text1 += indent8sp + 'async def open_cart_page_and_change_currency(self, page: PageWithRetry):\n'
+            new_text1 += indent12sp + 'tracer = trace.get_tracer(__name__)'
+
+            new_text2 = indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+            new_text2 += indent12sp + 'with tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+
+            new_text3 = indent20sp + 'await page.wait_for_event(\n'
+            new_text3 += indent24sp + '"response",\n'
+            new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
+            new_text3 += indent24sp + 'timeout=15000\n'
+            new_text3 += indent20sp + ')\n'
+            new_text3 += indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')'
+            
+            content = content.replace(orig_text1, new_text1)
+            content = content.replace(orig_text2, new_text2)
+            content = content.replace(orig_text3, new_text3)
+
+            with open('/patched/locustfile.py', 'w') as f:
+                f.write(content)
+        volumeMounts:
+          - name: patched-locustfile
+            mountPath: /patched
 opensearch:
   enabled: false
 grafana:
