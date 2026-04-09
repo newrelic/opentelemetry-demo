@@ -1,0 +1,10 @@
+# Ignore local CLI environment configuration
+cli/.env
+cli/.env.override
+
+# Ignore CLI binary executables
+cli/nr-otel-cli
+cli/nr-otel-cli.exe
+
+# Ignore templated nr-browser
+k8s/helm/nr-browser.yaml

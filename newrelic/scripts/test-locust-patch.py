@@ -48,10 +48,19 @@ indent24sp = indent16sp+indent8sp
 # Original text sections
 #
 
-# Going to insert task above this task and disable this one
+# Remove __init__ entirely since it only set self.tracer which is no longer needed
+orig_text0 =  indent8sp + 'def __init__(self, *args, **kwargs):\n'
+orig_text0 += indent12sp + 'super().__init__(*args, **kwargs)\n'
+orig_text0 += indent12sp + 'self.tracer = trace.get_tracer(__name__)\n'
+orig_text0 += '\n'
+
+# Going to insert task above this task and keep this one active
 orig_text1 = indent8sp + 'async def open_cart_page_and_change_currency(self, page: PageWithRetry):'
 
-# Keeping this task but applying Dan's patch
+# Fix currency span to use local tracer (consistent with other tasks)
+orig_text4 = indent12sp + 'with self.tracer.start_as_current_span("browser_change_currency", context=Context()):'
+
+# Keeping this task but applying patch from https://github.com/open-telemetry/opentelemetry-demo/pull/3171/changes
 orig_text2 = indent12sp + 'with self.tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
 
 orig_text3 = indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')'
@@ -77,10 +86,14 @@ new_text1 += indent20sp + 'logging.info("Product page visited successfully")\n'
 new_text1 += indent16sp + 'except Exception as e:\n'
 new_text1 += indent20sp + 'logging.error(f"Error in product page visit: {str(e)}")\n'
 new_text1 += '\n'
-new_text1 += indent8sp + '# @task\n'
+new_text1 += indent8sp + '@task\n'
 new_text1 += indent8sp + '@pw\n'
 new_text1 += indent8sp + 'async def open_cart_page_and_change_currency(self, page: PageWithRetry):\n'
 new_text1 += indent12sp + 'tracer = trace.get_tracer(__name__)'
+
+new_text0 = ''
+
+new_text4 = indent12sp + 'with tracer.start_as_current_span("browser_change_currency", context=Context()):'
 
 new_text2 = indent12sp + 'tracer = trace.get_tracer(__name__)\n'
 new_text2 += indent12sp + 'with tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
@@ -94,7 +107,9 @@ new_text3 += indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')'
 
 # Define your replacements here: { "Target Text": "Replacement Text" }
 REPLACEMENTS_MAP = {
+    orig_text0 : new_text0,
     orig_text1 : new_text1,
+    orig_text4 : new_text4,
     orig_text2 : new_text2,
     orig_text3 : new_text3
 }
