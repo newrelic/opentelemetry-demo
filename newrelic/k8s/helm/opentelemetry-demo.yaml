@@ -80,12 +80,6 @@ components:
 
 # Disable non-NR components
   load-generator:
-    resources:
-      limits:
-        memory: 8Gi
-    envOverrides:
-      - name: LOCUST_USERS
-        value: "10"
     additionalVolumes:
       - name: patched-locustfile
         emptyDir: {}
