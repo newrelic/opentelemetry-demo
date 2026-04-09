@@ -62,7 +62,7 @@ orig_text3 = indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')'
 
 new_text1 =  indent8sp + 'async def open_product_detail_page(self, page: PageWithRetry):\n'
 new_text1 += indent12sp + 'tracer = trace.get_tracer(__name__)\n'
-new_text1 += indent12sp + 'with self.tracer.start_as_current_span("browser_pdp", context=Context()):\n'
+new_text1 += indent12sp + 'with tracer.start_as_current_span("browser_pdp", context=Context()):\n'
 new_text1 += indent16sp + 'try:\n'
 new_text1 += indent20sp + 'page.on("console", lambda msg: print(msg.text))\n'
 new_text1 += indent20sp + 'await page.route(\'**/*\', add_baggage_header)\n'
