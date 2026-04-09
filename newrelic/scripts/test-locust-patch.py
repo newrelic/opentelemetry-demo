@@ -1,13 +1,13 @@
 import os
 
-# 
-# Use this script to changes to the locust.py file prior to patching them.
+#
+# Use this script to test changes to the locust.py file prior to patching them.
 # Apply your changes here, run the script, and review the output in ../../tmp
-# 
- 
+#
+
 def update_locustfile(source_path, dest_path, replacements):
     """
-    Reads a locustfile, applies multiple text replacements, 
+    Reads a locustfile, applies multiple text replacements,
     and saves the result to a new file.
     """
     if not os.path.exists(source_path):
@@ -54,62 +54,47 @@ orig_text0 += indent12sp + 'super().__init__(*args, **kwargs)\n'
 orig_text0 += indent12sp + 'self.tracer = trace.get_tracer(__name__)\n'
 orig_text0 += '\n'
 
-# Going to insert task above this task and keep this one active
-orig_text1 = indent8sp + 'async def open_cart_page_and_change_currency(self, page: PageWithRetry):'
+# Replace self.tracer with local tracer in browser_change_currency span
+orig_text1 = indent12sp + 'with self.tracer.start_as_current_span("browser_change_currency", context=Context()):'
 
-# Fix currency span to use local tracer (consistent with other tasks)
-orig_text4 = indent12sp + 'with self.tracer.start_as_current_span("browser_change_currency", context=Context()):'
-
-# Keeping this task but applying patch from https://github.com/open-telemetry/opentelemetry-demo/pull/3171/changes
+# Replace self.tracer with local tracer in browser_add_to_cart span
 orig_text2 = indent12sp + 'with self.tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
 
-orig_text3 = indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')'
+# Add wait_for_event for product image before and after clicking Roof Binoculars
+orig_text3 =  indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
+orig_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
+orig_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
 
 #
 # Changes
 #
 
-new_text1 =  indent8sp + 'async def open_product_detail_page(self, page: PageWithRetry):\n'
-new_text1 += indent12sp + 'tracer = trace.get_tracer(__name__)\n'
-new_text1 += indent12sp + 'with tracer.start_as_current_span("browser_pdp", context=Context()):\n'
-new_text1 += indent16sp + 'try:\n'
-new_text1 += indent20sp + 'page.on("console", lambda msg: print(msg.text))\n'
-new_text1 += indent20sp + 'await page.route(\'**/*\', add_baggage_header)\n'
-new_text1 += indent20sp + 'await page.goto("/product/HQTGWGPNH4", wait_until="domcontentloaded")\n'                 
-new_text1 += indent20sp + 'await page.wait_for_event(\n'
-new_text1 += indent24sp + '"response",\n'
-new_text1 += indent24sp + 'predicate=lambda r: \'/images/products/thecometbook.jpg\' in r.url and r.status == 200,\n'
-new_text1 += indent24sp + 'timeout=15000\n'
-new_text1 += indent20sp + ')\n'
-new_text1 += indent20sp + 'await page.wait_for_timeout(2000)  # giving the browser time to export the traces\n'
-new_text1 += indent20sp + 'logging.info("Product page visited successfully")\n'
-new_text1 += indent16sp + 'except Exception as e:\n'
-new_text1 += indent20sp + 'logging.error(f"Error in product page visit: {str(e)}")\n'
-new_text1 += '\n'
-new_text1 += indent8sp + '@task\n'
-new_text1 += indent8sp + '@pw\n'
-new_text1 += indent8sp + 'async def open_cart_page_and_change_currency(self, page: PageWithRetry):\n'
-new_text1 += indent12sp + 'tracer = trace.get_tracer(__name__)'
-
 new_text0 = ''
 
-new_text4 = indent12sp + 'with tracer.start_as_current_span("browser_change_currency", context=Context()):'
+new_text1 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+new_text1 += indent12sp + 'with tracer.start_as_current_span("browser_change_currency", context=Context()):'
 
-new_text2 = indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+new_text2 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
 new_text2 += indent12sp + 'with tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
 
-new_text3 = indent20sp + 'await page.wait_for_event(\n'
+new_text3 =  indent20sp + 'await page.wait_for_event(\n'
 new_text3 += indent24sp + '"response",\n'
 new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
 new_text3 += indent24sp + 'timeout=15000\n'
 new_text3 += indent20sp + ')\n'
-new_text3 += indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')'
+new_text3 += indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
+new_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
+new_text3 += indent20sp + 'await page.wait_for_event(\n'
+new_text3 += indent24sp + '"response",\n'
+new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
+new_text3 += indent24sp + 'timeout=15000\n'
+new_text3 += indent20sp + ')\n'
+new_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
 
 # Define your replacements here: { "Target Text": "Replacement Text" }
 REPLACEMENTS_MAP = {
     orig_text0 : new_text0,
     orig_text1 : new_text1,
-    orig_text4 : new_text4,
     orig_text2 : new_text2,
     orig_text3 : new_text3
 }
