@@ -176,4 +176,3 @@ prometheus:
 jaeger:
   enabled: false
 opentelemetry-collector:
-  enabled: false
