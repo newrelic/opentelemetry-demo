@@ -1,7 +1,0 @@
-# Ignore local environment configuration
-.env
-.env.override
-
-# Ignore binary executables
-nr-otel-cli
-nr-otel-cli.exe

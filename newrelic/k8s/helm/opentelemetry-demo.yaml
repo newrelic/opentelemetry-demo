@@ -79,6 +79,89 @@ components:
         value: http://$(OTEL_COLLECTOR_NAME):4317
 
 # Disable non-NR components
+  load-generator:
+    additionalVolumes:
+      - name: patched-locustfile
+        emptyDir: {}
+    additionalVolumeMounts:
+      - name: patched-locustfile
+        mountPath: /usr/src/app/locustfile.py
+        subPath: locustfile.py
+    initContainers:
+      - name: patch-locustfile
+        image: ghcr.io/open-telemetry/demo:2.2.0-load-generator
+        command:
+          - python
+          - -c
+          - |
+            with open('/usr/src/app/locustfile.py', 'r') as f:
+                content = f.read()
+
+            # Indent vars
+            indent4sp = '    '
+            indent8sp = indent4sp+indent4sp
+            indent12sp = indent4sp+indent8sp
+            indent16sp = indent8sp+indent8sp
+            indent20sp = indent16sp+indent4sp
+            indent24sp = indent16sp+indent8sp
+
+            #
+            # Original text sections
+            #
+
+            # Remove __init__ entirely since it only set self.tracer which is no longer needed
+            orig_text0 =  indent8sp + 'def __init__(self, *args, **kwargs):\n'
+            orig_text0 += indent12sp + 'super().__init__(*args, **kwargs)\n'
+            orig_text0 += indent12sp + 'self.tracer = trace.get_tracer(__name__)\n'
+            orig_text0 += '\n'
+
+            # Replace self.tracer with local tracer in browser_change_currency span
+            orig_text1 = indent12sp + 'with self.tracer.start_as_current_span("browser_change_currency", context=Context()):'
+
+            # Replace self.tracer with local tracer in browser_add_to_cart span
+            orig_text2 = indent12sp + 'with self.tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+
+            # Add wait_for_event for product image before and after clicking Roof Binoculars
+            orig_text3 =  indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
+            orig_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
+            orig_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
+
+            #
+            # Changes
+            #
+
+            new_text0 = ''
+
+            new_text1 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+            new_text1 += indent12sp + 'with tracer.start_as_current_span("browser_change_currency", context=Context()):'
+
+            new_text2 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+            new_text2 += indent12sp + 'with tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+
+            new_text3 =  indent20sp + 'await page.wait_for_event(\n'
+            new_text3 += indent24sp + '"response",\n'
+            new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
+            new_text3 += indent24sp + 'timeout=15000\n'
+            new_text3 += indent20sp + ')\n'
+            new_text3 += indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
+            new_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
+            new_text3 += indent20sp + 'await page.wait_for_event(\n'
+            new_text3 += indent24sp + '"response",\n'
+            new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
+            new_text3 += indent24sp + 'timeout=15000\n'
+            new_text3 += indent20sp + ')\n'
+            new_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
+
+            content = content.replace(orig_text0, new_text0)
+            content = content.replace(orig_text1, new_text1)
+            content = content.replace(orig_text2, new_text2)
+            content = content.replace(orig_text3, new_text3)
+
+            with open('/patched/locustfile.py', 'w') as f:
+                f.write(content)
+        volumeMounts:
+          - name: patched-locustfile
+            mountPath: /patched
 opensearch:
   enabled: false
 grafana:

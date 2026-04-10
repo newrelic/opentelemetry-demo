@@ -1,12 +1,5 @@
 # GENERATED FILE - DO NOT EDIT DIRECTLY
 components:
-  load-generator:
-    imageOverride:
-      # Downgrading load-generator image to 2.0.2 to avoid issues with newrelic browser monitoring
-      # https://github.com/open-telemetry/opentelemetry-demo/issues/2686
-      repository: ghcr.io/open-telemetry/demo
-      tag: "2.0.2-load-generator"
-
   frontend:
     command:
       - "/nodejs/bin/node"
