@@ -148,12 +148,17 @@ func buildEnvMap(cfg *Config) []string {
 		parentID = cfg.AccountId
 	}
 
+	accountID := cfg.SubAccountId
+	if accountID == "" {
+		accountID = cfg.AccountId
+	}
+
 	env := os.Environ()
 	// Keys MUST match variables.tf suffixes in lowercase
 	mapping := map[string]string{
 		"TF_VAR_newrelic_api_key":           cfg.ApiKey,
 		"TF_VAR_newrelic_parent_account_id": parentID,
-		"TF_VAR_newrelic_account_id":        cfg.SubAccountId,
+		"TF_VAR_newrelic_account_id":        accountID,
 		"TF_VAR_newrelic_region":            cfg.Region,
 		"TF_VAR_subaccount_name":            cfg.SubaccountName,
 		"TF_VAR_admin_group_name":           cfg.AdminGroupName,

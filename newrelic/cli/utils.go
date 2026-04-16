@@ -99,13 +99,18 @@ func validateNotEmpty(val string) error {
 }
 
 func saveConfigToEnv(cfg *Config) {
+	accountIDForTF := cfg.SubAccountId
+	if accountIDForTF == "" {
+		accountIDForTF = cfg.AccountId
+	}
+
 	envMap := map[string]string{
 		"NEW_RELIC_LICENSE_KEY":             cfg.LicenseKey,
 		"NEW_RELIC_API_KEY":                 cfg.ApiKey,
 		"NEW_RELIC_ACCOUNT_ID":              cfg.AccountId,
 		"NEW_RELIC_REGION":                  cfg.Region,
 		"TF_VAR_newrelic_api_key":           cfg.ApiKey,
-		"TF_VAR_newrelic_account_id":        cfg.SubAccountId,
+		"TF_VAR_newrelic_account_id":        accountIDForTF,
 		"TF_VAR_newrelic_parent_account_id": cfg.ParentAccountId,
 		"TF_VAR_subaccount_name":            cfg.SubaccountName,
 		"TF_VAR_admin_group_name":           cfg.AdminGroupName,
