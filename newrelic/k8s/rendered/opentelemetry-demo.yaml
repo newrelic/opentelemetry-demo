@@ -5,7 +5,7 @@ kind: ServiceAccount
 metadata:
   name: otel-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     
     app.kubernetes.io/version: "2.2.0"
@@ -19,7 +19,7 @@ metadata:
   name: flagd-config
   namespace: opentelemetry-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     
     app.kubernetes.io/version: "2.2.0"
@@ -186,7 +186,7 @@ metadata:
   name: postgresql-init
   namespace: opentelemetry-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     
     app.kubernetes.io/version: "2.2.0"
@@ -358,7 +358,7 @@ kind: Service
 metadata:
   name: ad
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: ad
     
@@ -383,7 +383,7 @@ kind: Service
 metadata:
   name: cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: cart
     
@@ -408,7 +408,7 @@ kind: Service
 metadata:
   name: checkout
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: checkout
     
@@ -433,7 +433,7 @@ kind: Service
 metadata:
   name: currency
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: currency
     
@@ -458,7 +458,7 @@ kind: Service
 metadata:
   name: email
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: email
     
@@ -483,7 +483,7 @@ kind: Service
 metadata:
   name: flagd
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: flagd
     
@@ -514,7 +514,7 @@ kind: Service
 metadata:
   name: frontend
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: frontend
     
@@ -539,7 +539,7 @@ kind: Service
 metadata:
   name: frontend-proxy
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: frontend-proxy
     
@@ -564,7 +564,7 @@ kind: Service
 metadata:
   name: image-provider
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: image-provider
     
@@ -589,7 +589,7 @@ kind: Service
 metadata:
   name: kafka
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: kafka
     
@@ -617,7 +617,7 @@ kind: Service
 metadata:
   name: llm
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: llm
     
@@ -642,7 +642,7 @@ kind: Service
 metadata:
   name: load-generator
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: load-generator
     
@@ -667,7 +667,7 @@ kind: Service
 metadata:
   name: payment
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: payment
     
@@ -692,7 +692,7 @@ kind: Service
 metadata:
   name: postgresql
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: postgresql
     
@@ -717,7 +717,7 @@ kind: Service
 metadata:
   name: product-catalog
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: product-catalog
     
@@ -742,7 +742,7 @@ kind: Service
 metadata:
   name: product-reviews
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: product-reviews
     
@@ -767,7 +767,7 @@ kind: Service
 metadata:
   name: quote
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: quote
     
@@ -792,7 +792,7 @@ kind: Service
 metadata:
   name: recommendation
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: recommendation
     
@@ -817,7 +817,7 @@ kind: Service
 metadata:
   name: shipping
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: shipping
     
@@ -842,7 +842,7 @@ kind: Service
 metadata:
   name: valkey-cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: valkey-cart
     
@@ -867,7 +867,7 @@ kind: Deployment
 metadata:
   name: accounting
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: accounting
     
@@ -929,6 +929,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: KAFKA_ADDR
               value: kafka:9092
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -963,7 +965,7 @@ kind: Deployment
 metadata:
   name: ad
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: ad
     
@@ -1029,6 +1031,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: AD_PORT
               value: "8080"
             - name: FLAGD_HOST
@@ -1056,7 +1060,7 @@ kind: Deployment
 metadata:
   name: cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: cart
     
@@ -1122,6 +1126,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: CART_PORT
               value: "8080"
             - name: ASPNETCORE_URLS
@@ -1159,7 +1165,7 @@ kind: Deployment
 metadata:
   name: checkout
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: checkout
     
@@ -1225,6 +1231,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: CHECKOUT_PORT
               value: "8080"
             - name: CART_ADDR
@@ -1275,7 +1283,7 @@ kind: Deployment
 metadata:
   name: currency
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: currency
     
@@ -1341,6 +1349,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: CURRENCY_PORT
               value: "8080"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -1366,7 +1376,7 @@ kind: Deployment
 metadata:
   name: email
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: email
     
@@ -1432,6 +1442,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: EMAIL_PORT
               value: "8080"
             - name: APP_ENV
@@ -1459,7 +1471,7 @@ kind: Deployment
 metadata:
   name: flagd
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: flagd
     
@@ -1536,6 +1548,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: FLAGD_METRICS_EXPORTER
               value: otel
             - name: FLAGD_OTEL_COLLECTOR_URI
@@ -1589,6 +1603,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: FLAGD_METRICS_EXPORTER
               value: otel
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -1635,7 +1651,7 @@ kind: Deployment
 metadata:
   name: fraud-detection
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: fraud-detection
     
@@ -1697,6 +1713,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: KAFKA_ADDR
               value: kafka:9092
             - name: FLAGD_HOST
@@ -1733,7 +1751,7 @@ kind: Deployment
 metadata:
   name: frontend
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: frontend
     
@@ -1799,6 +1817,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: FRONTEND_PORT
               value: "8080"
             - name: PORT
@@ -1856,7 +1876,7 @@ kind: Deployment
 metadata:
   name: frontend-proxy
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: frontend-proxy
     
@@ -1927,6 +1947,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: ENVOY_PORT
               value: "8080"
             - name: ENVOY_ADDR
@@ -1988,7 +2010,7 @@ kind: Deployment
 metadata:
   name: image-provider
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: image-provider
     
@@ -2060,6 +2082,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: IMAGE_PROVIDER_PORT
               value: "8081"
             - name: OTEL_COLLECTOR_PORT_GRPC
@@ -2083,7 +2107,7 @@ kind: Deployment
 metadata:
   name: kafka
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: kafka
     
@@ -2151,6 +2175,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: KAFKA_ADVERTISED_LISTENERS
               value: PLAINTEXT://kafka:9092
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -2170,7 +2196,7 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
-              memory: 600Mi
+              memory: 700Mi
           securityContext:
             runAsGroup: 1000
             runAsNonRoot: true
@@ -2184,7 +2210,7 @@ kind: Deployment
 metadata:
   name: llm
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: llm
     
@@ -2250,6 +2276,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: FLAGD_HOST
               value: flagd
             - name: FLAGD_PORT
@@ -2270,7 +2298,7 @@ kind: Deployment
 metadata:
   name: load-generator
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: load-generator
     
@@ -2336,6 +2364,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: LOCUST_WEB_HOST
               value: 0.0.0.0
             - name: LOCUST_WEB_PORT
@@ -2371,7 +2401,87 @@ spec:
             limits:
               memory: 1500Mi
           volumeMounts:
+            - mountPath: /usr/src/app/locustfile.py
+              name: patched-locustfile
+              subPath: locustfile.py
+      initContainers:
+        - command:
+          - python
+          - -c
+          - |
+            with open('/usr/src/app/locustfile.py', 'r') as f:
+                content = f.read()
+        
+            # Indent vars
+            indent4sp = '    '
+            indent8sp = indent4sp+indent4sp
+            indent12sp = indent4sp+indent8sp
+            indent16sp = indent8sp+indent8sp
+            indent20sp = indent16sp+indent4sp
+            indent24sp = indent16sp+indent8sp
+        
+            #
+            # Original text sections
+            #
+        
+            # Remove __init__ entirely since it only set self.tracer which is no longer needed
+            orig_text0 =  indent8sp + 'def __init__(self, *args, **kwargs):\n'
+            orig_text0 += indent12sp + 'super().__init__(*args, **kwargs)\n'
+            orig_text0 += indent12sp + 'self.tracer = trace.get_tracer(__name__)\n'
+            orig_text0 += '\n'
+        
+            # Replace self.tracer with local tracer in browser_change_currency span
+            orig_text1 = indent12sp + 'with self.tracer.start_as_current_span("browser_change_currency", context=Context()):'
+        
+            # Replace self.tracer with local tracer in browser_add_to_cart span
+            orig_text2 = indent12sp + 'with self.tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+        
+            # Add wait_for_event for product image before and after clicking Roof Binoculars
+            orig_text3 =  indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
+            orig_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
+            orig_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
+        
+            #
+            # Changes
+            #
+        
+            new_text0 = ''
+        
+            new_text1 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+            new_text1 += indent12sp + 'with tracer.start_as_current_span("browser_change_currency", context=Context()):'
+        
+            new_text2 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
+            new_text2 += indent12sp + 'with tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+        
+            new_text3 =  indent20sp + 'await page.wait_for_event(\n'
+            new_text3 += indent24sp + '"response",\n'
+            new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
+            new_text3 += indent24sp + 'timeout=15000\n'
+            new_text3 += indent20sp + ')\n'
+            new_text3 += indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
+            new_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
+            new_text3 += indent20sp + 'await page.wait_for_event(\n'
+            new_text3 += indent24sp + '"response",\n'
+            new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
+            new_text3 += indent24sp + 'timeout=15000\n'
+            new_text3 += indent20sp + ')\n'
+            new_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
+        
+            content = content.replace(orig_text0, new_text0)
+            content = content.replace(orig_text1, new_text1)
+            content = content.replace(orig_text2, new_text2)
+            content = content.replace(orig_text3, new_text3)
+        
+            with open('/patched/locustfile.py', 'w') as f:
+                f.write(content)
+          image: ghcr.io/open-telemetry/demo:2.2.0-load-generator
+          name: patch-locustfile
+          volumeMounts:
+          - mountPath: /patched
+            name: patched-locustfile
       volumes:
+        - emptyDir: {}
+          name: patched-locustfile
 ---
 # Source: opentelemetry-demo/templates/component.yaml
 apiVersion: apps/v1
@@ -2379,7 +2489,7 @@ kind: Deployment
 metadata:
   name: payment
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: payment
     
@@ -2445,6 +2555,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: PAYMENT_PORT
               value: "8080"
             - name: FLAGD_HOST
@@ -2476,7 +2588,7 @@ kind: Deployment
 metadata:
   name: postgresql
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: postgresql
     
@@ -2561,7 +2673,7 @@ kind: Deployment
 metadata:
   name: product-catalog
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: product-catalog
     
@@ -2627,6 +2739,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: PRODUCT_CATALOG_PORT
               value: "8080"
             - name: FLAGD_HOST
@@ -2660,7 +2774,7 @@ kind: Deployment
 metadata:
   name: product-reviews
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: product-reviews
     
@@ -2726,6 +2840,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: OPENAI_API_KEY
               value: dummy
             - name: LLM_MODEL
@@ -2771,7 +2887,7 @@ kind: Deployment
 metadata:
   name: quote
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: quote
     
@@ -2837,6 +2953,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: QUOTE_PORT
               value: "8080"
             - name: OTEL_PHP_AUTOLOAD_ENABLED
@@ -2868,7 +2986,7 @@ kind: Deployment
 metadata:
   name: recommendation
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: recommendation
     
@@ -2934,6 +3052,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: RECOMMENDATION_PORT
               value: "8080"
             - name: PRODUCT_CATALOG_ADDR
@@ -2965,7 +3085,7 @@ kind: Deployment
 metadata:
   name: shipping
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: shipping
     
@@ -3031,6 +3151,8 @@ spec:
               value: nr-k8s-otel-collector-gateway
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
+            - name: OTEL_METRIC_EXPORT_INTERVAL
+              value: "10000"
             - name: SHIPPING_PORT
               value: "8080"
             - name: QUOTE_ADDR
@@ -3056,7 +3178,7 @@ kind: Deployment
 metadata:
   name: valkey-cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.40.5
+    helm.sh/chart: opentelemetry-demo-0.40.7
     
     opentelemetry.io/name: valkey-cart
     
