@@ -1,0 +1,18 @@
+# Extends the repo-root config with overrides for the newrelic/ directory.
+extends: ../.markdownlint.yaml
+
+# MD013: line-length — disabled because documentation files contain long URLs
+#        that cannot be wrapped without breaking links.
+MD013: false
+
+# MD060: table-column-style — disabled because column alignment is a render-time
+#        concern and varies by editor/renderer.
+MD060: false
+
+# MD024: no-duplicate-heading — each deployment-target section intentionally
+#        has its own "Environment Variables" subsection.
+MD024: false
+
+# MD059: descriptive-link-text — "[here]" links are pervasive in existing docs;
+#        enforcing this retroactively would require prose rewrites.
+MD059: false

@@ -315,7 +315,7 @@ def query_graphql(
 
         if next_cursor_path:
             next_cursor = get_nested(gql_result, next_cursor_path)
-            if next_cursor == False:
+            if next_cursor is False:
                 raise GraphQLApiError(
                     f'expected value at path {next_cursor_path} but found none',
                 )

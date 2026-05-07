@@ -5,6 +5,7 @@ This Terraform module creates a New Relic sub-account and generates a license ke
 ## Purpose
 
 Use this module to:
+
 1. Create a dedicated New Relic sub-account for the OpenTelemetry Demo
 2. Grant admin group access to the sub-account
 3. Create a read-only user with limited access to the sub-account
@@ -19,6 +20,7 @@ Use this module to:
 - `curl` (usually pre-installed)
 
 **Important**:
+
 - The `newrelic_api_key` must belong to a user with "Organization Manager" permissions
 - The `admin_group_name` must already exist in New Relic
 - The API key user should be a member of the group specified in `admin_group_name`
@@ -63,6 +65,7 @@ terraform apply
 | readonly_user_name | Display name of the read-only user                                                                    | `string` | n/a                   | yes |
 
 Set variables using environment variables (recommended):
+
 - `TF_VAR_newrelic_api_key` - Your User API Key
 - `TF_VAR_newrelic_parent_account_id` - Your parent account ID
 - `TF_VAR_newrelic_region` - Region (US or EU, defaults to US)
@@ -111,6 +114,7 @@ readonly_user_name                  = "ReadOnly User"                  # Display
 This module automatically creates a read-only user with full Terraform management:
 
 **Important Notes:**
+
 - A new group is created for each sub-account automatically
 - User, group, and group membership are managed by Terraform
 - Access grants are managed via scripts (automatically invoked)
@@ -138,6 +142,7 @@ This separation ensures proper resource management while handling provider limit
 ## Finding Your New Relic Configuration Values
 
 ### Authentication Domain Name
+
 1. Log into [New Relic](https://one.newrelic.com)
 2. Click the user menu (bottom left) → **Administration**
 3. In the left sidebar, click **Access management** → **Authentication domains**
@@ -146,6 +151,7 @@ This separation ensures proper resource management while handling provider limit
 6. **Example names**: `Default`, `Custom Domain`, `SAML Domain`
 
 ### Role Names
+
 1. From the same **Administration** page
 2. Click **Access management** → **Roles**
 3. You'll see roles like:
@@ -157,6 +163,7 @@ This separation ensures proper resource management while handling provider limit
 **Note**: Role names in New Relic's API use snake_case (e.g., `all_product_admin`), not the display names shown in the UI (e.g., "All Product Admin")
 
 ### Admin Group Name
+
 1. From the same **Administration** page
 2. Click **Access management** → **Groups**
 3. You'll see a list of groups in each authentication domain
@@ -170,6 +177,7 @@ This separation ensures proper resource management while handling provider limit
    - Terraform will grant this group access to the new sub-account
 
 ### Quick Verification Command
+
 If you want to verify your values before running Terraform, you can query the NerdGraph API:
 
 ```bash
@@ -190,7 +198,7 @@ curl -X POST https://api.newrelic.com/graphql \
 ```
 
 This will show you:
+
 - All authentication domains (`.userManagement.authenticationDomains.authenticationDomains[]`)
 - All available roles (`.authorizationManagement.roles.roles[]`)
 - All groups in a specific authentication domain
-

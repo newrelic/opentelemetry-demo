@@ -1,0 +1,87 @@
+name: NewRelic Lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'newrelic/**'
+      - '**/*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  go-lint:
+    name: Go (newrelic/cli)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: newrelic/cli/go.mod
+      - uses: golangci/golangci-lint-action@v7
+        with:
+          working-directory: newrelic/cli
+          version: v2.12.2
+
+  shell-lint:
+    name: Shell (newrelic/scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - name: run shellcheck
+        run: find newrelic/scripts -name '*.sh' -print0 | xargs -0 shellcheck --severity=warning
+
+  python-lint:
+    name: Python (newrelic/scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: install ruff
+        run: pip install ruff
+      - name: run ruff
+        run: ruff check --cache-dir newrelic/.ruff_cache newrelic/scripts/
+
+  terraform-fmt:
+    name: Terraform (newrelic/terraform)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - uses: hashicorp/setup-terraform@v3
+      - name: check terraform formatting
+        run: terraform fmt -check -recursive newrelic/terraform/
+
+  yaml-lint:
+    name: YAML (newrelic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: install yamllint
+        run: pip install yamllint
+      - name: run yamllint
+        run: yamllint newrelic/ -c newrelic/.yamllint.yaml -f github
+
+  js-lint:
+    name: JS (newrelic/docker/config)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - name: check JS syntax
+        run: find newrelic -name '*.js' ! -name 'monkey-patch-injected.js' -print0 | xargs -0 node --check
+
+  markdown-lint:
+    name: Markdown (newrelic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.1
+      - name: install markdownlint-cli
+        run: npm install -g markdownlint-cli
+      - name: run markdownlint
+        run: markdownlint --config newrelic/.markdownlint.yaml 'newrelic/**/*.md'

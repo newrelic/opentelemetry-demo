@@ -8,3 +8,9 @@ cli/nr-otel-cli.exe
 
 # Ignore templated nr-browser
 k8s/helm/nr-browser.yaml
+
+# Ignore generated browser-agent script (contains injected credentials)
+docker/config/monkey-patch-injected.js
+
+# Ruff linter cache (created when running ruff check from within newrelic/)
+.ruff_cache/

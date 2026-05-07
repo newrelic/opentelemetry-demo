@@ -17,27 +17,32 @@ Ensure the following tools are installed based on your target environment for co
 
 To compile the project into a single binary for your corresponding to your operating system, run the following command from the `cli/` directory:
 
-**macOS (Apple Silicon / M1 / M2)**
+### macOS (Apple Silicon / M1 / M2)
+
 ```bash
 GOOS=darwin GOARCH=arm64 go build -o nr-otel-cli .
 ```
-1
-**macOS (Intel)**
+
+### macOS (Intel)
+
 ```bash
 GOOS=darwin GOARCH=amd64 go build -o nr-otel-cli .
 ```
 
-**Linux (AMD64)**
+### Linux (AMD64)
+
 ```bash
 GOOS=linux GOARCH=amd64 go build -o nr-otel-cli .
 ```
 
-**Windows**
+### Windows
+
 ```bash
 GOOS=windows GOARCH=amd64 go build -o nr-otel-cli .
 ```
 
 ### Run the Binary
+
 Ensure the binary has execution permissions (Mac/Linux) and run it:
 
 ```bash

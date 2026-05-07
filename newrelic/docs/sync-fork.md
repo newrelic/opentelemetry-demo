@@ -5,7 +5,7 @@ It involves a specific workflow that utilizes `git fetch` and `git merge` (or `g
 
 Here is a step-by-step guide on how to achieve this:
 
-### Prerequisites
+## Prerequisites
 
 Before you begin, ensure you have a local clone of your forked repository. As the New Relic OpenTelemetry Demo also operates a fork contribution model, you should normally have 3 remotes:
 
@@ -31,7 +31,6 @@ If `upstream` or `official` are missing, add them with:
 git remote add upstream git@github.com:newrelic/opentelemetry-demo.git
 git remote add official git@github.com:open-telemetry/opentelemetry-demo.git
 ```
-
 
 ### Step 1: Fetch the latest changes from the `official` and `upstream` remotes
 
@@ -106,4 +105,3 @@ Follow usual practice to raise a PR against `newrelic/opentemetry-demo`
 This PR will show the changes between your New Relic's `main` branch and the `sync_fork` branch, which effectively represent the updates from the official repository.
 It will also include any changes needed to adapt New Relic's fork after changes are made.
 You can review the changes and merge the PR when ready, thus syncing your fork via a PR.
-

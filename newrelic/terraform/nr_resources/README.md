@@ -8,6 +8,7 @@ This Terraform module creates New Relic resources to showcase New Relic capabili
 ## Purpose
 
 This module demonstrates various New Relic features and capabilities including:
+
 - **Alerts** - Creates alerts for the Astronomy apps. Expect these to be tuned over time. Web and Infrastructure based alerts to be added.
 - **Service Level Objectives (SLOs)** - Currently creates an SLO for the checkout service
 - **Future additions** - Dashboards, teams, scorecards, and other resources to showcase New Relic's observability platform
@@ -47,6 +48,7 @@ terraform apply
 | checkout_service_name | Name of the checkout service entity | `string` | `"checkout"` | no |
 
 Set variables using environment variables (recommended):
+
 - `TF_VAR_newrelic_api_key` - Your User API Key
 - `TF_VAR_newrelic_region` - Region (US or EU, defaults to US)
 - `TF_VAR_newrelic_account_id` - Your New Relic account ID
@@ -65,9 +67,13 @@ checkout_service_name = "checkout"
 ## What Gets Created
 
 ### Alerts
+
 #### Metric Based
-Initially, we have metrics only for the following services: ad, cart, checkout, frontend, product-catalog, and shipping.   
+
+Initially, we have metrics only for the following services: ad, cart, checkout, frontend, product-catalog, and shipping.
+
 Alerts:
+
 - **Error rate anomaly** - Faceted by service name
 - **Throughput anomaly** - Faceted by service name
 - **Latency anomaly** - Faceted by service name
@@ -76,8 +82,10 @@ Alerts:
 Source: metric_alerts.tf
 
 #### Span Based
-Covers Alerts for services where only span data is available. 
-- **Error rate anomaly** - Faceted by service name 
+
+Covers Alerts for services where only span data is available.
+
+- **Error rate anomaly** - Faceted by service name
 - **Throughput anomaly** - Faceted by service name
 - **Latency anomaly** - Faceted by service name
 - **Error rate threshold** - Faceted by service name, for now.
@@ -87,6 +95,7 @@ Source: span_alerts.tf
 ### Service Level Objectives (SLOs)
 
 Currently, this module creates an SLO for the checkout service with:
+
 - **Target**: 99.5% availability
 - **Time Window**: 1-day rolling window
 - **Metric**: Server-side spans without errors
@@ -96,6 +105,7 @@ Source: slos.tf
 ### Future Resources
 
 This module will be expanded to include additional New Relic resources such as:
+
 - Alert policies and conditions
 - Custom dashboards
 - Teams and user management
@@ -110,6 +120,7 @@ This module will be expanded to include additional New Relic resources such as:
 If you get an error that the entity cannot be found:
 
 1. Verify the demo is deployed and running:
+
    ```bash
    kubectl get pods -n opentelemetry-demo
    ```
@@ -121,6 +132,7 @@ If you get an error that the entity cannot be found:
 3. Wait longer - it can take 2-5 minutes for data to appear
 
 4. Verify you're using the correct account ID:
+
    ```bash
    # If using nr_account module
    cd ../nr_account

@@ -1,0 +1,9 @@
+extends: .yamllint
+
+# Exclude generated files that should not be linted.
+# k8s/rendered/ — Helm render output, regenerated on every deploy.
+# k8s/helm/nr-browser.yaml — generated with injected credentials; gitignored
+#   but may be present locally. The source template is monkey-patch.js.
+ignore: |
+  newrelic/k8s/rendered/
+  newrelic/k8s/helm/nr-browser.yaml
