@@ -38,12 +38,15 @@ yq eval -i 'del(.services.frontend-proxy.depends_on.grafana)' "$NR_DOCKER_COMPOS
 yq eval -i 'del(.services.otel-collector.depends_on)' "$NR_DOCKER_COMPOSE_PATH"
 
 # add environment variables required by the OpenTelemetry Collector
+# Single quotes required below: ${...} are yq template variables, not shell variables.
+# shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.environment += [ "NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}" ]' "$NR_DOCKER_COMPOSE_PATH"
 
 # update the command used to launch the collector to point to the NR-specific config
 yq eval -i '.services.otel-collector.command[0] = "--config=/etc/otelcol-config.yml" ' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i 'del(.services.otel-collector.command[1])' "$NR_DOCKER_COMPOSE_PATH"
 
+# shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.volumes = [ "${HOST_FILESYSTEM}:/hostfs:ro", "${DOCKER_SOCK}:/var/run/docker.sock:ro", "../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml", "./logs:/logs", "./checkpoint:/checkpoint" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.flagd.volumes = [ "${SRC_DIR}/flagd:/etc/flagd" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.flagd-ui.volumes = [ "${SRC_DIR}/flagd:/app/data" ]' "$NR_DOCKER_COMPOSE_PATH"

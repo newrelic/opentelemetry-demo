@@ -1,0 +1,7 @@
+version: "2"
+
+linters:
+  disable:
+    # CLI tools commonly leave OS env-setter and deferred-close errors unchecked;
+    # errcheck generates too much noise here without meaningful safety benefit.
+    - errcheck

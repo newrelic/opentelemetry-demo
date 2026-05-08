@@ -156,7 +156,8 @@ function sed_i() {
 }
 
 function parse_repo_owner() {
-  local origin_repo_url=$(git config --get remote.origin.url)
+  local origin_repo_url
+  origin_repo_url=$(git config --get remote.origin.url)
   local ssh_regex='^git@github.com:([^/]+)/([^.]+)(\.git)?$'
   local https_regex='^https://github.com/([^/]+)/([^.]+)(\.git)?$'
 

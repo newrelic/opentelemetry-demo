@@ -113,6 +113,7 @@ NOTES:
 > **_NOTE:_** It can take anywhere from 2 - 5 minutes for Pods to start up and telemetry to flow through the OTel Collector and on to New Relic.  Please have patience.  If you want to check on the status of the OTel collector, you can run `kubectl logs deployment/otel-collector -n opentelemetry-demo`
 
 ### Customize Kubernetes installation
+
 You can apply changes to the deployed OpenTelemetry Demo by modifying any values in `newrelic/k8s/helm/opentelemetry-demo.yaml`. See supported values in the official OpenTelemetry Demo Helm Chart [here](https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-demo#chart-parameters).
 
 After you save changes, you can re-run `install-k8s.sh` to apply changes and redeploy the modified components.
@@ -274,6 +275,7 @@ This repository includes Terraform modules and automated scripts to simplify New
 ### Why Use Terraform?
 
 The Terraform modules demonstrate how to:
+
 - **Automate account setup** - Programmatically create dedicated sub-accounts for isolated demo environments
 - **Showcase New Relic capabilities** - Implement SLOs, alerts, dashboards, teams, and other observability features
 - **Follow Observability as Code best practices** - Manage observability resources alongside your application infrastructure

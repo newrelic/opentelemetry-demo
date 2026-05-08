@@ -47,11 +47,11 @@ deployment:
             - telemetry.sdk.language
             - telemetry.sdk.name
 
-      exporters: 
+      exporters:
         debug: {}
 
       processors:
-        # Drop Python system metrics since they're duplicates of hostmetrics 
+        # Drop Python system metrics since they're duplicates of hostmetrics
         # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/system_metrics/system_metrics.html
         filter/python-system-metrics:
           error_mode: ignore
@@ -63,15 +63,15 @@ deployment:
         filter/drop-spanmetrics-services:
           metrics:
             datapoint:
-            - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
-            - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+              - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+              - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
 
         # Required to enable spanmetrics in the New Relic summary UI
         resource/newrelic_spanmetrics_flag:
           attributes:
-          - action: upsert
-            key: newrelic.spanmetrics.enabled
-            value: true
+            - action: upsert
+              key: newrelic.spanmetrics.enabled
+              value: true
 
         resourcedetection/otel-demo:
           detectors: [env]
@@ -96,13 +96,14 @@ deployment:
                 - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"], "\\/api\\/checkout")  # e.g. # /api/checkout
                 - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"], "\\/api\\/products\\/.*")  # e.g. /api/products/1YMWWN1N4O
                 - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"], "\\/api\\/recommendations")  # e.g. # /api/recommendations?productIds=...
-                - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"], "\\/api\\/data.*")  # e.g. # " /api/data?contextKeys=telescopes" or /api/data/?contextKeys=cameras
+                # e.g. "/api/data?contextKeys=telescopes" or /api/data/?contextKeys=cameras
+                - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"], "\\/api\\/data.*")
 
         resource/otel-demo:
           attributes:
-          - key: service.instance.id
-            from_attribute: k8s.pod.uid
-            action: insert
+            - key: service.instance.id
+              from_attribute: k8s.pod.uid
+              action: insert
 
       pipelines:
 

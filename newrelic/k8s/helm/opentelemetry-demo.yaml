@@ -78,7 +78,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
 
-# Disable non-NR components
+  # Disable non-NR components
   load-generator:
     additionalVolumes:
       - name: patched-locustfile

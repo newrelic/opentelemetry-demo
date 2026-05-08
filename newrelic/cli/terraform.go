@@ -132,10 +132,11 @@ func handleTerraform(action string, cfg *Config) {
 		return
 	}
 
-	if cfg.Target == "account" {
+	switch cfg.Target {
+	case "account":
 		out, _ := exec.Command("terraform", append(tfArgs, "output", "-raw", "license_key")...).Output()
 		cfg.LicenseKey = strings.TrimSpace(string(out))
-	} else if cfg.Target == "browser" {
+	case "browser":
 		fetchBrowserConfigFromTF(tfArgs, env, cfg)
 	}
 

@@ -6,8 +6,8 @@ provider "newrelic" {
 
 ## Reusable variables
 locals {
-   web_title_template = "{{tags.appName}} [{{conditionName}}] {{priority}}"
-   aggregation_window = 30
-   aggregation_delay = 30
-   threshold_duration = 60
+  web_title_template = "{{tags.appName}} [{{conditionName}}] {{priority}}"
+  aggregation_window = 30
+  aggregation_delay  = 30
+  threshold_duration = 60
 }
