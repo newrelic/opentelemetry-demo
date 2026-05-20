@@ -8,7 +8,7 @@ Use this module to:
 
 1. Create a dedicated New Relic sub-account for the OpenTelemetry Demo
 2. Grant admin group access to the sub-account
-3. Create a read-only user with limited access to the sub-account
+3. Optionally create a read-only user with limited access to the sub-account
 4. Generate a license key for data ingestion
 
 ## Prerequisites
@@ -25,8 +25,8 @@ Use this module to:
 - The `admin_group_name` must already exist in New Relic
 - The API key user should be a member of the group specified in `admin_group_name`
 - The `readonly_authentication_domain_name` must use basic authentication (SAML/OIDC not yet supported here)
-- A readonly group will be created automatically with the name `"{subaccount_name} - ReadOnly"`
-- A user will be added to this group, and an invitation sent to `readonly_user_email`
+- When `readonly_user_email` is set, a readonly group named `"{subaccount_name} - ReadOnly"` is created, the user is added to it, and an invitation is sent to that address
+- When `readonly_user_email` is omitted, no readonly user, group, or role grant is created
 
 ## Usage
 
@@ -61,8 +61,8 @@ terraform apply
 | admin_role_name | Role to grant `admin_group_name`; must have permissions to create license keys                        | `string` | `"all_product_admin"` | no |
 | readonly_authentication_domain_name | Authentication domain for creating the read-only user (only basic auth supported)                     | `string` | `"Default"`           | no |
 | readonly_role_name | Role to grant the `readonly_group_name` in the new account                                             | `string` | `"read_only"`         | no |
-| readonly_user_email | Email address of the read-only user to create                                                         | `string` | n/a                   | yes |
-| readonly_user_name | Display name of the read-only user                                                                    | `string` | n/a                   | yes |
+| readonly_user_email | Email address of the read-only user to create. When null, no user, group, or role grant is created. | `string` | `null` | no |
+| readonly_user_name | Display name of the read-only user. Required when `readonly_user_email` is set.                       | `string` | `null`                | no |
 
 Set variables using environment variables (recommended):
 
@@ -75,8 +75,8 @@ Set variables using environment variables (recommended):
 - `TF_VAR_admin_role_name` - Admin role name (defaults to "all_product_admin")
 - `TF_VAR_readonly_authentication_domain_name` - Auth domain for readonly user (defaults to "Default")
 - `TF_VAR_readonly_role_name` - Readonly role name (defaults to "read_only")
-- `TF_VAR_readonly_user_email` - Email address for readonly user (required)
-- `TF_VAR_readonly_user_name` - Display name for readonly user (required)
+- `TF_VAR_readonly_user_email` - Email address for readonly user (optional; omit to skip user creation)
+- `TF_VAR_readonly_user_name` - Display name for readonly user (required when `TF_VAR_readonly_user_email` is set)
 
 **Using the automated scripts**: The repository includes convenience scripts (`install-nr-account.sh`, `cleanup-nr-account.sh`) in the `scripts/` directory that handle the Terraform workflow. Variables not set via environment variables will be prompted for by Terraform interactively.
 
@@ -107,20 +107,22 @@ readonly_user_name                  = "ReadOnly User"                  # Display
 |------|-------------|:---------:|
 | account_id | The ID of the created sub-account | no |
 | license_key | The license key for data ingestion | yes |
-| readonly_user_email | Email address of the created read-only user | no |
+| readonly_user_email | Email address of the created read-only user, or `null` if user creation was skipped | no |
+| readonly_group_id | ID of the readonly group, or `null` if `readonly_user_email` was not set | no |
 
 ## Read-Only User Setup
 
-This module automatically creates a read-only user with full Terraform management:
+When `readonly_user_email` is set, the module creates a read-only user with full Terraform management:
 
 **Important Notes:**
 
-- A new group is created for each sub-account automatically
+- A group named `"{subaccount_name} - ReadOnly"` is created and the user is added to it
 - User, group, and group membership are managed by Terraform
 - Access grants are managed via scripts (automatically invoked)
 - The user **must** check their email and follow the link to set their password
 - Password setup is required before the user can log in
 - All operations are cleaned up automatically on `terraform destroy`
+- When `readonly_user_email` is omitted, none of the above resources are created
 
 ## How It Works
 
@@ -128,8 +130,7 @@ This module uses a hybrid approach:
 
 1. **Terraform Resources** manage the lifecycle of:
    - Sub-account creation (`newrelic_account_management`)
-   - User creation (`newrelic_user`)
-   - Group creation with user membership (`newrelic_group`)
+   - User and group creation (`newrelic_user`, `newrelic_group`) — only when `readonly_user_email` is set
    - License key creation (`newrelic_api_access_key`)
    - Data lookups (authentication domains, groups)
 

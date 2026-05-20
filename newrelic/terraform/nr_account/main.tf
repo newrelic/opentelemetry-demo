@@ -48,6 +48,7 @@ data "newrelic_authentication_domain" "readonly_auth_domain" {
 
 # Create read-only user
 resource "newrelic_user" "readonly_user" {
+  count                    = var.readonly_user_email != null ? 1 : 0
   authentication_domain_id = data.newrelic_authentication_domain.readonly_auth_domain.id
   email_id                 = var.readonly_user_email
   name                     = var.readonly_user_name
@@ -56,18 +57,21 @@ resource "newrelic_user" "readonly_user" {
 
 # Create readonly group with user
 resource "newrelic_group" "readonly_group" {
+  count                    = var.readonly_user_email != null ? 1 : 0
   authentication_domain_id = data.newrelic_authentication_domain.readonly_auth_domain.id
   name                     = "${var.subaccount_name} - ReadOnly"
-  user_ids                 = [newrelic_user.readonly_user.id]
+  user_ids                 = [newrelic_user.readonly_user[0].id]
 }
 
 # Grant readonly group access to the sub-account
 resource "terraform_data" "readonly_access_grant" {
+  count = var.readonly_user_email != null ? 1 : 0
+
   triggers_replace = {
     account_id = newrelic_account_management.subaccount.id
     api_key    = var.newrelic_api_key
     region     = upper(var.newrelic_region) == "US" ? "newrelic" : "eu.newrelic"
-    group_id   = newrelic_group.readonly_group.id
+    group_id   = newrelic_group.readonly_group[0].id
     role_name  = var.readonly_role_name
   }
 

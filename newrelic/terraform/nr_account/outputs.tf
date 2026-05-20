@@ -10,6 +10,11 @@ output "license_key" {
 }
 
 output "readonly_user_email" {
-  description = "Email address of the created read-only user"
-  value       = newrelic_user.readonly_user.email_id
+  description = "Email address of the created read-only user, or null if user creation was skipped"
+  value       = var.readonly_user_email != null ? newrelic_user.readonly_user[0].email_id : null
+}
+
+output "readonly_group_id" {
+  description = "ID of the readonly group, or null if readonly_user_email was not set"
+  value       = var.readonly_user_email != null ? newrelic_group.readonly_group[0].id : null
 }
