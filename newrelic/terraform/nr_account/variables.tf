@@ -57,11 +57,13 @@ variable "readonly_role_name" {
 }
 
 variable "readonly_user_email" {
-  description = "Email address of the read-only user to create"
+  description = "Email address of the read-only user to create. When null, user and group membership creation are skipped and the readonly group is created empty."
   type        = string
+  default     = null
 }
 
 variable "readonly_user_name" {
-  description = "Display name of the read-only user"
+  description = "Display name of the read-only user. Required when readonly_user_email is set."
   type        = string
+  default     = null
 }
