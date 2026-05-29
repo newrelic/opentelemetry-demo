@@ -9,7 +9,7 @@ TS=$(date +"%Y%m%d_%H%M%S")
 TS_FULL=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Kubernetes variables
-OTEL_DEMO_CHART_VERSION="0.40.5"
+OTEL_DEMO_CHART_VERSION="0.40.8"
 NR_K8S_CHART_VERSION="0.10.13"
 OTEL_DEMO_RELEASE_NAME=otel-demo
 NR_K8S_RELEASE_NAME=nr-k8s-otel-collector
