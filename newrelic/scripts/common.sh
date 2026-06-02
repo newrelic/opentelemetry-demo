@@ -131,11 +131,14 @@ prompt_for_account_id() {
   prompt_for_env_var "NEW_RELIC_ACCOUNT_ID" "Please enter your New Relic Account ID" true
 }
 
-# Set NEW_RELIC_REGION variable from environment or prompt user. Default to US.
+# Set NEW_RELIC_REGION variable from environment or prompt user. Default to us.
 prompt_for_region() {
-  prompt_for_env_var "NEW_RELIC_REGION" "Please enter your New Relic Region (default: US)" false
+  prompt_for_env_var "NEW_RELIC_REGION" "Please enter your New Relic Region (default: us)" false
   if [ -z "$NEW_RELIC_REGION" ]; then
-    export NEW_RELIC_REGION="US"
+    export NEW_RELIC_REGION="us"
+  else
+    NEW_RELIC_REGION=$(echo "$NEW_RELIC_REGION" | tr '[:upper:]' '[:lower:]')
+    export NEW_RELIC_REGION
   fi
 }
 
