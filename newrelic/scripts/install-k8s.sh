@@ -15,6 +15,7 @@
 #   - helm
 #   - Access to the target Kubernetes cluster
 #   - NEW_RELIC_LICENSE_KEY (will prompt if not set)
+#   - NEW_RELIC_REGION (optional, defaults to us; set to eu or jp for other regions)
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
@@ -24,6 +25,7 @@ check_tool_installed helm
 check_tool_installed kubectl
 
 prompt_for_license_key
+prompt_for_region
 prompt_for_openshift
 
 install_or_upgrade_chart() {
@@ -75,7 +77,7 @@ kubectl create secret generic "$NR_LICENSE_SECRET" --from-literal=license-key="$
 
 # Install New Relic K8s OpenTelemetry Collector
 ensure_helm_repo "newrelic" "https://helm-charts.newrelic.com"
-install_or_upgrade_chart "$NR_K8S_RELEASE_NAME" "newrelic/nr-k8s-otel-collector" "$NR_K8S_CHART_VERSION" "../k8s/helm/nr-k8s-otel-collector.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
+install_or_upgrade_chart "$NR_K8S_RELEASE_NAME" "newrelic/nr-k8s-otel-collector" "$NR_K8S_CHART_VERSION" "../k8s/helm/nr-k8s-otel-collector.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER" "global.region=$NEW_RELIC_REGION"
 
 # Install OpenTelemetry Demo
 ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetry-helm-charts"
