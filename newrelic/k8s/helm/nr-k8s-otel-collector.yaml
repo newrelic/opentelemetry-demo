@@ -8,7 +8,7 @@ images:
   collector:
     registry: ""
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.145.0"
+    tag: "0.153.0"
     pullPolicy: IfNotPresent
 
 # This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
