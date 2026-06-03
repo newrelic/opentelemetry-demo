@@ -127,7 +127,7 @@ deployment:
             - filter/python-system-metrics
             - resourcedetection/otel-demo
             - resource/otel-demo
-            - k8sattributes/ksm
+            - k8s_attributes/ksm
             - batch
           exporters:
             - otlphttp/newrelic
@@ -141,7 +141,7 @@ deployment:
             - resourcedetection/otel-demo
             - resource/otel-demo
             - transform/otel-demo
-            - k8sattributes/ksm
+            - k8s_attributes/ksm
             - batch
           receivers:
             - otlp
