@@ -110,7 +110,7 @@ deployment:
         # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
         metrics/spanmetrics:
           exporters:
-            - otlphttp/newrelic
+            - otlp_http/newrelic
           processors:
             - memory_limiter
             - filter/drop-spanmetrics-services
@@ -130,12 +130,12 @@ deployment:
             - k8s_attributes/ksm
             - batch
           exporters:
-            - otlphttp/newrelic
+            - otlp_http/newrelic
 
         traces/otel-demo:
           exporters:
             - spanmetrics
-            - otlphttp/newrelic
+            - otlp_http/newrelic
           processors:
             - memory_limiter
             - resourcedetection/otel-demo
@@ -156,4 +156,4 @@ deployment:
             - transform/otel-demo
             - batch
           exporters:
-            - otlphttp/newrelic
+            - otlp_http/newrelic
