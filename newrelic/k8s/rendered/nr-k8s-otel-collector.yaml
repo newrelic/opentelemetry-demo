@@ -1779,7 +1779,7 @@ data:
       pipelines:
         logs/otel-demo:
           exporters:
-          - otlphttp/newrelic
+          - otlp_http/newrelic
           processors:
           - memory_limiter
           - resourcedetection/otel-demo
@@ -1790,19 +1790,19 @@ data:
           - otlp
         metrics/otel-demo:
           exporters:
-          - otlphttp/newrelic
+          - otlp_http/newrelic
           processors:
           - memory_limiter
           - filter/python-system-metrics
           - resourcedetection/otel-demo
           - resource/otel-demo
-          - k8sattributes/ksm
+          - k8s_attributes/ksm
           - batch
           receivers:
           - otlp
         metrics/spanmetrics:
           exporters:
-          - otlphttp/newrelic
+          - otlp_http/newrelic
           processors:
           - memory_limiter
           - filter/drop-spanmetrics-services
@@ -1813,13 +1813,13 @@ data:
         traces/otel-demo:
           exporters:
           - spanmetrics
-          - otlphttp/newrelic
+          - otlp_http/newrelic
           processors:
           - memory_limiter
           - resourcedetection/otel-demo
           - resource/otel-demo
           - transform/otel-demo
-          - k8sattributes/ksm
+          - k8s_attributes/ksm
           - batch
           receivers:
           - otlp
@@ -2354,7 +2354,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.145.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.153.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2525,7 +2525,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: d0c634da5a68f5d7de3cc8f93f896ad5c005a00a92cac921fa3225ac85c54fae
+        checksum/config: 1af8c1edbd925d97507bbaf3a85bf89d5a5aa022163a0022d2766007b178e1d6
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2539,7 +2539,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.145.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.153.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
