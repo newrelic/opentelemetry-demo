@@ -9,8 +9,8 @@ TS=$(date +"%Y%m%d_%H%M%S")
 TS_FULL=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Kubernetes variables
-OTEL_DEMO_CHART_VERSION="0.40.5"
-NR_K8S_CHART_VERSION="0.10.13"
+OTEL_DEMO_CHART_VERSION="0.40.9"
+NR_K8S_CHART_VERSION="0.13.0"
 OTEL_DEMO_RELEASE_NAME=otel-demo
 NR_K8S_RELEASE_NAME=nr-k8s-otel-collector
 OTEL_DEMO_NAMESPACE=opentelemetry-demo
@@ -131,11 +131,14 @@ prompt_for_account_id() {
   prompt_for_env_var "NEW_RELIC_ACCOUNT_ID" "Please enter your New Relic Account ID" true
 }
 
-# Set NEW_RELIC_REGION variable from environment or prompt user. Default to US.
+# Set NEW_RELIC_REGION variable from environment or prompt user. Default to us.
 prompt_for_region() {
-  prompt_for_env_var "NEW_RELIC_REGION" "Please enter your New Relic Region (default: US)" false
+  prompt_for_env_var "NEW_RELIC_REGION" "Please enter your New Relic Region (default: us)" false
   if [ -z "$NEW_RELIC_REGION" ]; then
-    export NEW_RELIC_REGION="US"
+    export NEW_RELIC_REGION="us"
+  else
+    NEW_RELIC_REGION=$(echo "$NEW_RELIC_REGION" | tr '[:upper:]' '[:lower:]')
+    export NEW_RELIC_REGION
   fi
 }
 

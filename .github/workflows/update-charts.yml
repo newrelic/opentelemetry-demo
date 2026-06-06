@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: '30 0 * * 0' # Once a week, Sunday 00:30 UTC
 
+permissions:
+  contents: read
+
 jobs:
   update-charts:
     permissions:

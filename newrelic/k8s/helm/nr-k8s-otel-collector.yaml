@@ -8,7 +8,7 @@ images:
   collector:
     registry: ""
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.145.0"
+    tag: "0.153.0"
     pullPolicy: IfNotPresent
 
 # This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
@@ -110,7 +110,7 @@ deployment:
         # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
         metrics/spanmetrics:
           exporters:
-            - otlphttp/newrelic
+            - otlp_http/newrelic
           processors:
             - memory_limiter
             - filter/drop-spanmetrics-services
@@ -127,21 +127,21 @@ deployment:
             - filter/python-system-metrics
             - resourcedetection/otel-demo
             - resource/otel-demo
-            - k8sattributes/ksm
+            - k8s_attributes/ksm
             - batch
           exporters:
-            - otlphttp/newrelic
+            - otlp_http/newrelic
 
         traces/otel-demo:
           exporters:
             - spanmetrics
-            - otlphttp/newrelic
+            - otlp_http/newrelic
           processors:
             - memory_limiter
             - resourcedetection/otel-demo
             - resource/otel-demo
             - transform/otel-demo
-            - k8sattributes/ksm
+            - k8s_attributes/ksm
             - batch
           receivers:
             - otlp
@@ -156,4 +156,4 @@ deployment:
             - transform/otel-demo
             - batch
           exporters:
-            - otlphttp/newrelic
+            - otlp_http/newrelic
