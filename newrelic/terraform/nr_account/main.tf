@@ -7,7 +7,7 @@ provider "newrelic" {
 # Create a New Relic sub-account
 resource "newrelic_account_management" "subaccount" {
   name   = var.subaccount_name
-  region = upper(var.newrelic_region) == "US" ? "us01" : "eu01"
+  region = upper(var.newrelic_region) == "US" ? "us01" : upper(var.newrelic_region) == "EU" ? "eu01" : "jp01"
 }
 
 # Get admin authentication domain
@@ -26,7 +26,7 @@ resource "terraform_data" "admin_access_grant" {
   triggers_replace = {
     account_id = newrelic_account_management.subaccount.id
     api_key    = var.newrelic_api_key
-    region     = upper(var.newrelic_region) == "US" ? "newrelic" : "eu.newrelic"
+    region     = upper(var.newrelic_region) == "US" ? "newrelic" : upper(var.newrelic_region) == "EU" ? "eu.newrelic" : "jp.newrelic"
     group_id   = data.newrelic_group.admin_group.id
     role_name  = var.admin_role_name
   }
@@ -70,7 +70,7 @@ resource "terraform_data" "readonly_access_grant" {
   triggers_replace = {
     account_id = newrelic_account_management.subaccount.id
     api_key    = var.newrelic_api_key
-    region     = upper(var.newrelic_region) == "US" ? "newrelic" : "eu.newrelic"
+    region     = upper(var.newrelic_region) == "US" ? "newrelic" : upper(var.newrelic_region) == "EU" ? "eu.newrelic" : "jp.newrelic"
     group_id   = newrelic_group.readonly_group[0].id
     role_name  = var.readonly_role_name
   }

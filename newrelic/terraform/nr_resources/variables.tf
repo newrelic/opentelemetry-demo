@@ -6,13 +6,13 @@ variable "newrelic_api_key" {
 }
 
 variable "newrelic_region" {
-  description = "New Relic region (US or EU)"
+  description = "New Relic region (US, EU, or JP)"
   type        = string
   default     = "US"
 
   validation {
-    condition     = contains(["US", "EU"], upper(var.newrelic_region))
-    error_message = "Region must be either 'US' or 'EU'."
+    condition     = contains(["US", "EU", "JP"], upper(var.newrelic_region))
+    error_message = "Region must be 'US', 'EU', or 'JP'."
   }
 }
 
