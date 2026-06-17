@@ -16,11 +16,11 @@ jobs:
     name: Go (newrelic/cli)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: newrelic/cli/go.mod
-      - uses: golangci/golangci-lint-action@v7
+      - uses: golangci/golangci-lint-action@9fae48acfc02a90574d7c304a1758ef9895495fa # v7
         with:
           working-directory: newrelic/cli
           version: v2.12.2
@@ -29,7 +29,7 @@ jobs:
     name: Shell (newrelic/scripts)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: run shellcheck
         run: find newrelic/scripts -name '*.sh' -print0 | xargs -0 shellcheck --severity=warning
 
@@ -37,12 +37,12 @@ jobs:
     name: Python (newrelic/scripts)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.x'
       - name: install ruff
-        run: pip install ruff
+        run: pip install --require-hashes -r newrelic/.github/requirements/ruff.txt
       - name: run ruff
         run: ruff check --cache-dir newrelic/.ruff_cache newrelic/scripts/
 
@@ -50,8 +50,8 @@ jobs:
     name: Terraform (newrelic/terraform)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
       - name: check terraform formatting
         run: terraform fmt -check -recursive newrelic/terraform/
 
@@ -59,12 +59,12 @@ jobs:
     name: YAML (newrelic)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.x'
       - name: install yamllint
-        run: pip install yamllint
+        run: pip install --require-hashes -r newrelic/.github/requirements/yamllint.txt
       - name: run yamllint
         run: yamllint newrelic/ -c newrelic/.yamllint.yaml -f github
 
@@ -72,7 +72,7 @@ jobs:
     name: JS (newrelic/docker/config)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: check JS syntax
         run: find newrelic -name '*.js' ! -name 'monkey-patch-injected.js' -print0 | xargs -0 node --check
 
@@ -80,8 +80,8 @@ jobs:
     name: Markdown (newrelic)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: install markdownlint-cli
-        run: npm install -g markdownlint-cli
+        run: npm install -g markdownlint-cli@0.49.0
       - name: run markdownlint
         run: markdownlint --config newrelic/.markdownlint.yaml 'newrelic/**/*.md'
