@@ -2,10 +2,8 @@
 
 Tracking: [ENTERPRISE-31017](https://new-relic.atlassian.net/browse/ENTERPRISE-31017)
 
-> **Branch note:** This work lives on its own `kafka-scenario` branch, based on `main`
-> and kept **independent of the `rca-bakeoff` branch**. Where the bake-off has already
-> touched Kafka (see "Current New Relic coverage" below), this plan treats that as
-> out-of-scope context, not a dependency.
+> **Branch note:** This work lives on its own `kafka-scenario` branch, based on `main`.
+> It is self-contained — everything the scenario needs is (or will be) built on this branch.
 
 ## What the scenario does
 
@@ -20,7 +18,7 @@ The flag is an **integer** flag, not a boolean: `on: 100`, `off: 0`. The `on` va
 
 ## Current New Relic coverage in this repo
 
-On this branch (`kafka-scenario`, based on `main`) there is **no Kafka-specific New Relic coverage**:
+On this branch there is **no Kafka-specific New Relic coverage**:
 
 - No Kafka/messaging alerts in [newrelic/terraform/nr_resources/metric_alerts.tf](../terraform/nr_resources/metric_alerts.tf).
 - No Kafka SLOs in [newrelic/terraform/nr_resources/slos.tf](../terraform/nr_resources/slos.tf).
@@ -29,35 +27,22 @@ On this branch (`kafka-scenario`, based on `main`) there is **no Kafka-specific 
 
 The demo currently emits Kafka producer/consumer **spans** (from checkout, fraud-detection, accounting auto-instrumentation) but **not** broker-side metrics like consumer lag.
 
-> **Related work on the `rca-bakeoff` branch (out of scope here):** the bake-off branch
-> already added a **symptom-level** alert, `checkout_order_latency_kafka_symptom` in
-> `metric_alerts.tf`, gated by `var.kafka_scenario_alert_enabled` (default false). It fires
-> on the honest user-facing symptom (checkout p95 latency rising as the queue backs up) and
-> deliberately does **not** name Kafka or fraud-detection, so it doesn't pre-localize the
-> fault for the RCA agents. That alert is *symptom-level only* and cannot measure lag — it
-> exists to give the bake-off a shared starting alert, and is separate from the cause-level
-> Kafka observability this plan builds.
-
 ## Proposed subtasks
 
 1. **Enable Kafka broker metrics**
    Add the `kafkametrics` receiver (and/or `jmx` receiver) to [src/otel-collector/otelcol-config-extras.yml](../../src/otel-collector/otelcol-config-extras.yml) so `kafka.consumer_group.lag`, `kafka.partition.current_offset`, etc. are exported to New Relic.
-   *This is the gate: without broker-side metrics, the dashboard tiles (#2), the cause-level alert (#3), and the SLO (#4) have nothing to query.*
+   *This is the gate: without broker-side metrics, the dashboard tiles (#2), the alerts (#3), and the SLO (#4) have nothing to query.*
 
 2. **Add a Kafka section to the service-baselines dashboard**
    Producer rate (checkout), consumer rate and lag (fraud-detection vs accounting consumer groups), per-topic message rate, error rate on the `orders` topic.
    File: [newrelic/dashboards/service_baselines.json](../dashboards/service_baselines.json).
 
-3. **Add a cause-level Kafka alert in terraform**
-   The **symptom** side (checkout latency) is already covered by the bake-off's
-   `checkout_order_latency_kafka_symptom` alert (on the `rca-bakeoff` branch — see above),
-   so this subtask is specifically the **cause-level** alert that pinpoints the fault:
+3. **Add Kafka alerts in terraform**
+   At minimum:
    - Consumer-lag threshold alert for the `fraud-detection` group on the `orders` topic.
-   - (Optional) Producer-rate-spike alert on `checkout`.
-   Depends on #1 (lag metrics must be collected first).
+   - (Optional) Producer-rate-spike alert on `checkout` (catches the burst when the flag flips on).
+   Depends on #1 (lag metrics must be collected first), ideally after #2 (alert on what's visualised).
    File: [newrelic/terraform/nr_resources/metric_alerts.tf](../terraform/nr_resources/metric_alerts.tf).
-   *If this branch is ever used alongside the bake-off, keep this cause-level alert separate
-   from / disabled during bake-off runs so it doesn't hand the RCA agents the answer.*
 
 4. **(Optional) Kafka SLO**
    e.g. "fraud-detection consumer lag ≤ N for X% of the period."
