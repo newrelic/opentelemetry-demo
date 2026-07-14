@@ -54,6 +54,22 @@ receivers:
   httpcheck/frontend-proxy:
     targets:
     - endpoint: http://frontend-proxy:8080
+  # Kafka broker metrics (ENTERPRISE-31017 — Kafka scenario).
+  # Scrapes broker-side metrics — notably kafka.consumer_group.lag — which the
+  # kafkaQueueProblems scenario produces (fraud-detection lags on the orders topic
+  # while accounting keeps up). The demo already emits producer/consumer spans;
+  # this adds the broker-side lag metric that spans cannot provide.
+  # Keep this receiver block identical across deployment paths; only the broker
+  # address and pipeline wiring differ per path.
+  kafkametrics:
+    brokers:
+    - ${env:KAFKA_ADDR}
+    protocol_version: 2.0.0
+    scrapers:
+    - brokers
+    - topics
+    - consumers
+    collection_interval: 15s
   otlp:
     protocols:
       grpc:
@@ -166,6 +182,7 @@ service:
       receivers:
       - hostmetrics
       - docker_stats
+      - kafkametrics
       - redis
       - otlp
       - prometheus/ad
