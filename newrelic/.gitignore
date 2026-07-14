@@ -14,3 +14,6 @@ docker/config/monkey-patch-injected.js
 
 # Ruff linter cache (created when running ruff check from within newrelic/)
 .ruff_cache/
+
+# Local planning/design scratch (source of truth is Jira ENTERPRISE-31017)
+docs/kafka-scenario-plan.md
