@@ -145,6 +145,9 @@ prompt_for_region() {
 # Prompt user to confirm if installation is for an OpenShift cluster
 prompt_for_openshift() {
   prompt_for_env_var "IS_OPENSHIFT_CLUSTER" "Is this installation for an OpenShift cluster? (y/n, default: n)" false
+  if [ -z "${IS_OPENSHIFT_CLUSTER:-}" ]; then
+    export IS_OPENSHIFT_CLUSTER="n"
+  fi
   validate_yesno_answer "IS_OPENSHIFT_CLUSTER"
 }
 
