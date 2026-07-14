@@ -83,4 +83,25 @@ install_or_upgrade_chart "$NR_K8S_RELEASE_NAME" "newrelic/nr-k8s-otel-collector"
 ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetry-helm-charts"
 install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry-demo" "$OTEL_DEMO_CHART_VERSION" "../k8s/helm/opentelemetry-demo.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
 
+# Grant pg_monitor to the postgresql user used by the NR collector's postgresql
+# receiver. The demo's init.sql (bundled in the chart) creates this user without
+# monitoring privileges, so query_sample/top_query event collection needs this.
+# This is idempotent DDL (no-op if already granted) and requires no DB restart.
+grant_pg_monitor() {
+  echo "Granting pg_monitor to the demo postgresql user..."
+  if ! kubectl rollout status deployment/postgresql -n "$OTEL_DEMO_NAMESPACE" --timeout=120s; then
+    echo "Warning: postgresql deployment not ready; skipping pg_monitor grant. Run manually later."
+    return
+  fi
+  # Use the superuser and database configured on the pod rather than hard-coding.
+  if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/postgresql -- \
+      sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "GRANT pg_monitor TO otelu;"'; then
+    echo "pg_monitor granted to otelu."
+  else
+    echo "Warning: failed to grant pg_monitor to otelu. Grant manually with:"
+    echo "  kubectl exec -n $OTEL_DEMO_NAMESPACE deployment/postgresql -- psql -U root -d otel -c 'GRANT pg_monitor TO otelu;'"
+  fi
+}
+grant_pg_monitor
+
 echo "OpenTelemetry Demo installation completed successfully!"
