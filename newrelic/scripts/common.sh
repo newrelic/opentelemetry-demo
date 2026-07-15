@@ -134,7 +134,7 @@ prompt_for_account_id() {
 # Set NEW_RELIC_REGION variable from environment or prompt user. Default to us.
 prompt_for_region() {
   prompt_for_env_var "NEW_RELIC_REGION" "Please enter your New Relic Region (default: us)" false
-  if [ -z "$NEW_RELIC_REGION" ]; then
+  if [ -z "${NEW_RELIC_REGION:-}" ]; then
     export NEW_RELIC_REGION="us"
   else
     NEW_RELIC_REGION=$(echo "$NEW_RELIC_REGION" | tr '[:upper:]' '[:lower:]')
@@ -145,6 +145,9 @@ prompt_for_region() {
 # Prompt user to confirm if installation is for an OpenShift cluster
 prompt_for_openshift() {
   prompt_for_env_var "IS_OPENSHIFT_CLUSTER" "Is this installation for an OpenShift cluster? (y/n, default: n)" false
+  if [ -z "${IS_OPENSHIFT_CLUSTER:-}" ]; then
+    export IS_OPENSHIFT_CLUSTER="n"
+  fi
   validate_yesno_answer "IS_OPENSHIFT_CLUSTER"
 }
 
