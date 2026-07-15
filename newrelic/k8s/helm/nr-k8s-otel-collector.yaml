@@ -116,6 +116,26 @@ deployment:
       exporters:
         debug: {}
 
+      receivers:
+        # Kafka broker metrics (ENTERPRISE-31847 — Kafka scenario, k8s path).
+        # On k8s the demo's own collector is disabled and telemetry is *pushed* to
+        # this collector's otlp receiver — but broker-side consumer lag can only be
+        # *scraped*. This scraping receiver connects to the in-cluster kafka Service
+        # (kafka:9092, same namespace) and emits kafka.consumer_group.lag etc.
+        # Note: this collector image (contrib 0.153.0) renamed the receiver to
+        # `kafka_metrics` (the `kafkametrics` alias is deprecated). The Docker path
+        # runs an older image (0.142.0) that still uses `kafkametrics`; keep each
+        # path on the name its image expects.
+        kafka_metrics:
+          brokers:
+            - kafka:9092
+          protocol_version: 2.0.0
+          scrapers:
+            - brokers
+            - topics
+            - consumers
+          collection_interval: 15s
+
       processors:
         # Strip description/unit from all metrics scraped from the ad
         # service's Prometheus endpoint, mirroring NRDOT's own
@@ -273,6 +293,7 @@ deployment:
           receivers:
             - otlp
             - prometheus/ad
+            - kafka_metrics
           processors:
             - memory_limiter
             - filter/python-system-metrics
