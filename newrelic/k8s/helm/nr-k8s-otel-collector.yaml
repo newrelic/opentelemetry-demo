@@ -73,8 +73,14 @@ deployment:
           events:
             db.server.query_sample:
               enabled: true
+            db.server.top_query:
+              enabled: true
           query_sample_collection:
             max_rows_per_query: 100
+          top_query_collection:
+            max_rows_per_query: 100
+            top_n_query: 100
+            collection_interval: 60s
           connection_pool:
             max_idle_time: 10m
             max_lifetime: 0

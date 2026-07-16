@@ -78,6 +78,23 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
 
+  postgresql:
+    # Preload pg_stat_statements so the NR collector's postgresql receiver can
+    # read db.server.top_query; must be set at server start (not via CREATE
+    # EXTENSION alone). See install-k8s.sh for the CREATE EXTENSION + grant step.
+    command:
+      - docker-entrypoint.sh
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+    resources:
+      limits:
+        memory: 200Mi
+      requests:
+        memory: 100Mi
+
   # Disable non-NR components
   load-generator:
     additionalVolumes:
