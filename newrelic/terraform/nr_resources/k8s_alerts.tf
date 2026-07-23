@@ -9,13 +9,18 @@
 
 ## Kubernetes Alert Policy
 resource "newrelic_alert_policy" "k8s_alert_policy" {
-  name                = "Astronomy Kubernetes Health"
+  name                = "Astronomy Shop Kubernetes Health"
   incident_preference = "PER_CONDITION_AND_TARGET"
 }
 
 ## Pod Not Ready
-## kube_pod_status_ready is a per-condition gauge (condition = 'true' | 'false' | 'unknown');
-## the series where condition = 'false' is 1 while the pod is not ready.
+## kube_pod_status_ready is a per-condition gauge (condition = 'true' | 'false' | 'unknown').
+## The collector drops zero-value samples, so only the condition currently
+## reporting 1.0 is present at any given time — filtering on condition = 'false'
+## alone would miss this, since a ready pod simply has no 'false' series at all
+## rather than one reporting 0. Instead, restrict to rows where the reported
+## value is 1.0 (the only ones the collector emits) and evaluate the condition
+## label itself to get a true not-ready signal.
 resource "newrelic_nrql_alert_condition" "k8s_pod_not_ready" {
   account_id                   = var.newrelic_account_id
   policy_id                    = newrelic_alert_policy.k8s_alert_policy.id
@@ -25,7 +30,7 @@ resource "newrelic_nrql_alert_condition" "k8s_pod_not_ready" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT latest(kube_pod_status_ready) FROM Metric WHERE metricName = 'kube_pod_status_ready' AND condition = 'false' FACET k8s.pod.name, k8s.namespace.name, k8s.cluster.name"
+    query           = "SELECT if(latest(condition) = 'false', 1, 0) FROM Metric WHERE metricName = 'kube_pod_status_ready' AND kube_pod_status_ready['latest'] = 1.0 FACET k8s.pod.name, k8s.namespace.name, k8s.cluster.name"
     data_account_id = var.newrelic_account_id
   }
 
