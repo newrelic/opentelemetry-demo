@@ -449,6 +449,7 @@ Overloads the Kafka `orders` topic while slowing one consumer, producing a consu
 2. Generate checkout traffic so orders flow — either let the load generator run, or place orders through the web store. The lag builds as checkouts complete.
 
 > **Note (Kubernetes):** the `checkout` and `fraud-detection` services read the flag at startup, so after toggling it you may need to restart them to pick up the change:
+>
 > ```bash
 > kubectl -n opentelemetry-demo rollout restart deploy/checkout deploy/fraud-detection
 > ```
@@ -457,11 +458,11 @@ Overloads the Kafka `orders` topic while slowing one consumer, producing a consu
 
 Broker-side Kafka metrics (notably `kafka.consumer_group.lag`) are collected by the `kafkametrics`/`kafka_metrics` receiver added to the collector, faceted by `group` and `topic`.
 
-- **Dashboard** — the *Kafka* section of the **Astronomy Services Baselines** dashboard: the *Consumer Group Lag* tile shows `fraud-detection` climbing (to ~1000–1500+ at demo volume) while `accounting` stays flat near 0. Producer rate and consumer throughput tiles show the flood.
-- **Alerts** — two conditions on the *Astronomy Service Metric Health* policy open critical incidents:
+- **Dashboard** — the _Kafka_ section of the **Astronomy Services Baselines** dashboard: the _Consumer Group Lag_ tile shows `fraud-detection` climbing (to ~1000–1500+ at demo volume) while `accounting` stays flat near 0. Producer rate and consumer throughput tiles show the flood.
+- **Alerts** — two conditions on the _Astronomy Service Metric Health_ policy open critical incidents:
   - **Kafka Consumer Lag (fraud-detection / orders)** — lag above `var.kafka_consumer_lag_threshold` (default 100).
   - **Kafka Producer Rate Spike (orders topic)** — production rate above `var.kafka_producer_rate_threshold` (default 60/min).
-- **SLO** — the *fraud-detection - Kafka Consumer Lag* service level burns error budget while lag exceeds the threshold.
+- **SLO** — the _fraud-detection - Kafka Consumer Lag_ service level burns error budget while lag exceeds the threshold.
 
 Quick NRQL check:
 
@@ -474,9 +475,11 @@ WHERE topic = 'orders' FACET `group` TIMESERIES
 
 1. Set **`kafkaQueueProblems`** back to **`off`** in the Flagd UI.
 2. On Kubernetes, restart the services again so they stop producing the burst / re-read the flag:
+
    ```bash
    kubectl -n opentelemetry-demo rollout restart deploy/checkout deploy/fraud-detection
    ```
+
 3. `fraud-detection` drains the backlog and lag returns to ~0 (about a minute at demo volume); the alert incidents auto-close.
 
 #### Deployment-path notes
