@@ -75,9 +75,13 @@ resource "newrelic_nrql_alert_condition" "k8s_deployment_replicas_unavailable" {
 }
 
 ## Container OOMKilled
-## kube_pod_container_status_last_terminated_reason is a labeled gauge that reports
-## 1 for whichever reason was last recorded for the container; alert when that
-## reason is OOMKilled.
+## kube_pod_container_status_last_terminated_reason is a labeled gauge that keeps
+## reporting 1 for whichever reason a container was *last* terminated with, even
+## long after the fact — so alerting on latest(...) = 'OOMKilled' alone fires once
+## and then never resolves, since there's no new sample to clear it. Instead, pair
+## it with kube_pod_container_status_last_terminated_timestamp (a separate metric,
+## joined here by matching facets) and only alert when that timestamp is recent
+## relative to now — i.e. an OOM kill that just happened, not one from days ago.
 resource "newrelic_nrql_alert_condition" "k8s_container_oom_killed" {
   account_id                   = var.newrelic_account_id
   policy_id                    = newrelic_alert_policy.k8s_alert_policy.id
@@ -87,7 +91,7 @@ resource "newrelic_nrql_alert_condition" "k8s_container_oom_killed" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT latest(kube_pod_container_status_last_terminated_reason) FROM Metric WHERE metricName = 'kube_pod_container_status_last_terminated_reason' AND reason = 'OOMKilled' FACET k8s.pod.name, k8s.container.name, k8s.namespace.name, k8s.cluster.name"
+    query           = "SELECT if((latest(timestamp)/1000 - latest(kube_pod_container_status_last_terminated_timestamp)) < ${local.threshold_duration * 2}, 1, 0) FROM Metric WHERE metricName = 'kube_pod_container_status_last_terminated_timestamp' OR (metricName = 'kube_pod_container_status_last_terminated_reason' AND reason = 'OOMKilled' AND kube_pod_container_status_last_terminated_reason['latest'] = 1.0) FACET k8s.pod.name, k8s.container.name, k8s.namespace.name, k8s.cluster.name"
     data_account_id = var.newrelic_account_id
   }
 
