@@ -1,7 +1,6 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-
 static_resources:
   listeners:
     - address:
@@ -37,10 +36,6 @@ static_resources:
                       domains:
                         - "*"
                       routes:
-                        - match: { path: "/loadgen" }
-                          redirect: { path_redirect: "/loadgen/" }
-                        - match: { prefix: "/loadgen/" }
-                          route: { cluster: loadgen, prefix_rewrite: "/" }
                         - match: { prefix: "/otlp-http/" }
                           route: { cluster: opentelemetry_collector_http, prefix_rewrite: "/" }
                         - match: { path: "/jaeger" }
@@ -51,6 +46,14 @@ static_resources:
                           redirect: { path_redirect: "/grafana/" }
                         - match: { prefix: "/grafana/" }
                           route: { cluster: grafana }
+                        - match: { path: "/opamp" }
+                          redirect: { path_redirect: "/opamp/" }
+                        - match: { prefix: "/opamp/" }
+                          route: { cluster: opamp, prefix_rewrite: "/" }
+                        - match: { path: "/telemetry" }
+                          redirect: { path_redirect: "/telemetry/" }
+                        - match: { prefix: "/telemetry/" }
+                          route: { cluster: telemetry-docs, prefix_rewrite: "/" }
                         - match: { prefix: "/images/" }
                           route: { cluster: image-provider, prefix_rewrite: "/" }
                         - match: { prefix: "/flagservice/" }
@@ -59,6 +62,19 @@ static_resources:
                           route:
                             cluster: flagd-ui
                             prefix_rewrite: "/"
+                            upgrade_configs:
+                              - upgrade_type: websocket
+                        - match: { path: "/profiles" }
+                          redirect: { path_redirect: "/profiles/" }
+                        - match: { prefix: "/profiles/" }
+                          route: { cluster: profiles }
+                        - match: { path: "/chatbot" }
+                          redirect: { path_redirect: "/chatbot/" }
+                        - match: { prefix: "/chatbot/" }
+                          route:
+                            cluster: chatbot
+                            prefix_rewrite: "/"
+                            timeout: 0s
                             upgrade_configs:
                               - upgrade_type: websocket
                         - match: { prefix: "/" }  # Default/catch-all route - keep last since prefix:"/" matches everything
@@ -79,12 +95,11 @@ static_resources:
                   - name: envoy.access_loggers.open_telemetry
                     typed_config:
                       "@type": "type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig"
-                      common_config:
-                        log_name: "otel_envoy_access_log"
-                        grpc_service:
-                          envoy_grpc:
-                            cluster_name: opentelemetry_collector_grpc
-                        transport_api_version: "V3"
+                      stat_prefix: otel_envoy_access_log
+                      log_name: "otel_envoy_access_log"
+                      grpc_service:
+                        envoy_grpc:
+                          cluster_name: opentelemetry_collector_grpc
                       body:
                         # yamllint disable-line rule:line-length
                         string_value: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% \"%UPSTREAM_TRANSPORT_FAILURE_REASON%\" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%\n"
@@ -93,6 +108,9 @@ static_resources:
                           - key: "service.name"
                             value:
                               string_value: ${OTEL_SERVICE_NAME}
+                          - key: "service.namespace"
+                            value:
+                              string_value: ${OTEL_SERVICE_NAMESPACE}
                       attributes:
                         values:
                           - key: "destination.address"
@@ -132,6 +150,10 @@ static_resources:
     - name: opentelemetry_collector_grpc
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: &dns_resolver
+        name: envoy.network.dns_resolver.cares
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.network.dns_resolver.cares.v3.CaresDnsResolverConfig
       typed_extension_protocol_options:
         envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
           "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
@@ -149,6 +171,7 @@ static_resources:
     - name: opentelemetry_collector_http
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
       load_assignment:
         cluster_name: opentelemetry_collector_http
         endpoints:
@@ -161,6 +184,7 @@ static_resources:
     - name: frontend
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
       load_assignment:
         cluster_name: frontend
         endpoints:
@@ -173,6 +197,7 @@ static_resources:
     - name: image-provider
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
       load_assignment:
         cluster_name: image-provider
         endpoints:
@@ -185,6 +210,7 @@ static_resources:
     - name: flagservice
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
       load_assignment:
         cluster_name: flagservice
         endpoints:
@@ -197,6 +223,7 @@ static_resources:
     - name: flagd-ui
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
       load_assignment:
         cluster_name: flagd-ui
         endpoints:
@@ -206,21 +233,10 @@ static_resources:
                     socket_address:
                       address: ${FLAGD_UI_HOST}
                       port_value: ${FLAGD_UI_PORT}
-    - name: loadgen
-      type: STRICT_DNS
-      lb_policy: ROUND_ROBIN
-      load_assignment:
-        cluster_name: loadgen
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    socket_address:
-                      address: ${LOCUST_WEB_HOST}
-                      port_value: ${LOCUST_WEB_PORT}
     - name: grafana
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
       load_assignment:
         cluster_name: grafana
         endpoints:
@@ -233,6 +249,7 @@ static_resources:
     - name: jaeger
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
       load_assignment:
         cluster_name: jaeger
         endpoints:
@@ -242,6 +259,58 @@ static_resources:
                     socket_address:
                       address: ${JAEGER_HOST}
                       port_value: ${JAEGER_UI_PORT}
+    - name: opamp
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      dns_failure_refresh_rate: { base_interval: 10s, max_interval: 30s }
+      typed_dns_resolver_config: *dns_resolver
+      load_assignment:
+        cluster_name: opamp
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${OPAMP_SERVER_HOST}
+                      port_value: ${OPAMP_SERVER_UI_PORT}
+    - name: telemetry-docs
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
+      load_assignment:
+        cluster_name: telemetry-docs
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${TELEMETRY_DOCS_HOST}
+                      port_value: ${TELEMETRY_DOCS_PORT}
+    - name: chatbot
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      typed_dns_resolver_config: *dns_resolver
+      load_assignment:
+        cluster_name: chatbot
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${CHATBOT_HOST}
+                      port_value: ${CHATBOT_PORT}
+    - name: profiles
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: profiles
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: ${FIREPIT_HOST}
+                      port_value: ${FIREPIT_PORT}
 admin:
   address:
     socket_address:

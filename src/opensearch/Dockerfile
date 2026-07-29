@@ -1,7 +1,8 @@
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
-FROM opensearchproject/opensearch:3.2.0
+# Keep this tag aligned with src/grafana/provisioning/datasources/opensearch.yaml.
+FROM public.ecr.aws/opensearchproject/opensearch:3.7.0@sha256:123e6591a47b1d54686890551bdb35739c85193ecded381219fc9e059e18128f
 
 USER 0
 
