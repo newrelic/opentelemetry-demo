@@ -42,6 +42,8 @@ DISPLAY_MERGE_BASE=""
 REPO_OWNER=$(parse_repo_owner)
 TAG_REGEX='^([0-9a-fA-F]+),refs/tags/([0-9]+\.[0-9]+\.[0-9]+)$'
 
+git fetch $UPSTREAM_REMOTE
+
 if [ "$MERGE_BASE" == "" ]; then
   echo "MERGE_BASE is not set, using latest tag"
   TAGS=$(git ls-remote --tags --sort='-creatordate' $UPSTREAM_REMOTE | awk '{ print $1 "," $2 }')
@@ -61,7 +63,6 @@ else
 fi
 
 echo "starting merge from $DISPLAY_MERGE_BASE"
-git fetch $UPSTREAM_REMOTE
 git checkout main
 
 AHEAD=$(git rev-list $MERGE_BASE..main --count)
