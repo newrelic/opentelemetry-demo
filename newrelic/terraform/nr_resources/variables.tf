@@ -38,8 +38,28 @@ variable "low_throughput_alert_enabled" {
   default     = false
 }
 
+##
+## Kafka scenario alert thresholds (ENTERPRISE-31843).
+## Defaults derived from live validation: fraud-detection consumer lag sits at 0
+## at rest and spikes to ~1000-1500 under the kafkaQueueProblems scenario, and the
+## orders-topic production rate is a few msgs/min at rest vs a burst when the flag
+## is on. Thresholds sit well above baseline so the alerts fire only during the
+## scenario, not on normal demo traffic.
+##
+variable "kafka_consumer_lag_threshold" {
+  description = "Consumer lag (messages) above which the Kafka consumer-lag alert fires"
+  type        = number
+  default     = 100
+}
 
-## 
+variable "kafka_producer_rate_threshold" {
+  description = "Orders-topic production rate (messages/min) above which the Kafka producer-spike alert fires"
+  type        = number
+  default     = 60
+}
+
+
+##
 ## Maps services to thresholds for alerts are defined using metric values.
 ##
 variable "metric_alert_map" {
