@@ -77,6 +77,31 @@ func getEnvOrDefault(key, def string) string {
 	return def
 }
 
+// overrideEnv returns a copy of the process environment with the given
+// key/value overrides applied. It's not enough to just append "KEY=value" to
+// os.Environ(): exec.Cmd.Env passes duplicate keys straight through to the
+// OS, and most getenv() implementations (including Terraform's and
+// docker's) return the FIRST match, not the last. Appending a duplicate
+// therefore silently loses to whatever os.Environ() already had for that
+// key. Empty override values are skipped, leaving any existing value (or
+// none) in place.
+func overrideEnv(overrides map[string]string) []string {
+	env := make([]string, 0, len(os.Environ())+len(overrides))
+	for _, kv := range os.Environ() {
+		key := strings.SplitN(kv, "=", 2)[0]
+		if _, ok := overrides[key]; ok {
+			continue
+		}
+		env = append(env, kv)
+	}
+	for k, v := range overrides {
+		if v != "" {
+			env = append(env, k+"="+v)
+		}
+	}
+	return env
+}
+
 func validateLicenseKey(val string) error {
 	if len(val) != 40 || !strings.HasSuffix(val, "NRAL") {
 		return fmt.Errorf("must be 40 chars and end with 'NRAL'")

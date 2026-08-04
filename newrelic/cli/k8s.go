@@ -88,7 +88,7 @@ func handleK8s(action string, cfg *Config) {
 	exec.Command("kubectl", "delete", "secret", "newrelic-license-key", "-n", ns).Run()
 	runCommand("kubectl", []string{"create", "secret", "generic", "newrelic-license-key", "--from-literal=license-key=" + cfg.LicenseKey, "-n", ns}, nil)
 
-	installChart("nr-k8s", []string{Paths["nr-k8s-values"]})
+	installChart("nr-k8s", []string{Paths["nr-k8s-values"]}, "global.region="+strings.ToLower(cfg.Region))
 
 	otelValues := []string{Paths["otel-values"]}
 	if cfg.EnableBrowser != nil && *cfg.EnableBrowser {
@@ -98,11 +98,14 @@ func handleK8s(action string, cfg *Config) {
 }
 
 // installChart executes the helm upgrade --install command for a given chart.
-func installChart(key string, values []string) {
+func installChart(key string, values []string, extraSets ...string) {
 	c := Charts[key]
 	args := []string{"upgrade", "--install", c.Name, c.Repo, "--version", c.Version, "-n", c.NS}
 	for _, v := range values {
 		args = append(args, "-f", v)
+	}
+	for _, s := range extraSets {
+		args = append(args, "--set", s)
 	}
 
 	if isOpenShift {
