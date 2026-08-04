@@ -8,7 +8,7 @@ images:
   collector:
     registry: ""
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.153.0"
+    tag: "0.157.0"
     pullPolicy: IfNotPresent
 
 # This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
@@ -17,6 +17,18 @@ images:
 deployment:
   configMap:
     extraConfig:
+      receivers:
+        # Demo: scrape a Prometheus /metrics endpoint exposed by the ad
+        # service using the Prometheus Java client library, bridging
+        # existing Prometheus-client instrumentation into the OTel pipeline.
+        prometheus/ad:
+          config:
+            scrape_configs:
+              - job_name: ad
+                scrape_interval: 10s
+                static_configs:
+                  - targets: ["ad:9465"]
+
       connectors:
         spanmetrics:
           metrics_flush_interval: 30s
@@ -51,6 +63,21 @@ deployment:
         debug: {}
 
       processors:
+        # Strip description/unit from all metrics scraped from the ad
+        # service's Prometheus endpoint, mirroring NRDOT's own
+        # transform/low_data_mode_inator approach for its bundled metrics.
+        # Scoped by the ad job's resource attribute (set by the prometheus
+        # receiver from the scrape job name) rather than a specific metric
+        # name, so it covers whatever ad exposes, not just today's counter.
+        transform/strip_ad_metric_metadata:
+          metric_statements:
+            - context: metric
+              conditions:
+                - resource.attributes["service.name"] == "ad"
+              statements:
+                - set(metric.description, "")
+                - set(metric.unit, "")
+
         # Drop Python system metrics since they're duplicates of hostmetrics
         # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/system_metrics/system_metrics.html
         filter/python-system-metrics:
@@ -75,6 +102,12 @@ deployment:
 
         resourcedetection/otel-demo:
           detectors: [env]
+
+        # Converts Traceloop/OpenLLMetry telemetry from agent/mcp/chatbot into
+        # official gen_ai.* semconv attributes.
+        gen_ai_normalizer:
+          sources:
+            - name: openllmetry
 
         # This processor is used to help limit high cardinality on next.js span names
         # When this PR is merged (and released) we can remove this transform processor
@@ -122,12 +155,15 @@ deployment:
         metrics/otel-demo:
           receivers:
             - otlp
+            - prometheus/ad
           processors:
             - memory_limiter
             - filter/python-system-metrics
             - resourcedetection/otel-demo
             - resource/otel-demo
             - k8s_attributes/ksm
+            - transform/strip_ad_metric_metadata
+            - cumulativetodelta
             - batch
           exporters:
             - otlp_http/newrelic
@@ -142,6 +178,7 @@ deployment:
             - resource/otel-demo
             - transform/otel-demo
             - k8s_attributes/ksm
+            - gen_ai_normalizer
             - batch
           receivers:
             - otlp
