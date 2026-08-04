@@ -1,0 +1,22 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Usage (via make run-frontend-tests)
+
+services:
+  # Frontend Tests
+  frontendTests:
+    image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend-tests
+    container_name: frontend-tests
+    build:
+      context: ./
+      dockerfile: ./src/frontend/Dockerfile.cypress
+    volumes:
+      - ./src/frontend/cypress/videos:/app/cypress/videos
+      - ./src/frontend/cypress/screenshots:/app/cypress/screenshots
+    environment:
+      - CYPRESS_baseUrl=http://${FRONTEND_ADDR}
+      - FRONTEND_ADDR
+      - NODE_ENV=production
+    depends_on:
+      - frontend

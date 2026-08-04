@@ -43,7 +43,7 @@ class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
     def ListRecommendations(self, request, context):
         prod_list = get_product_list(request.product_ids)
         span = trace.get_current_span()
-        span.set_attribute("app.products_recommended.count", len(prod_list))
+        span.set_attribute("demo.product.recommended.count", len(prod_list))
         logger.info(f"Receive ListRecommendations for product ids:{prod_list}")
 
         # build and return response
@@ -51,7 +51,7 @@ class RecommendationService(demo_pb2_grpc.RecommendationServiceServicer):
         response.product_ids.extend(prod_list)
 
         # Collect metrics for this service
-        rec_svc_metrics["app_recommendations_counter"].add(len(prod_list), {'recommendation.type': 'catalog'})
+        rec_svc_metrics["demo.recommendation.requests"].add(len(prod_list), {'recommendation.type': 'catalog'})
 
         return response
 
@@ -76,39 +76,39 @@ def get_product_list(request_product_ids):
 
         # Feature flag scenario - Cache Leak
         if check_feature_flag("recommendationCacheFailure"):
-            span.set_attribute("app.recommendation.cache_enabled", True)
+            span.set_attribute("demo.feature_flag.recommendation_cache", True)
             if random.random() < 0.5 or first_run:
                 first_run = False
-                span.set_attribute("app.cache_hit", False)
+                span.set_attribute("demo.recommendation.cache_hit", False)
                 logger.info("get_product_list: cache miss")
-                cat_response = product_catalog_stub.GetProduct(demo_pb2.Empty())
+                cat_response = product_catalog_stub.ListProducts(demo_pb2.Empty())
                 response_ids = [x.id for x in cat_response.products]
                 cached_ids = cached_ids + response_ids
                 cached_ids = cached_ids + cached_ids[:len(cached_ids) // 4]
                 product_ids = cached_ids
             else:
-                span.set_attribute("app.cache_hit", True)
+                span.set_attribute("demo.recommendation.cache_hit", True)
                 logger.info("get_product_list: cache hit")
                 product_ids = cached_ids
         else:
-            span.set_attribute("app.recommendation.cache_enabled", False)
+            span.set_attribute("demo.feature_flag.recommendation_cache", False)
             cat_response = product_catalog_stub.ListProducts(demo_pb2.Empty())
             product_ids = [x.id for x in cat_response.products]
 
-        span.set_attribute("app.products.count", len(product_ids))
+        span.set_attribute("demo.product.count", len(product_ids))
 
         # Create a filtered list of products excluding the products received as input
         filtered_products = list(set(product_ids) - set(request_product_ids))
         num_products = len(filtered_products)
-        span.set_attribute("app.filtered_products.count", num_products)
+        span.set_attribute("demo.product.filtered.count", num_products)
         num_return = min(max_responses, num_products)
 
-        # Sample list of indicies to return
+        # Sample list of indices to return
         indices = random.sample(range(num_products), num_return)
         # Fetch product ids from indices
         prod_list = [filtered_products[i] for i in indices]
 
-        span.set_attribute("app.filtered_products.list", prod_list)
+        span.set_attribute("demo.product.filtered.list", prod_list)
 
         return prod_list
 
@@ -123,7 +123,7 @@ def must_map_env(key: str):
 def check_feature_flag(flag_name: str):
     # Initialize OpenFeature
     client = api.get_client()
-    return client.get_boolean_value("recommendationCacheFailure", False)
+    return client.get_boolean_value(flag_name, False)
 
 
 if __name__ == "__main__":
@@ -138,11 +138,7 @@ if __name__ == "__main__":
 
     # Initialize Logs
     logger_provider = LoggerProvider(
-        resource=Resource.create(
-            {
-                'service.name': service_name,
-            }
-        ),
+        resource = Resource.create({}),
     )
     set_logger_provider(logger_provider)
     log_exporter = OTLPLogExporter(insecure=True)

@@ -16,11 +16,17 @@ We meet every other Wednesday at 8:00 PT. The schedule may change based on
 contributors' availability. Check the [OpenTelemetry Community Calendar](https://github.com/open-telemetry/community?tab=readme-ov-file#special-interest-groups)
 for specific dates and Zoom links.
 
+The call is open to all. Whether you're a seasoned OpenTelemetry developer,
+just starting your journey, or simply curious about the work we do, you're more
+than welcome to participate.
+
 See the
 [public meeting notes](https://docs.google.com/document/d/16f-JOjKzLgWxULRxY8TmpM_FjlI1sthvKurnqFz9x98/edit)
 for a summary description of past meetings.
 For edit access, ask in our
 [Slack channel](https://cloud-native.slack.com/archives/C03B4CWV4DA).
+If you are new to the CNCF Slack community, you can [create an
+account](https://slack.cncf.io/).
 
 ### Sign the Contributor License Agreement (CLA)
 
@@ -53,8 +59,15 @@ Ensure you have the following installed:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - [Make](https://www.gnu.org/software/make/)
-- [Docker](https://www.docker.com/get-started/)
-- [Docker Compose](https://docs.docker.com/compose/install/#install-compose) v2.0.0+
+- [Docker][docker] with [Docker Compose][docker-compose] v2.0.0+
+
+Alternatively, [Podman][podman] 4.7.0+ can be used instead of Docker. See
+[Using Podman Instead of Docker](#using-podman-instead-of-docker) for setup
+instructions.
+
+[docker]: https://www.docker.com/get-started/
+[docker-compose]: https://docs.docker.com/compose/install/#install-compose
+[podman]: https://podman.io/getting-started/installation
 
 ### Clone the Repository
 
@@ -69,6 +82,33 @@ cd opentelemetry-demo/
 make start
 ```
 
+### Using Podman Instead of Docker
+
+The demo supports both Docker and Podman. Docker is the default container
+runtime. To use Podman instead, set the following environment variables:
+
+```sh
+DOCKER_COMPOSE_CMD="podman compose" make start
+```
+
+To persist this setting, add it to your shell profile (e.g., `~/.bashrc`):
+
+```sh
+export DOCKER_CMD=podman
+export DOCKER_COMPOSE_CMD="podman compose"
+```
+
+Then you can simply run `make start` and it will use Podman.
+
+#### Podman-specific Notes
+
+- Podman runs rootless by default, which may require adjusting some
+  system settings
+- If you encounter permission issues, ensure your user is in the
+  appropriate groups
+- Ensure the Podman socket is running: `systemctl --user start podman.socket`
+- You can check the Podman socket status with: `systemctl --user status podman.socket`
+
 ### Verify the Webstore & Telemetry
 
 Once the images are built and containers are started, visit:
@@ -76,8 +116,12 @@ Once the images are built and containers are started, visit:
 - **Webstore**: [http://localhost:8080/](http://localhost:8080/)
 - **Jaeger**: [http://localhost:8080/jaeger/ui/](http://localhost:8080/jaeger/ui/)
 - **Grafana**: [http://localhost:8080/grafana/](http://localhost:8080/grafana/)
+- **OpAMP**: [http://localhost:8080/opamp/](http://localhost:8080/opamp/)
 - **Feature Flags UI**: [http://localhost:8080/feature/](http://localhost:8080/feature/)
-- **Load Generator UI**: [http://localhost:8080/loadgen/](http://localhost:8080/loadgen/)
+
+The OpAMP UI shows the OpenTelemetry Collector as a managed agent. Click the
+collector instance ID to view its health status, version, attributes, and
+effective configuration.
 
 ## Troubleshooting Common Issues
 
@@ -98,7 +142,33 @@ If inactive, start it:
 
 ```sh
 sudo systemctl start docker
-  ```
+```
+
+### Podman Not Running or Socket Issues
+
+**Error:** `Cannot connect to Podman` or socket-related errors
+
+**Solution:**
+
+- Ensure the Podman socket is running:
+
+```sh
+systemctl --user start podman.socket
+```
+
+- Verify the socket is active:
+
+```sh
+systemctl --user status podman.socket
+```
+
+- Verify the socket exists:
+
+```sh
+podman info --format '{{.Host.RemoteSocket.Path}}'
+```
+
+- If using rootless Podman, ensure `XDG_RUNTIME_DIR` is set correctly.
 
 ### Gradle Issues (Windows)
 
@@ -110,31 +180,39 @@ cd src/ad/
 ./gradlew wrapper --gradle-version 7.4.2
 ```
 
-### Docker build cache issues
+### Build Cache Issues
 
-While developing, you may encounter issues with Docker build cache. To clear the
-cache:
+While developing, you may encounter issues with container build cache.
+To clear the cache:
 
 ```sh
-docker system prune -a
+docker system prune -a   # For Docker
+podman system prune -a   # For Podman
 ```
 
-Warning: This removes all unused Docker data, including images, containers,
+Warning: This removes all unused container data, including images, containers,
 volumes, and networks. Use with caution.
 
 ### Debugging Tips
 
-- Use `docker ps` to check running containers.
+- Check running containers:
+
+```sh
+docker ps       # For Docker
+podman ps       # For Podman
+```
+
 - View logs for services:
 
 ```sh
-docker logs <container_id>
+docker logs <container_id>   # For Docker
+podman logs <container_id>   # For Podman
 ```
 
 - Restart containers if needed:
 
 ```sh
-docker-compose restart
+make restart service=<service-name>
 ```
 
 ### Review the Documentation
@@ -184,13 +262,45 @@ Check out a new branch, make modifications and push the branch to your fork:
 ```sh
 $ git checkout -b feature
 # change files
-# Test your changes locally.
-$ docker compose up -d --build
-# Go to Webstore, Jaeger or docker container logs etc. as appropriate to make sure your changes are working correctly.
 $ git add my/changed/files
 $ git commit -m "short description of the change"
 $ git push fork feature
 ```
+
+Test your changes locally before opening a PR. For a change that affects one
+service, rebuild and restart only that service:
+
+```sh
+make build service=<service-name>
+make restart service=<service-name>
+```
+
+For example, if you change the Shipping service:
+
+```sh
+make build service=shipping
+make restart service=shipping
+```
+
+If the demo is not already running, or your change affects shared Docker Compose
+configuration, environment variables, generated protobufs, cross-service
+contracts, or collector/frontend-proxy configuration, start the demo stack after
+building the affected service:
+
+```sh
+make build service=<service-name>
+make start
+```
+
+Verify the change using the path that matches what you changed: the Webstore UI,
+direct service endpoints, container logs, Jaeger traces, Grafana dashboards, or
+other telemetry views as appropriate.
+
+Update the relevant [documentation][docs] and [Changelog](./CHANGELOG.md) before
+opening the PR for user-visible behavior, telemetry, configuration, or workflow
+changes.
+Trivial typo, cosmetic, and purely internal cleanup changes may not need a
+changelog entry.
 
 Open a pull request against the main `opentelemetry-demo` repo.
 
@@ -204,8 +314,8 @@ Open a pull request against the main `opentelemetry-demo` repo.
 - Make sure the PR title reflects the contribution.
 - Write a summary that helps understand the change.
 - Include usage examples in the summary, where applicable.
-- Include benchmarks (before/after) in the summary, for contributions that are
-  performance enhancements.
+- For performance-related changes, include before/after measurements in the
+  summary and describe how they were collected.
 
 ### How to Get PRs Merged
 
@@ -235,7 +345,9 @@ on each other), the owner should try to get people aligned by:
 - Tagging subdomain experts (by looking at the change history) in the PR asking
   for suggestion.
 - Reaching out to more people on the [CNCF OpenTelemetry Community Demo Slack
-  channel](https://app.slack.com/client/T08PSQ7BQ/C03B4CWV4DA).
+  channel](https://app.slack.com/client/T08PSQ7BQ/C03B4CWV4DA). If you are new
+  to the CNCF Slack community, you can [create an
+  account](https://slack.cncf.io/).
 - Stepping back to see if it makes sense to narrow down the scope of the PR or
   split it up.
 - If none of the above worked and the PR has been stuck for more than 2 weeks,

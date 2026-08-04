@@ -3,6 +3,8 @@
 name: Checks
 
 on:
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
   pull_request:
@@ -12,72 +14,203 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build_images:
+    name: Build images
     permissions:  # required by the reusable workflow
-      contents: read
-      packages: write
+      contents: read  # required by the component-build-images reusable workflow
+      packages: write  # required to push built images to GHCR
     uses: ./.github/workflows/component-build-images.yml
     with:
-      push: false
-      version: 'dev'
+      push: ${{ github.event_name == 'push' }}
+      force_build: ${{ github.event_name == 'push' }}
+      # Use a non-release tag for PR builds; tags are not pushed when push=false.
+      version: ${{ github.event_name == 'push' && 'main' || 'dev' }}
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
   markdownlint:
+    name: Markdown lint
     runs-on: ubuntu-latest
     steps:
-      - name: check out code
-        uses: actions/checkout@v6.0.1
-      - name: install dependencies
-        run: npm install
-      - name: run markdownlint
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install dependencies
+        run: npm ci
+      - name: Run markdownlint
         run: make markdownlint
 
   yamllint:
+    name: YAML lint
     runs-on: ubuntu-latest
     steps:
-      - name: check out code
-        uses: actions/checkout@v6.0.1
-      - uses: actions/setup-python@v6
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.x'
-      - name: install yamllint
+      - name: Install yamllint
         run: make install-yamllint
-      - name: run yamllint
-        run: yamllint . -f github
+      - name: Run yamllint
+        run: yamllint . -f github --strict
 
   misspell:
+    name: Misspell
     runs-on: ubuntu-latest
     steps:
-      - name: check out code
-        uses: actions/checkout@v6.0.1
-      - name: run misspell
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run misspell
         run: make misspell
 
   checklinks:
-    name: linkspector
+    name: lychee
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
-      - name: Run linkspector
-        uses: umbrelladocs/action-linkspector@v1
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          level: info
-          fail_level: any
-          config_file: '.linkspector.yml'
+          persist-credentials: false
+      - name: Restore lychee cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        id: cache-restore
+        with:
+          path: .lycheecache
+          key: ${{ runner.os }}-lychee-${{ hashFiles('.lychee.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-lychee-
+      - name: Run lychee
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
+        with:
+          args: --config .lychee.toml --cache --max-cache-age 3d --cache-exclude-status 300..=599 .
+          fail: true
+      - name: Save lychee cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: .lycheecache
+          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
 
   sanity:
+    name: Sanity check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6.0.1
-      - name: run sanitycheck.py
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run sanitycheck.py
         run: python3 ./internal/tools/sanitycheck.py
 
   checklicense:
+    name: Check license
     runs-on: ubuntu-latest
     steps:
-      - name: check out code
-        uses: actions/checkout@v6.0.1
-      - name: install tools
-        run: make install-tools
-      - name: run checklicense
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run checklicense
         run: make checklicense
+
+  weaver-check:
+    name: Weaver check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run Weaver registry check
+        env:
+          GITHUB_WORKSPACE_PATH: ${{ github.workspace }}
+        run: |
+          docker run --rm \
+            --mount "type=bind,source=${GITHUB_WORKSPACE_PATH}/telemetry-schema,target=/home/weaver/source,readonly" \
+            otel/weaver:v0.22.1 \
+            registry check -r source
+
+  check-react-native-changes:
+    name: Check React Native changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.filter.outputs.react_native }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check React Native paths
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706  # v4.0.2
+        id: filter
+        with:
+          filters: |
+            react_native:
+              - 'src/react-native-app/**'
+              - 'Makefile'
+              - '.github/workflows/checks.yml'
+              - '.github/workflows/react-native-build.yml'
+
+  react-native-build:
+    needs: check-react-native-changes
+    if: needs.check-react-native-changes.outputs.should_build == 'true'
+    uses: ./.github/workflows/react-native-build.yml
+
+  zizmor:
+    name: zizmor scan
+    permissions:
+      actions: read  # required to scan GitHub Actions workflows
+      contents: read  # required to checkout the repository
+      security-events: write  # required to upload zizmor SARIF to code scanning
+    uses: ./.github/workflows/zizmor.yml
+
+  codeql-analysis:
+    name: CodeQL analysis
+    permissions:
+      actions: read  # required to scan GitHub Actions workflows
+      contents: read  # required to checkout the repository
+      security-events: write  # required to upload CodeQL SARIF to code scanning
+    uses: ./.github/workflows/codeql-analysis.yml
+
+  build-test:
+    name: build-test
+    needs: [
+      build_images,
+      markdownlint,
+      yamllint,
+      misspell,
+      checklinks,
+      sanity,
+      checklicense,
+      weaver-check,
+      react-native-build,
+      codeql-analysis,
+      zizmor
+    ]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report CI status
+        shell: bash
+        env:
+          CI_SUCCESS: ${{ !contains(needs.*.result, 'failure') }}
+        run: |
+          if [ "${CI_SUCCESS}" == "true" ]
+          then
+            echo 'Build complete ✓'
+          else
+            echo 'Build failed ✗'
+            exit 1
+          fi
