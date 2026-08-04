@@ -94,9 +94,13 @@ func loadConfig(cfg *Config) {
 	}
 
 	// Meta and Terraform Vars (Lowercase suffixes for variables.tf alignment)
-	if cfg.SubAccountId == "" {
-		cfg.SubAccountId = getTFVar("newrelic_account_id")
-	}
+	// NOTE: SubAccountId is intentionally NOT restored from TF_VAR_newrelic_account_id
+	// here. It's only meant to hold a sub-account ID freshly created by this run's
+	// "account" provisioning step (see terraform.go), which also sets AccountId to the
+	// same value. Restoring it from a leftover env var let a stale sub-account ID from
+	// a previous run silently override an explicit --NEW_RELIC_ACCOUNT_ID flag later
+	// (buildEnvMap checked SubAccountId before AccountId). AccountId's own restoration
+	// from NEW_RELIC_ACCOUNT_ID below already covers the "reuse across invocations" case.
 	if cfg.ParentAccountId == "" {
 		cfg.ParentAccountId = getTFVar("newrelic_parent_account_id")
 	}
