@@ -51,6 +51,17 @@ components:
       requests:
         memory: 200Mi
   checkout:
+    useDefault:
+      env: true
+    envOverrides:
+      # Preemptive opt-in: otelgrpc-go pre-v0.69.0 (this chart's pinned version)
+      # doesn't understand rpc/old and ignores it. Once the chart is bumped past
+      # the otelgrpc rename (rpc.server.duration -> rpc.server.call.duration,
+      # rpc.grpc.status_code -> rpc.response.status_code, with no error.type
+      # ever set), this restores the old metric name/attribute NR's error-rate
+      # rule matches on.
+      - name: OTEL_SEMCONV_STABILITY_OPT_IN
+        value: rpc/old
     resources:
       limits:
         memory: 100Mi
@@ -74,7 +85,7 @@ components:
       - name: DB_CONNECTION_STRING
         value: postgres://otelu:otelp@postgresql/otel?sslmode=disable
       - name: OTEL_SEMCONV_STABILITY_OPT_IN
-        value: database
+        value: database,rpc/old
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
 
