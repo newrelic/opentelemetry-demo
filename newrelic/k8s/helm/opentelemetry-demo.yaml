@@ -76,6 +76,189 @@ components:
       # LLM, set this to "False" and provide LLM_BASE_URL/API_KEY.
       - name: USE_VCR
         value: "True"
+  load-generator:
+    additionalVolumes:
+      - name: patched-script
+        emptyDir: {}
+    additionalVolumeMounts:
+      - name: patched-script
+        mountPath: /home/k6/script.js
+        subPath: script.js
+    initContainers:
+      # Temporary workaround, remove once these land upstream and this
+      # component picks up a released image that includes them:
+      #   - #3820: product-link click races page hydration under
+      #     imageSlowLoad, silently no-opping the SPA navigation (the
+      #     image-wait fix from #3171 was lost in the Locust->k6 rewrite)
+      #   - #3812: shared browser context across iterations breaks RUM
+      #     agents' session tracking, and context.close() cuts off
+      #     visibilitychange/pagehide-triggered sends before they finish
+      #   - #3813: browser scenario's VU count is hardcoded to 1, so it
+      #     can't be scaled independently of LOAD_GENERATOR_VUS
+      #
+      # Two-stage patch, same shape as the pre-v3.0.0 Locust-era
+      # locustfile.py patch this replaces: copy the shipped script.js out of
+      # the actual load-generator image (so the patch tracks upstream
+      # changes instead of vendoring a full copy here), then transform it
+      # with a small Python container since the k6 image has no python3
+      # (it's Alpine-based, sh/sed only - a single-image sed patch was
+      # considered but multi-line JS block replacement via sed is too
+      # fragile to be worth the one fewer container).
+      - name: copy-script
+        image: ghcr.io/open-telemetry/demo:3.0.0-load-generator
+        command:
+          - sh
+          - -c
+          - cp /home/k6/script.js /patched/script.js
+        volumeMounts:
+          - name: patched-script
+            mountPath: /patched
+      - name: patch-script
+        image: docker.io/library/python:3.12-slim
+        command:
+          - python
+          - -c
+          - |
+            import textwrap
+
+            with open('/patched/script.js', 'r') as f:
+                content = f.read()
+
+            # The upstream 3.0.0-load-generator image has none of these fixes - none
+            # were ever merged upstream. This patches in:
+            #   1. waitForSelector instead of the no-op
+            #      waitForLoadState('domcontentloaded') after a client-side route
+            #      change (domcontentloaded already fired once for the initial load
+            #      and never fires again for a pushState transition, so the
+            #      add-to-cart click never finds its target).
+            #   2. A wait for the RoofBinoculars.jpg thumbnail response before
+            #      clicking the product link - imageSlowLoad delays that request by
+            #      up to 10s, and the homepage isn't hydrated/interactive until it
+            #      resolves, so an early click never reaches the Next.js router and
+            #      the SPA navigation silently no-ops.
+            #   3. A fresh browser context per iteration instead of a shared page, so
+            #      cookies/storage don't leak across simulated users for the VU's
+            #      entire 9999h lifetime.
+            #   4. Forcing visibilitychange/pagehide and giving the RUM agent's
+            #      session-trace blob harvest a real window to flush before the
+            #      context is torn down - page.close() alone cuts the beacon off
+            #      mid-flight.
+            orig_task = textwrap.dedent("""\
+                async function addProductToCartBrowser(page) {
+                    // Roof Binoculars (2ZYFJ3GM2N). Selects by href / data-cy rather than
+                    // :has-text(), which k6 browser's native CSS engine does not support
+                    // (it forwards selectors straight to document.querySelectorAll, unlike
+                    // Playwright's own selector engine).
+                    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
+                    await page.waitForSelector('a[href="/product/2ZYFJ3GM2N"]', { timeout: 15000 })
+                    await page.click('a[href="/product/2ZYFJ3GM2N"]')
+                    await page.waitForLoadState('domcontentloaded')
+                    await page.click('[data-cy="product-add-to-cart"]')
+                    await page.waitForLoadState('domcontentloaded')
+                    await page.waitForTimeout(2000)
+                }""")
+
+            new_task = textwrap.dedent("""\
+                async function addProductToCartBrowser(page) {
+                    // Roof Binoculars (2ZYFJ3GM2N). Selects by href / data-cy rather than
+                    // :has-text(), which k6 browser's native CSS engine does not support
+                    // (it forwards selectors straight to document.querySelectorAll, unlike
+                    // Playwright's own selector engine).
+                    await Promise.all([
+                        page.waitForResponse(/\\/images\\/products\\/RoofBinoculars\\.jpg/, { timeout: 25000 }),
+                        page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' }),
+                    ])
+                    await page.waitForSelector('a[href="/product/2ZYFJ3GM2N"]', { timeout: 15000 })
+                    await page.click('a[href="/product/2ZYFJ3GM2N"]')
+                    await page.waitForSelector('[data-cy="product-add-to-cart"]', { timeout: 25000 })
+                    await page.click('[data-cy="product-add-to-cart"]')
+                    await page.waitForTimeout(2000)
+                }""")
+
+            orig_scenario = textwrap.dedent("""\
+                export async function browserScenario() {
+                    if (getFlagdValue('loadGeneratorTraffic') <= 0) {
+                        sleep(cryptoRandom() * 9 + 1)
+                        return
+                    }
+
+                    const page = await browser.newPage()
+                    const isCurrencyChange = cryptoRandom() < 0.5
+                    const span = tracer.startSpan(isCurrencyChange ? 'browser_change_currency' : 'browser_add_to_cart')
+                    try {
+                        await page.setExtraHTTPHeaders({ baggage: 'synthetic_request=true' })
+                        if (isCurrencyChange) {
+                            span.log('Currency changed to CHF')
+                            await changeCurrency(page)
+                        } else {
+                            span.log('Product added to cart successfully')
+                            await addProductToCartBrowser(page)
+                        }
+                    } catch (e) {
+                        console.error(`browser task error: ${e}`)
+                    } finally {
+                        span.end()
+                        await page.close()
+                    }
+
+                    sleep(cryptoRandom() * 9 + 1)
+                }""")
+
+            new_scenario = textwrap.dedent("""\
+                export async function browserScenario() {
+                    if (getFlagdValue('loadGeneratorTraffic') <= 0) {
+                        sleep(cryptoRandom() * 9 + 1)
+                        return
+                    }
+
+                    const context = await browser.newContext()
+                    const page = await context.newPage()
+                    const isCurrencyChange = cryptoRandom() < 0.5
+                    const span = tracer.startSpan(isCurrencyChange ? 'browser_change_currency' : 'browser_add_to_cart')
+                    try {
+                        await page.setExtraHTTPHeaders({ baggage: 'synthetic_request=true' })
+                        if (isCurrencyChange) {
+                            span.log('Currency changed to CHF')
+                            await changeCurrency(page)
+                        } else {
+                            span.log('Product added to cart successfully')
+                            await addProductToCartBrowser(page)
+                        }
+                    } catch (e) {
+                        console.error(`browser task error: ${e}`)
+                    } finally {
+                        span.end()
+                        await page.evaluate(() => {
+                            document.dispatchEvent(new Event('visibilitychange'))
+                            window.dispatchEvent(new Event('pagehide'))
+                        }).catch(() => {})
+                        await page.waitForTimeout(8000)
+                        await context.close()
+                    }
+
+                    sleep(cryptoRandom() * 9 + 1)
+                }""")
+
+            # #3813: the browser scenario's VU count is hardcoded to 1, independent of
+            # LOAD_GENERATOR_VUS, so there's no way to run more than one concurrent
+            # browser/RUM session. Make it configurable the same way LOAD_GENERATOR_VUS
+            # already works for the HTTP scenario.
+            orig_vus = "                vus: 1,\n"
+            new_vus = "                vus: parseInt(__ENV.BROWSER_GENERATOR_VUS || '1'),\n"
+
+            assert orig_task in content, 'addProductToCartBrowser text not found - upstream script.js changed'
+            assert orig_scenario in content, 'browserScenario text not found - upstream script.js changed'
+            assert orig_vus in content, 'hardcoded browser vus line not found - upstream script.js changed'
+
+            content = content.replace(orig_task, new_task)
+            content = content.replace(orig_scenario, new_scenario)
+            content = content.replace(orig_vus, new_vus)
+
+            with open('/patched/script.js', 'w') as f:
+                f.write(content)
+        volumeMounts:
+          - name: patched-script
+            mountPath: /patched
 
 # Disable non-NR components
 opensearch:
