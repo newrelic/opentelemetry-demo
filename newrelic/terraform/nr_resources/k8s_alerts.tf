@@ -30,7 +30,7 @@ resource "newrelic_nrql_alert_condition" "k8s_pod_not_ready" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT if(latest(condition) = 'false', 1, 0) FROM Metric WHERE metricName = 'kube_pod_status_ready' AND kube_pod_status_ready['latest'] = 1.0 FACET k8s.pod.name, k8s.namespace.name, k8s.cluster.name"
+    query           = "SELECT if(latest(condition) = 'false', 1, 0) FROM Metric WHERE metricName = 'kube_pod_status_ready' AND kube_pod_status_ready['latest'] = 1.0 AND k8s.namespace.name = 'opentelemetry-demo' FACET k8s.pod.name, k8s.namespace.name, k8s.cluster.name"
     data_account_id = var.newrelic_account_id
   }
 
@@ -57,7 +57,7 @@ resource "newrelic_nrql_alert_condition" "k8s_deployment_replicas_unavailable" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT latest(kube_deployment_status_replicas_unavailable) FROM Metric WHERE metricName = 'kube_deployment_status_replicas_unavailable' FACET k8s.deployment.name, k8s.namespace.name, k8s.cluster.name"
+    query           = "SELECT latest(kube_deployment_status_replicas_unavailable) FROM Metric WHERE metricName = 'kube_deployment_status_replicas_unavailable' AND k8s.namespace.name = 'opentelemetry-demo' FACET k8s.deployment.name, k8s.namespace.name, k8s.cluster.name"
     data_account_id = var.newrelic_account_id
   }
 
@@ -91,7 +91,7 @@ resource "newrelic_nrql_alert_condition" "k8s_container_oom_killed" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT if((latest(timestamp)/1000 - latest(kube_pod_container_status_last_terminated_timestamp)) < ${local.threshold_duration * 2}, 1, 0) FROM Metric WHERE metricName = 'kube_pod_container_status_last_terminated_timestamp' OR (metricName = 'kube_pod_container_status_last_terminated_reason' AND reason = 'OOMKilled' AND kube_pod_container_status_last_terminated_reason['latest'] = 1.0) FACET k8s.pod.name, k8s.container.name, k8s.namespace.name, k8s.cluster.name"
+    query           = "SELECT if((latest(timestamp)/1000 - latest(kube_pod_container_status_last_terminated_timestamp)) < ${local.threshold_duration * 2}, 1, 0) FROM Metric WHERE (metricName = 'kube_pod_container_status_last_terminated_timestamp' OR (metricName = 'kube_pod_container_status_last_terminated_reason' AND reason = 'OOMKilled' AND kube_pod_container_status_last_terminated_reason['latest'] = 1.0)) AND k8s.namespace.name = 'opentelemetry-demo' FACET k8s.pod.name, k8s.container.name, k8s.namespace.name, k8s.cluster.name"
     data_account_id = var.newrelic_account_id
   }
 
@@ -120,7 +120,7 @@ resource "newrelic_nrql_alert_condition" "k8s_readiness_probe_failing" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT latest(kube_pod_container_status_ready) FROM Metric WHERE metricName = 'kube_pod_container_status_ready' FACET k8s.pod.name, k8s.container.name, k8s.namespace.name, k8s.cluster.name"
+    query           = "SELECT latest(kube_pod_container_status_ready) FROM Metric WHERE metricName = 'kube_pod_container_status_ready' AND k8s.namespace.name = 'opentelemetry-demo' FACET k8s.pod.name, k8s.container.name, k8s.namespace.name, k8s.cluster.name"
     data_account_id = var.newrelic_account_id
   }
 
