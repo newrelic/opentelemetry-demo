@@ -77,6 +77,43 @@ components:
       - name: USE_VCR
         value: "True"
   load-generator:
+    # Full env list at upstream default values, kept explicit rather than
+    # omitted. This chart's env is set as a plain array, which Helm
+    # replaces wholesale rather than merging - so a future change that
+    # only touches BROWSER_GENERATOR_VUS (e.g. to scale up concurrent
+    # browser sessions) won't silently drop K6_BROWSER_ENABLED,
+    # FLAGD_HOST, or any other var the base chart normally sets.
+    env:
+      - name: LOAD_GENERATOR_VUS
+        value: "10"
+      - name: BROWSER_GENERATOR_VUS
+        value: "1"
+      - name: K6_TARGET_URL
+        value: http://frontend-proxy:8080
+      - name: K6_BROWSER_ENABLED
+        value: "true"
+      - name: K6_BROWSER_ARGS
+        value: no-sandbox,disable-dev-shm-usage
+      - name: FLAGD_HOST
+        value: flagd
+      - name: FLAGD_PORT
+        value: "8013"
+      - name: FLAGD_OFREP_PORT
+        value: "8016"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
+      - name: K6_OTEL_EXPORTER_PROTOCOL
+        value: http/protobuf
+      - name: K6_OTEL_HTTP_EXPORTER_ENDPOINT
+        value: $(OTEL_COLLECTOR_NAME):4318
+      - name: K6_OTEL_HTTP_EXPORTER_INSECURE
+        value: "true"
+      - name: K6_OTEL_METRIC_PREFIX
+        value: k6.
+      - name: OTEL_RESOURCE_ATTRIBUTES_EXTRA
+        value: service.criticality=low
     additionalVolumes:
       - name: patched-script
         emptyDir: {}
@@ -213,10 +250,60 @@ components:
 
                     const context = await browser.newContext()
                     const page = await context.newPage()
+                    // Tag first-party requests as synthetic via baggage (checkout/payment
+                    // annotate spans based on this) the same way the pre-k6
+                    // Locust/Playwright load-generator did, but scoped to same-origin
+                    // only. The old code (and, until this fix, this one) added the
+                    // header via a global page.setExtraHTTPHeaders matching every
+                    // request including third-party ones. A custom header on a
+                    // cross-origin request is a non-simple request under the Fetch
+                    // spec, forcing a real CORS preflight; k6/Playwright drives the page
+                    // through CDP, which loses Chromium's normal "simple cross-origin
+                    // request" fast path once a custom header is present. New Relic's
+                    // CDN doesn't answer OPTIONS preflights on its RUM agent's
+                    // chunk-loading domains, so that preflight failed and the agent's
+                    // harvester chunk (where its fetch/XHR/sendBeacon calls to New
+                    // Relic actually happen) never loaded - even though the base agent
+                    // initialized fine. The same bug independently broke loading Google
+                    // Fonts under k6/Playwright. Scoping the header to same-origin only
+                    // avoids triggering a preflight for any third-party resource.
+                    //
+                    // This is done via an in-page addInitScript() rather than
+                    // page.route()/route.continue() - CDP-level request interception -
+                    // because a page.route() handler here leaves the VU unable to start
+                    // a second iteration: context.close() reports a clean teardown
+                    // (visible even with K6_BROWSER_DEBUG=true), but k6's own
+                    // VU/executor never reclaims the VU afterward, silently stalling
+                    // the whole scenario after exactly one iteration.
+                    await context.addInitScript(() => {
+                        const origFetch = window.fetch
+                        window.fetch = function (input, init) {
+                            try {
+                                const url = typeof input === 'string' ? input : input.url
+                                if (url && url.startsWith(window.location.origin)) {
+                                    init = init || {}
+                                    const headers = new Headers(init.headers || {})
+                                    const existing = headers.get('baggage') || ''
+                                    headers.set('baggage', [existing, 'synthetic_request=true'].filter(Boolean).join(', '))
+                                    init.headers = headers
+                                }
+                            } catch (e) {}
+                            return origFetch.call(this, input, init)
+                        }
+                        const origOpen = XMLHttpRequest.prototype.open
+                        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+                            const result = origOpen.call(this, method, url, ...rest)
+                            try {
+                                if (url && (url.startsWith(window.location.origin) || url.startsWith('/'))) {
+                                    this.setRequestHeader('baggage', 'synthetic_request=true')
+                                }
+                            } catch (e) {}
+                            return result
+                        }
+                    })
                     const isCurrencyChange = cryptoRandom() < 0.5
                     const span = tracer.startSpan(isCurrencyChange ? 'browser_change_currency' : 'browser_add_to_cart')
                     try {
-                        await page.setExtraHTTPHeaders({ baggage: 'synthetic_request=true' })
                         if (isCurrencyChange) {
                             span.log('Currency changed to CHF')
                             await changeCurrency(page)
@@ -228,7 +315,18 @@ components:
                         console.error(`browser task error: ${e}`)
                     } finally {
                         span.end()
+                        // INP/RUM beacons are only finalized/sent by the New Relic
+                        // browser agent when its visibilitychange handler observes
+                        // document.visibilityState === "hidden" (checked inside the
+                        // handler, not inferred from the event alone). Dispatching a
+                        // bare 'visibilitychange' event does not change that real,
+                        // browser-computed property, so the agent's own check silently
+                        // failed and no beacon was ever sent before context.close()
+                        // tore the page down. Override the getters first so the
+                        // agent's own check passes.
                         await page.evaluate(() => {
+                            Object.defineProperty(document, 'visibilityState', { get: () => 'hidden', configurable: true })
+                            Object.defineProperty(document, 'hidden', { get: () => true, configurable: true })
                             document.dispatchEvent(new Event('visibilitychange'))
                             window.dispatchEvent(new Event('pagehide'))
                         }).catch(() => {})
