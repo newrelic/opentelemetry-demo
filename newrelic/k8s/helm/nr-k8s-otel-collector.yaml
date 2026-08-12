@@ -156,7 +156,11 @@ deployment:
               # ERROR on successful calls too. Both checks must be one
               # condition string joined with "and".
               conditions:
-                - (metric.name == "rpc.server.call.duration" or metric.name == "rpc.client.call.duration") and attributes["rpc.response.status_code"] != nil and attributes["rpc.response.status_code"] != "OK"
+                - >-
+                  (metric.name == "rpc.server.call.duration" or metric.name
+                  == "rpc.client.call.duration") and
+                  attributes["rpc.response.status_code"] != nil and
+                  attributes["rpc.response.status_code"] != "OK"
               statements:
                 - set(attributes["error.type"], "SERVER ERROR")
 
