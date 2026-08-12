@@ -138,6 +138,28 @@ deployment:
               from_attribute: k8s.pod.uid
               action: insert
 
+        # otelgrpc never sets error.type on rpc.server.call.duration /
+        # rpc.client.call.duration even when the RPC failed, so NR's
+        # error.type-based error-rate rule can't match gRPC traffic. This is
+        # gRPC not following semconv, not a New Relic gap:
+        # https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9426
+        # Backfill a coarse error.type from the status code NR does receive
+        # so error rate shows up; remove once otelgrpc sets error.type itself.
+        transform/grpc_error_type:
+          error_mode: ignore
+          metric_statements:
+            - context: datapoint
+              # Multiple entries under conditions: are OR'd together, not
+              # AND'd - two separate list items here would match every
+              # rpc.server.call.duration/rpc.client.call.duration datapoint
+              # on the metric-name check alone, tagging error.type=SERVER
+              # ERROR on successful calls too. Both checks must be one
+              # condition string joined with "and".
+              conditions:
+                - (metric.name == "rpc.server.call.duration" or metric.name == "rpc.client.call.duration") and attributes["rpc.response.status_code"] != nil and attributes["rpc.response.status_code"] != "OK"
+              statements:
+                - set(attributes["error.type"], "SERVER ERROR")
+
       pipelines:
 
         # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
@@ -163,6 +185,7 @@ deployment:
             - resource/otel-demo
             - k8s_attributes/ksm
             - transform/strip_ad_metric_metadata
+            - transform/grpc_error_type
             - cumulativetodelta
             - batch
           exporters:
