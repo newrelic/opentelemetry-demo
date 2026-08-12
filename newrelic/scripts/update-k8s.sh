@@ -56,6 +56,17 @@ update_version_in_script() {
     fi
 }
 
+# Resolve the opentelemetry-collector-contrib version shipped by the demo chart.
+# The demo chart sets the collector image repository but defaults the tag to the
+# bundled opentelemetry-collector subchart appVersion, so we render the chart and
+# read the concrete resolved image tag.
+get_demo_collector_version() {
+    local chart_version="$1"
+    helm template otel-demo open-telemetry/opentelemetry-demo --version "$chart_version" 2>/dev/null \
+      | grep -oE 'otel/opentelemetry-collector-contrib:[0-9]+\.[0-9]+\.[0-9]+' \
+      | head -1 | cut -d: -f2
+}
+
 ensure_helm_repo "newrelic" "https://helm-charts.newrelic.com"
 ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetry-helm-charts"
 
@@ -80,6 +91,34 @@ else
   echo "opentelemetry-demo chart is up to date."
 fi
 
+# Sync the opentelemetry-collector-contrib version used by the NR K8s collector and
+# the Docker Compose setup to whatever the latest demo chart ships. The NRDOT K8s
+# image lacks the spanmetrics connector, so we pin contrib to the demo's collector
+# version and propagate it from a single source of truth.
+CONTRIB_UPDATED=false
+CONTRIB_VERSION=$(get_demo_collector_version "$LATEST_OTEL_DEMO_CHART_VERSION")
+if [ -z "$CONTRIB_VERSION" ]; then
+  echo "Error: could not resolve opentelemetry-collector-contrib version from opentelemetry-demo chart $LATEST_OTEL_DEMO_CHART_VERSION"
+  exit 1
+fi
+CURR_CONTRIB_VERSION=$(yq '.images.collector.tag' "$NR_K8S_VALUES_PATH")
+
+echo "Latest demo collector (contrib) version: $CONTRIB_VERSION"
+echo "Current NR K8s collector (contrib) tag: $CURR_CONTRIB_VERSION"
+
+if [ "$CONTRIB_VERSION" != "$CURR_CONTRIB_VERSION" ]; then
+  echo "Syncing opentelemetry-collector-contrib version to $CONTRIB_VERSION"
+  # Replace the tag on the line following the contrib repository line. Using sed
+  # (rather than `yq -i`) keeps the diff surgical and preserves the file's comments
+  # and formatting.
+  sed_i '/repository: otel\/opentelemetry-collector-contrib/{n;s/tag: .*/tag: "'"$CONTRIB_VERSION"'"/;}' "$NR_K8S_VALUES_PATH"
+  sed_i "s#\(COLLECTOR_CONTRIB_IMAGE=.*opentelemetry-collector-contrib:\).*#\1$CONTRIB_VERSION#" "$ENV_PATH"
+  echo "Updated images.collector.tag in $NR_K8S_VALUES_PATH and COLLECTOR_CONTRIB_IMAGE in $ENV_PATH"
+  CONTRIB_UPDATED=true
+else
+  echo "opentelemetry-collector-contrib version is already in sync."
+fi
+
 LATEST_NR_K8S_CHART_VERSION=$(helm search repo newrelic/nr-k8s-otel-collector --versions | awk 'NR==2 {print $2}')
 CURR_NR_K8S_CHART_VERSION=$(cat $COMMON_SCRIPT_PATH | sed -n 's/^NR_K8S_CHART_VERSION="\([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)"$/\1/p')
 
@@ -90,15 +129,23 @@ NR_K8S_UPDATED=false
 
 if [ "$LATEST_NR_K8S_CHART_VERSION" != "" ] && [ "$LATEST_NR_K8S_CHART_VERSION" != "$CURR_NR_K8S_CHART_VERSION" ]; then
   echo "Updating nr-k8s-otel-collector chart to version $LATEST_NR_K8S_CHART_VERSION"
-  template_chart "nr-k8s-otel-collector" "newrelic/nr-k8s-otel-collector" "$LATEST_NR_K8S_CHART_VERSION" "opentelemetry-demo" "$NR_K8S_VALUES_PATH" "$NR_K8S_RENDER_PATH"
   update_version_in_script "NR_K8S_CHART_VERSION" "$LATEST_NR_K8S_CHART_VERSION" "$COMMON_SCRIPT_PATH"
-  echo "Completed updating the New Relic K8s instrumentation!"
   NR_K8S_UPDATED=true
 else
   echo "NR K8s chart is up to date."
 fi
 
-if [ "$OTEL_DEMO_UPDATED" = false ] && [ "$NR_K8S_UPDATED" = false ]; then
+# Re-render the NR K8s manifest when the chart version changed OR the contrib tag changed.
+# The render is gated on a values change too (not just a chart bump) so that an updated
+# images.collector.tag actually lands in the rendered manifest.
+if [ "$NR_K8S_UPDATED" = true ] || [ "$CONTRIB_UPDATED" = true ]; then
+  NR_K8S_RENDER_VERSION="${LATEST_NR_K8S_CHART_VERSION:-$CURR_NR_K8S_CHART_VERSION}"
+  echo "Rendering nr-k8s-otel-collector chart (version $NR_K8S_RENDER_VERSION)"
+  template_chart "nr-k8s-otel-collector" "newrelic/nr-k8s-otel-collector" "$NR_K8S_RENDER_VERSION" "opentelemetry-demo" "$NR_K8S_VALUES_PATH" "$NR_K8S_RENDER_PATH"
+  echo "Completed updating the New Relic K8s instrumentation!"
+fi
+
+if [ "$OTEL_DEMO_UPDATED" = false ] && [ "$NR_K8S_UPDATED" = false ] && [ "$CONTRIB_UPDATED" = false ]; then
   echo "No updates were necessary. Charts are up to date."
   exit 0
 fi
@@ -120,6 +167,14 @@ if [ "$NR_K8S_UPDATED" = true ]; then
   fi
   COMMIT_DESC+="nr-k8s $LATEST_NR_K8S_CHART_VERSION"
   BODY_DESC+="* nr-k8s-otel-collector-$LATEST_NR_K8S_CHART_VERSION"$'\n'
+fi
+
+if [ "$CONTRIB_UPDATED" = true ]; then
+  if [ -n "$COMMIT_DESC" ]; then
+    COMMIT_DESC+=","
+  fi
+  COMMIT_DESC+="contrib $CONTRIB_VERSION"
+  BODY_DESC+="* opentelemetry-collector-contrib-$CONTRIB_VERSION"$'\n'
 fi
 
 COMMIT_MSG="chore: update charts - $COMMIT_DESC"
