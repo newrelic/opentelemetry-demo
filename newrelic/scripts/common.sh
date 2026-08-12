@@ -23,6 +23,7 @@ NR_K8S_RENDER_PATH=${NR_K8S_RENDER_PATH:-"$SCRIPT_DIR/../k8s/rendered/nr-k8s-ote
 # Docker variables
 DOCKER_COMPOSE_PATH=${DOCKER_COMPOSE_PATH:-"$SCRIPT_DIR/../../docker-compose.yml"}
 NR_DOCKER_COMPOSE_PATH=${NR_DOCKER_COMPOSE_PATH:-"$SCRIPT_DIR/../docker/docker-compose.yml"}
+ENV_PATH=${ENV_PATH:-"$SCRIPT_DIR/../../.env"}
 
 # Check if required tools are installed and error out if not
 check_tool_installed() {
