@@ -65,11 +65,22 @@
       "defaultVariant": "off"
     },
     "kafkaQueueProblems": {
-      "description": "Overloads Kafka queue while simultaneously introducing a consumer side delay leading to a lag spike",
+      "description": "Throttles the fraud-detection consumer by sleeping N ms per consumed record (value = per-record delay in ms). Drains slower than checkout produces, so consumer lag climbs. Tune the delay live from this flag.",
       "state": "ENABLED",
       "variants": {
-        "on": 100,
+        "5sec": 5000,
+        "3sec": 3000,
+        "1sec": 1000,
         "off": 0
+      },
+      "defaultVariant": "off"
+    },
+    "kafkaConsumerDead": {
+      "description": "fraud-detection leaves the orders consumer group (unsubscribes and stops polling) while checkout keeps producing, so the group empties (members -> 0) and lag climbs against a zero-member group",
+      "state": "ENABLED",
+      "variants": {
+        "on": true,
+        "off": false
       },
       "defaultVariant": "off"
     },
