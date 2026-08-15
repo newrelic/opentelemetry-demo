@@ -20,7 +20,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-accounting
     container_name: accounting
     build:
-      context: ./
+      context: ../..
       dockerfile: ${ACCOUNTING_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-accounting
@@ -48,7 +48,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-ad
     container_name: ad
     build:
-      context: ./
+      context: ../..
       dockerfile: ${AD_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-ad
@@ -83,7 +83,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-cart
     container_name: cart
     build:
-      context: ./
+      context: ../..
       dockerfile: ${CART_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-cart
@@ -117,7 +117,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-checkout
     container_name: checkout
     build:
-      context: ./
+      context: ../..
       dockerfile: ${CHECKOUT_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-checkout
@@ -169,7 +169,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-currency
     container_name: currency
     build:
-      context: ./
+      context: ../..
       dockerfile: ${CURRENCY_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-currency
@@ -199,7 +199,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-email
     container_name: email
     build:
-      context: ./
+      context: ../..
       dockerfile: ${EMAIL_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-email
@@ -228,7 +228,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-fraud-detection
     container_name: fraud-detection
     build:
-      context: ./
+      context: ../..
       dockerfile: ${FRAUD_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-fraud-detection
@@ -263,7 +263,7 @@ services:
       - ../docker/config/monkey-patch.js:/app/monkey-patch.js:z
     command: [ "--require=./Instrumentation.js", "--require=./monkey-patch.js", "server.js" ]
     build:
-      context: ./
+      context: ../..
       dockerfile: ${FRONTEND_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-frontend
@@ -324,7 +324,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-frontend-proxy
     container_name: frontend-proxy
     build:
-      context: ./
+      context: ../..
       dockerfile: ${FRONTEND_PROXY_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-frontend-proxy
@@ -334,7 +334,7 @@ services:
           memory: 65M
     restart: unless-stopped
     ports:
-      - "${ENVOY_PORT}:${ENVOY_PORT}"
+      - "${ENVOY_HOST_PORT:-${ENVOY_PORT}}:${ENVOY_PORT}"
       - "${ENVOY_ADMIN_PORT}:${ENVOY_ADMIN_PORT}"
     environment:
       - FRONTEND_PORT
@@ -372,7 +372,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-image-provider
     container_name: image-provider
     build:
-      context: ./
+      context: ../..
       dockerfile: ${IMAGE_PROVIDER_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-image-provider
@@ -401,7 +401,7 @@ services:
     image: ghcr.io/open-telemetry/demo:2.0.2-load-generator
     container_name: load-generator
     build:
-      context: ./
+      context: ../..
       dockerfile: ${LOAD_GENERATOR_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-load-generator
@@ -415,10 +415,11 @@ services:
     environment:
       - LOCUST_WEB_PORT
       - LOCUST_USERS
+      - LOCUST_SPAWN_RATE
       - LOCUST_HOST
       - LOCUST_HEADLESS
       - LOCUST_AUTOSTART
-      - LOCUST_BROWSER_TRAFFIC_ENABLED=true
+      - LOCUST_BROWSER_TRAFFIC_ENABLED
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_RESOURCE_ATTRIBUTES
@@ -439,7 +440,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-payment
     container_name: payment
     build:
-      context: ./
+      context: ../..
       dockerfile: ${PAYMENT_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-payment
@@ -470,7 +471,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-product-catalog
     container_name: product-catalog
     build:
-      context: ./
+      context: ../..
       dockerfile: ${PRODUCT_CATALOG_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-product-catalog
@@ -507,7 +508,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-product-reviews
     container_name: product-reviews
     build:
-      context: ./
+      context: ../..
       dockerfile: ${PRODUCT_REVIEWS_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-product-reviews
@@ -551,7 +552,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-quote
     container_name: quote
     build:
-      context: ./
+      context: ../..
       dockerfile: ${QUOTE_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-quote
@@ -580,7 +581,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-recommendation
     container_name: recommendation
     build:
-      context: ./
+      context: ../..
       dockerfile: ${RECOMMENDATION_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-recommendation
@@ -615,7 +616,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-shipping
     container_name: shipping
     build:
-      context: ./
+      context: ../..
       dockerfile: ${SHIPPING_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-shipping
@@ -630,6 +631,8 @@ services:
       - IPV6_ENABLED
       - SHIPPING_PORT
       - QUOTE_ADDR
+      - FLAGD_HOST
+      - FLAGD_PORT
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_RESOURCE_ATTRIBUTES
       - OTEL_SERVICE_NAME=shipping
@@ -668,7 +671,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-flagd-ui
     container_name: flagd-ui
     build:
-      context: ./
+      context: ../..
       dockerfile: ${FLAGD_UI_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-flagd-ui
@@ -699,7 +702,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-kafka
     container_name: kafka
     build:
-      context: ./
+      context: ../..
       dockerfile: ${KAFKA_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-kafka
@@ -733,7 +736,7 @@ services:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-llm
     container_name: llm
     build:
-      context: ./
+      context: ../..
       dockerfile: ${LLM_DOCKERFILE}
       cache_from:
         - ${IMAGE_NAME}:${IMAGE_VERSION}-llm
@@ -818,4 +821,5 @@ services:
       - POSTGRES_PASSWORD
       - GOMEMLIMIT=160MiB
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - NEW_RELIC_OTLP_ENDPOINT
       - KAFKA_ADDR
