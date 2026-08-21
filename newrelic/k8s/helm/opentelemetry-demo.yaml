@@ -89,6 +89,14 @@ components:
       - shared_preload_libraries=pg_stat_statements
       - -c
       - pg_stat_statements.track=all
+      - -c
+      - pg_stat_statements.max=10000
+      - -c
+      - pg_stat_statements.save=on
+      - -c
+      - track_activity_query_size=4096
+      - -c
+      - track_functions=all
     resources:
       limits:
         memory: 200Mi

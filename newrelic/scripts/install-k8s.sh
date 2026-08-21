@@ -65,9 +65,8 @@ install_or_upgrade_chart() {
   fi
 }
 
-# Set up the NR collector postgresql receiver's monitoring access:
-#   - GRANT pg_monitor to the receiver's user (init.sql creates it without
-#     monitoring privileges; needed for query_sample/top_query).
+# Set up the NR collector postgresql receiver's monitoring access, per
+# https://docs.newrelic.com/docs/opentelemetry/database/postgresql/hosted/:
 #   - CREATE EXTENSION pg_stat_statements in both the app database and
 #     "postgres". The receiver's top_query collection always connects to the
 #     hardcoded "postgres" database regardless of the configured `databases`
@@ -75,6 +74,9 @@ install_or_upgrade_chart() {
 #     extensions are per-database, so the extension must exist in "postgres"
 #     too or top_query fails with `relation "pg_stat_statements" does not
 #     exist` even though it works fine against the app database.
+#   - CREATE SCHEMA otel + GRANT USAGE on otel/public + GRANT SELECT on all
+#     public tables + GRANT pg_monitor to the receiver's user (init.sql
+#     creates it without any monitoring privileges).
 # All statements are idempotent (no-op if already applied) and require no DB
 # restart, since shared_preload_libraries is set via the chart's postgresql
 # command override.
@@ -88,7 +90,7 @@ setup_pg_monitoring() {
   # Two separate psql invocations, since `-c` runs one SQL statement string
   # against a single connection and can't switch databases mid-session (that's
   # the psql meta-command \c, not SQL).
-  local app_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; GRANT pg_monitor TO $POSTGRES_MONITOR_USER;"
+  local app_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; CREATE SCHEMA IF NOT EXISTS otel; GRANT USAGE ON SCHEMA otel TO $POSTGRES_MONITOR_USER; GRANT USAGE ON SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT SELECT ON ALL TABLES IN SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT pg_monitor TO $POSTGRES_MONITOR_USER;"
   local postgres_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; GRANT CONNECT ON DATABASE postgres TO $POSTGRES_MONITOR_USER;"
   if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/postgresql -- \
       sh -c "psql -v ON_ERROR_STOP=1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c '$app_db_ddl'" \
