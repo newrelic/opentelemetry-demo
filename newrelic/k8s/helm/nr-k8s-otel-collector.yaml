@@ -77,12 +77,10 @@ deployment:
               enabled: true
           query_sample_collection:
             max_rows_per_query: 100
-            allowed_comment_keys: [nr_service_guid]
           top_query_collection:
             max_rows_per_query: 100
             top_n_query: 100
             collection_interval: 60s
-            allowed_comment_keys: [nr_service_guid]
           connection_pool:
             max_idle_time: 10m
             max_lifetime: 0
@@ -96,8 +94,6 @@ deployment:
             postgresql.deadlocks:
               enabled: true
             postgresql.function.calls:
-              enabled: true
-            postgresql.query.conflicts:
               enabled: true
             postgresql.sequential_scans:
               enabled: true

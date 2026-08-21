@@ -91,7 +91,7 @@ setup_pg_monitoring() {
   # against a single connection and can't switch databases mid-session (that's
   # the psql meta-command \c, not SQL).
   local app_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; CREATE SCHEMA IF NOT EXISTS otel; GRANT USAGE ON SCHEMA otel TO $POSTGRES_MONITOR_USER; GRANT USAGE ON SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT SELECT ON ALL TABLES IN SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT pg_monitor TO $POSTGRES_MONITOR_USER;"
-  local postgres_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; GRANT CONNECT ON DATABASE postgres TO $POSTGRES_MONITOR_USER;"
+  local postgres_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; GRANT CONNECT ON DATABASE postgres TO $POSTGRES_MONITOR_USER; GRANT USAGE ON SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT SELECT ON ALL TABLES IN SCHEMA public TO $POSTGRES_MONITOR_USER;"
   if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/postgresql -- \
       sh -c "psql -v ON_ERROR_STOP=1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c '$app_db_ddl'" \
     && kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/postgresql -- \
