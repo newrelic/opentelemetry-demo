@@ -427,12 +427,6 @@ After setting up port forwarding, you can access the Flagd UI at [http://localho
 
 ![flagdui](./images/flagdui.png)
 
-## Scenarios
-
-Scenarios are failure modes you can turn on via feature flags (see [Accessing the Flagd UI](#accessing-the-flagd-ui)) to demonstrate New Relic detecting and diagnosing a problem — for example during a MARS Gameday. Each scenario is documented in its own file under [`newrelic/docs/scenarios/`](docs/scenarios):
-
-- [Kafka Consumer Lag (`kafkaQueueProblems`)](docs/scenarios/kafka-consumer-lag.md) — overloads the Kafka `orders` topic while slowing one consumer, producing a consumer-lag spike.
-
 ## Troubleshooting
 
 In some cases, the `flagd` pod may consistently be OOMKilled regardless of how much memory you provide it.  We have found that reverting to version `2.0.0` of the `flagd-ui` container resolves the issue.  Run the following patch command in your cluster to do so:
