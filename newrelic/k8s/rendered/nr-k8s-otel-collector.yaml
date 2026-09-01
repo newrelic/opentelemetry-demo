@@ -1204,9 +1204,6 @@ data:
         metrics:
           metric:
           - instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"
-      gen_ai_normalizer:
-        sources:
-        - name: openllmetry
       resource/newrelic_spanmetrics_flag:
         attributes:
         - action: upsert
@@ -1220,16 +1217,6 @@ data:
       resourcedetection/otel-demo:
         detectors:
         - env
-      transform/grpc_error_type:
-        error_mode: ignore
-        metric_statements:
-        - conditions:
-          - (metric.name == "rpc.server.call.duration" or metric.name == "rpc.client.call.duration")
-            and attributes["rpc.response.status_code"] != nil and attributes["rpc.response.status_code"]
-            != "OK"
-          context: datapoint
-          statements:
-          - set(attributes["error.type"], "SERVER ERROR")
       transform/kafka_cluster_name:
         error_mode: ignore
         metric_statements:
@@ -1256,14 +1243,6 @@ data:
             "\\/api\\/recommendations")
           - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"],
             "\\/api\\/data.*")
-      transform/strip_ad_metric_metadata:
-        metric_statements:
-        - conditions:
-          - resource.attributes["service.name"] == "ad"
-          context: metric
-          statements:
-          - set(metric.description, "")
-          - set(metric.unit, "")
       
 
       transform/promote_job_label:
@@ -1900,9 +1879,6 @@ data:
           - resource/otel-demo
           - transform/kafka_cluster_name
           - k8s_attributes/ksm
-          - transform/strip_ad_metric_metadata
-          - transform/grpc_error_type
-          - cumulativetodelta
           - batch
           receivers:
           - otlp
@@ -1928,7 +1904,6 @@ data:
           - resource/otel-demo
           - transform/otel-demo
           - k8s_attributes/ksm
-          - gen_ai_normalizer
           - batch
           receivers:
           - otlp
@@ -2463,7 +2438,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.157.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.153.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2634,7 +2609,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: ff3076cfce1cca21fb6f42b0e81cdf3dd66ef3081cf6da80b128b03c83781ead
+        checksum/config: 4f0581bbc02491ac4ea4344b7d0a0ce335575169763b3e336da6422b9ec0e50e
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2648,7 +2623,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.157.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.153.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
