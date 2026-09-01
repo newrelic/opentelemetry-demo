@@ -50,6 +50,32 @@ deployment:
       exporters:
         debug: {}
 
+      receivers:
+        # Kafka broker metrics (ENTERPRISE-31847 — Kafka scenario, k8s path).
+        # On k8s the demo's own collector is disabled and telemetry is *pushed* to
+        # this collector's otlp receiver — but broker-side consumer lag can only be
+        # *scraped*. This scraping receiver connects to the in-cluster kafka Service
+        # (kafka:9092, same namespace) and emits kafka.consumer_group.lag etc.
+        # Note: this collector image (contrib 0.153.0) renamed the receiver to
+        # `kafka_metrics` (the `kafkametrics` alias is deprecated). The Docker path
+        # runs an older image (0.142.0) that still uses `kafkametrics`; keep each
+        # path on the name its image expects.
+        kafka_metrics:
+          brokers:
+            - kafka:9092
+          protocol_version: 2.0.0
+          # Intended to emit the `kafka.cluster.alias` resource attribute naming this
+          # cluster. NOTE: broken in this image's contrib version (see the
+          # transform/kafka_cluster_name comment below re PR #47605) — the attribute
+          # is not actually emitted, so kafka.cluster.name is set by that processor
+          # instead. Kept here as future-proofing for when the fix lands upstream.
+          cluster_alias: otel-demo-kafka
+          scrapers:
+            - brokers
+            - topics
+            - consumers
+          collection_interval: 15s
+
       processors:
         # Drop Python system metrics since they're duplicates of hostmetrics
         # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/system_metrics/system_metrics.html
@@ -105,6 +131,38 @@ deployment:
               from_attribute: k8s.pod.uid
               action: insert
 
+        # Kafka scenario: expose the cluster name for UI faceting (dashboards, RCA).
+        # Set `kafka.cluster.name` as a DATAPOINT attribute on Kafka metrics only.
+        #
+        # Why datapoint (not resource): the Kafka broker/JVM services and the Kafka
+        # scrape metrics share a resource, so setting a *resource* attribute gated on
+        # the metric name leaks onto sibling non-Kafka metrics (jvm.*, otlp.exporter.*,
+        # rpc.* — verified leaking 2026-07-23). A datapoint attribute attaches only to
+        # the matched Kafka datapoints, so no bleed — and it sits alongside `group`/
+        # `topic` as a facetable metric dimension, which is what the dashboards want.
+        #
+        # WHY NOT USE THE RECEIVER'S cluster_alias?
+        # The kafka_metrics receiver has a `cluster_alias` option that is *supposed*
+        # to emit `kafka.cluster.alias` (we still set it on the receiver below, as
+        # future-proofing). But contrib v0.153.0 — baked into this collector image —
+        # has a bug where `cluster_alias` is accepted in config yet the attribute is
+        # NEVER emitted. Verified live 2026-07-23: kafka.consumer_group.lag arrived with
+        # NO kafka.cluster.alias attribute, so an alias-driven copy no-ops. See open PR:
+        #   https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/47605
+        #   "[receiver/kafkametrics] fix kafka.cluster.alias attribute never emitted"
+        # TODO: once the image moves to a contrib version that includes that fix,
+        # switch to copying the alias:
+        #   set(attributes["kafka.cluster.name"], resource.attributes["kafka.cluster.alias"])
+        #   where resource.attributes["kafka.cluster.alias"] != nil
+        transform/kafka_cluster_name:
+          error_mode: ignore
+          metric_statements:
+            - context: datapoint
+              conditions:
+                - IsMatch(metric.name, "^kafka\\.")
+              statements:
+                - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+
       pipelines:
 
         # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
@@ -122,11 +180,13 @@ deployment:
         metrics/otel-demo:
           receivers:
             - otlp
+            - kafka_metrics
           processors:
             - memory_limiter
             - filter/python-system-metrics
             - resourcedetection/otel-demo
             - resource/otel-demo
+            - transform/kafka_cluster_name
             - k8s_attributes/ksm
             - batch
           exporters:

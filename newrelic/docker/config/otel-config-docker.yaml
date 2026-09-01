@@ -54,6 +54,28 @@ receivers:
   httpcheck/frontend-proxy:
     targets:
     - endpoint: http://frontend-proxy:8080
+  # Kafka broker metrics (ENTERPRISE-31017 — Kafka scenario).
+  # Scrapes broker-side metrics — notably kafka.consumer_group.lag — which the
+  # kafkaQueueProblems scenario produces (fraud-detection lags on the orders topic
+  # while accounting keeps up). The demo already emits producer/consumer spans;
+  # this adds the broker-side lag metric that spans cannot provide.
+  # Keep this receiver block identical across deployment paths; only the broker
+  # address and pipeline wiring differ per path.
+  kafkametrics:
+    brokers:
+    - ${env:KAFKA_ADDR}
+    protocol_version: 2.0.0
+    # Intended to emit the `kafka.cluster.alias` resource attribute naming this cluster.
+    # NOTE: broken in this image's contrib version (see the transform/kafka_cluster_name
+    # comment below re PR #47605) — the attribute is not actually emitted, so
+    # kafka.cluster.name is set by that processor instead. Kept here as future-proofing
+    # for when the fix lands upstream.
+    cluster_alias: otel-demo-kafka
+    scrapers:
+    - brokers
+    - topics
+    - consumers
+    collection_interval: 15s
   otlp:
     protocols:
       grpc:
@@ -89,6 +111,24 @@ processors:
       # Setting to host.name for now.
       from_attribute: host.name
       key: service.instance.id
+  # Entity-graph / Kafka scenario: pin a STABLE host identity so the single Docker
+  # host resolves to ONE INFRA-HOST entity and every service (the kafka broker
+  # included) forms a "runs on" edge to it. Without this, host.name comes from the
+  # collector container's ephemeral hostname and host.id from a machine-id that is
+  # not readable in these distroless images, so the host entity is unstable/absent
+  # and the broker->host relationship never synthesizes (the recurring "broker-host
+  # metrics weren't resolvable via the entity graph" finding). One VM => one host id
+  # is the accurate topology here. Placed AFTER `resource` so the service.instance.id
+  # derivation above is unaffected, and upserts so it wins over resourcedetection/env's
+  # system detector (which runs next with override:false).
+  resource/host_identity:
+    attributes:
+    - action: upsert
+      key: host.id
+      value: otel-demo-host
+    - action: upsert
+      key: host.name
+      value: otel-demo-host
   resourcedetection/env:
     detectors:
     - env
@@ -116,11 +156,41 @@ processors:
       statements:
       - replace_pattern(name, "\\?.*", "")
       - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+  # Kafka scenario: set `kafka.cluster.name` (the attribute the dashboards/alerts facet
+  # on) for UI faceting + RCA. Set as a DATAPOINT attribute on Kafka metrics only
+  # (metric name matches ^kafka\.).
+  #
+  # Why datapoint (not resource): Kafka scrape metrics can share a resource with
+  # sibling non-Kafka metrics, so a *resource* attribute gated on the metric name
+  # leaks onto them (verified on the k8s path 2026-07-23: jvm.*, otlp.exporter.*, rpc.*
+  # picked it up). A datapoint attribute attaches only to the matched Kafka datapoints —
+  # no bleed — and sits alongside `group`/`topic` as a facetable dimension.
+  #
+  # WHY NOT USE THE RECEIVER'S cluster_alias?
+  # The kafkametrics receiver's `cluster_alias` option is *supposed* to emit
+  # `kafka.cluster.alias` (we still set it on the receiver above, as future-proofing),
+  # but the baked contrib versions have a bug where it's accepted yet NEVER emitted
+  # (verified on the k8s path, contrib 0.153.0, 2026-07-23; this Docker path runs the
+  # even-older 0.142.0). See open PR:
+  #   https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/47605
+  #   "[receiver/kafkametrics] fix kafka.cluster.alias attribute never emitted"
+  # TODO: once the image moves to a contrib version that includes that fix, switch to
+  # copying the alias:
+  #   set(attributes["kafka.cluster.name"], resource.attributes["kafka.cluster.alias"])
+  #   where resource.attributes["kafka.cluster.alias"] != nil
+  transform/kafka_cluster_name:
+    error_mode: ignore
+    metric_statements:
+    - context: datapoint
+      conditions:
+      - IsMatch(metric.name, "^kafka\\.")
+      statements:
+      - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
 
 exporters:
   debug: {}
   otlphttp/newrelic:
-    endpoint: https://otlp.nr-data.net:4318
+    endpoint: ${env:NEW_RELIC_OTLP_ENDPOINT}
     headers:
       api-key: ${env:NEW_RELIC_LICENSE_KEY}
 
@@ -135,6 +205,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - transform
       - batch
       receivers:
@@ -146,12 +217,15 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - resourcedetection/env
+      - transform/kafka_cluster_name
       - cumulativetodelta
       - batch
       receivers:
       - hostmetrics
       - docker_stats
+      - kafkametrics
       - redis
       - otlp
     traces:
@@ -161,6 +235,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - resourcedetection/env
       - transform
       - batch

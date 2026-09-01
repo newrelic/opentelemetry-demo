@@ -61,7 +61,6 @@
                 "accountIds": [
                   4494439
                 ],
-
                 "query": "SELECT sum(apm.service.error.count['count']) / count(apm.service.transaction.duration)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
               }
             ],
@@ -113,7 +112,6 @@
             "nrqlQueries": [
               {
                 "accountIds": [
-
                   4494439
                 ],
                 "query": "SELECT sum(apm.service.transaction.duration['count'])\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
@@ -170,7 +168,6 @@
                   4494439
                 ],
                 "query": "SELECT percentile(apm.service.transaction.duration, 95)\nFROM Metric WHERE (service.name IN ('ad','cart','checkout',  'frontend','product-catalog', 'shipping')) AND (transactionType = 'Web') FACET service.name LIMIT MAX\nTIMESERIES AUTO\nSINCE 3 HOURS AGO "
-
               }
             ],
             "platformOptions": {
@@ -330,6 +327,220 @@
               "zero": true
             },
             "yAxisRight": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "id": "kafka-hdr",
+          "title": null,
+          "layout": {
+            "column": 1,
+            "row": 9,
+            "width": 12,
+            "height": 1
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.markdown"
+          },
+          "rawConfiguration": {
+            "text": "# Kafka \u2014 Consumer Lag Scenario (`kafkaQueueProblems`)"
+          }
+        },
+        {
+          "id": "kafka-lag",
+          "title": "Consumer Group Lag \u2014 orders topic (fraud-detection vs accounting)",
+          "layout": {
+            "column": 1,
+            "row": 10,
+            "width": 6,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  4494439
+                ],
+                "query": "SELECT latest(`kafka.consumer_group.lag`) FROM Metric WHERE topic = 'orders' FACET `group` LIMIT MAX TIMESERIES AUTO SINCE 3 hours AGO"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "yAxisLeft": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "id": "kafka-prod",
+          "title": "Producer Rate \u2014 orders topic (messages/min)",
+          "layout": {
+            "column": 7,
+            "row": 10,
+            "width": 6,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  4494439
+                ],
+                "query": "SELECT derivative(`kafka.partition.current_offset`, 1 minute) AS 'msgs/min' FROM Metric WHERE topic = 'orders' FACET topic LIMIT MAX TIMESERIES AUTO SINCE 3 hours AGO"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "yAxisLeft": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "id": "kafka-cons",
+          "title": "Consumer Throughput by Group (messages/min)",
+          "layout": {
+            "column": 1,
+            "row": 13,
+            "width": 6,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  4494439
+                ],
+                "query": "SELECT derivative(`kafka.consumer_group.offset`, 1 minute) AS 'msgs/min' FROM Metric WHERE topic = 'orders' FACET `group` LIMIT MAX TIMESERIES AUTO SINCE 3 hours AGO"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "yAxisLeft": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "id": "kafka-health",
+          "title": "Topic Health \u2014 partitions, under-replicated, offline",
+          "layout": {
+            "column": 7,
+            "row": 13,
+            "width": 6,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  4494439
+                ],
+                "query": "SELECT latest(`kafka.topic.partitions`) AS 'partitions', latest(`kafka.partition.underReplicated`) AS 'under-replicated', latest(`kafka.partition.offline`) AS 'offline' FROM Metric WHERE topic = 'orders' TIMESERIES AUTO SINCE 3 hours AGO"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "yAxisLeft": {
+              "zero": true
+            }
+          }
+        },
+        {
+          "id": "kafka-dead-hdr",
+          "title": null,
+          "layout": {
+            "column": 1,
+            "row": 16,
+            "width": 12,
+            "height": 1
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.markdown"
+          },
+          "rawConfiguration": {
+            "text": "# Kafka — Dead Consumer Group Scenario (`kafkaConsumerDead`)"
+          }
+        },
+        {
+          "id": "kafka-members",
+          "title": "Consumer Group Members — orders topic (fraud-detection drops to 0)",
+          "layout": {
+            "column": 1,
+            "row": 17,
+            "width": 6,
+            "height": 3
+          },
+          "linkedEntityGuids": null,
+          "visualization": {
+            "id": "viz.line"
+          },
+          "rawConfiguration": {
+            "facet": {
+              "showOtherSeries": false
+            },
+            "legend": {
+              "enabled": true
+            },
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  4494439
+                ],
+                "query": "SELECT latest(`kafka.consumer_group.members`) FROM Metric WHERE `kafka.cluster.name` = 'otel-demo-kafka' FACET `group` LIMIT MAX TIMESERIES AUTO SINCE 3 hours AGO"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            },
+            "yAxisLeft": {
               "zero": true
             }
           }

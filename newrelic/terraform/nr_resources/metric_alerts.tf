@@ -122,6 +122,111 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
   title_template     = "[{{conditionName}}] {{priority}}"
 }
 
+##############################
+## Kafka scenario alerts (ENTERPRISE-31843)
+##
+## Broker-side alerts for the kafkaQueueProblems scenario. Requires the
+## kafkametrics/kafka_metrics receiver (ENTERPRISE-31101 Docker, ENTERPRISE-31847 k8s)
+## so kafka.consumer_group.lag and kafka.partition.current_offset are collected.
+##
+## Thresholds come from live validation on k3s: fraud-detection lag sits at 0 at
+## rest and spikes to ~1000-1500 under the scenario, so a threshold well above 0
+## (default 100, sustained) cleanly separates scenario from baseline without noise.
+##
+## Consumer-lag alert (the cause-level signal): fraud-detection lags on the orders
+## topic because it consumes 1s/record while checkout floods the topic.
+resource "newrelic_nrql_alert_condition" "kafka_consumer_lag" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "Kafka Consumer Lag (fraud-detection / orders)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT latest(kafka.consumer_group.lag) FROM Metric WHERE topic = 'orders' AND `group` = 'fraud-detection' FACET `group`, topic"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.kafka_consumer_lag_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option        = "last_value"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
+## Producer-rate-spike alert: checkout floods the orders topic when the flag is on.
+## current_offset is a monotonic gauge, so the production rate is its derivative;
+## baseline is a few msgs/min, the scenario bursts ~100 messages per checkout.
+resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "Kafka Producer Rate Spike (orders topic)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT derivative(kafka.partition.current_offset, 1 minute) FROM Metric WHERE topic = 'orders' FACET topic"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.kafka_producer_rate_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option        = "none"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
+## Dead-consumer-group alert for the kafkaConsumerDead scenario: fraud-detection
+## unsubscribes from the orders topic, so the group empties and
+## kafka.consumer_group.members drops to 0 while checkout keeps producing (lag still
+## climbs). This is the demo counterpart to the SRE Agent's detect_consumer_liveness
+## (members == 0 AND lag_present). The demo condition can stay simple — it fires on
+## members dropping to 0 for any group; the co-occurring lag is already covered by the
+## consumer-lag alert above and by the producer that keeps running.
+##
+## Implemented as "below 1" rather than "equals 0": for an integer member count the two
+## are equivalent, and "below" plays nicely with fill_option = last_value on the demo's
+## intermittent telemetry (a live consumer reads as 1, a departed one as 0).
+resource "newrelic_nrql_alert_condition" "kafka_dead_consumer_group" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "Kafka Dead Consumer Group (orders)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT latest(kafka.consumer_group.members) FROM Metric WHERE kafka.cluster.name = 'otel-demo-kafka' FACET `group`"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "below"
+    threshold             = var.kafka_dead_consumer_members_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option        = "last_value"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
 ##
 ## Tags for Metric Alert Conditions
 ##
