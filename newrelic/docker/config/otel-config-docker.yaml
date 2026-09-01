@@ -72,6 +72,17 @@ receivers:
         static_configs:
         - targets:
           - ${env:OTEL_COLLECTOR_HOST}:8888
+  # Demo: scrape a Prometheus /metrics endpoint exposed by the ad service
+  # using the Prometheus Java client library, bridging existing
+  # Prometheus-client instrumentation into the OTel pipeline.
+  prometheus/ad:
+    config:
+      scrape_configs:
+      - job_name: ad
+        scrape_interval: 10s
+        static_configs:
+        - targets:
+          - ad:${env:AD_PROMETHEUS_PORT}
   redis:
     collection_interval: 30s
     endpoint: valkey-cart:6379
@@ -79,6 +90,9 @@ receivers:
 processors:
   batch: {}
   cumulativetodelta: {}
+  gen_ai_normalizer:
+    sources:
+    - name: openllmetry
   memory_limiter:
     check_interval: 5s
     limit_percentage: 80
@@ -154,6 +168,7 @@ service:
       - docker_stats
       - redis
       - otlp
+      - prometheus/ad
     traces:
       exporters:
       - otlphttp/newrelic
@@ -163,6 +178,7 @@ service:
       - resource
       - resourcedetection/env
       - transform
+      - gen_ai_normalizer
       - batch
       receivers:
       - otlp

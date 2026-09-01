@@ -2,7 +2,23 @@ const nrsnippet = `
 <script type="text/javascript">!function(){if(navigator.sendBeacon){const n=navigator.sendBeacon,a="/v1/traces";navigator.sendBeacon=function(t,e){return!(!t||"string"!=typeof t||!t.includes(a))||n.apply(this,arguments)}}}();</script>
 <script type="text/javascript">window.NREUM||(NREUM={});NREUM.init={session_replay:{enabled:true,block_selector:'',mask_text_selector:'*',sampling_rate:10.0,error_sampling_rate:100.0,mask_all_inputs:true,collect_fonts:true,inline_images:false,inline_stylesheet:true,fix_stylesheets:true,preload:false,mask_input_options:{}},distributed_tracing:{enabled:true,exclude_newrelic_header:true,cors_use_newrelic_header:false,cors_use_tracecontext_headers:true},performance:{capture_measures:true},browser_consent_mode:{enabled:false},privacy:{cookies_enabled:true},ajax:{deny_list:["bam.nr-data.net", ]}};NREUM.loader_config={accountID:"$ACCOUNT_ID",trustKey:"$TRUST_KEY",agentID:"$AGENT_ID",licenseKey:"$LICENSE_KEY",applicationID:"$APPLICATION_ID"};NREUM.info={beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",licenseKey:"$LICENSE_KEY",applicationID:"$APPLICATION_ID",sa:1};</script>
 <script src="https://js-agent.nr-assets.net/nr-loader-spa-current.min.js"></script>
-<script type="text/javascript">!function(){const t=t=>t.startsWith("/cart/checkout/")&&t.length>15?"/cart/checkout/[orderId]":t.startsWith("/product/")&&t.length>9?"/product/[productId]":void 0,e=()=>{setTimeout((()=>{if(window.newrelic&&"function"==typeof window.newrelic.interaction){const e=t(window.location.pathname);newrelic.interaction().setName(e).save(),newrelic.setCurrentRouteName(e)}}),150)},n=history.pushState;history.pushState=function(){n.apply(this,arguments),e()};const i=history.replaceState;history.replaceState=function(){i.apply(this,arguments),e()},window.addEventListener("popstate",e),window.addEventListener("load",(()=>{if(window.newrelic){const e=t(window.location.pathname);newrelic.setPageViewName(e)}}))}();</script>`;
+<script type="text/javascript">!function(){const t=t=>t.startsWith("/cart/checkout/")&&t.length>15?"/cart/checkout/[orderId]":t.startsWith("/product/")&&t.length>9?"/product/[productId]":void 0,e=()=>{setTimeout((()=>{if(window.newrelic&&"function"==typeof window.newrelic.interaction){const e=t(window.location.pathname);newrelic.interaction().setName(e).save(),newrelic.setCurrentRouteName(e)}}),150)},n=history.pushState;history.pushState=function(){n.apply(this,arguments),e()};const i=history.replaceState;history.replaceState=function(){i.apply(this,arguments),e()},window.addEventListener("popstate",e),window.addEventListener("load",(()=>{if(window.newrelic){const e=t(window.location.pathname);newrelic.setPageViewName(e)}}))}();</script>
+<script type="text/javascript">
+  // Ties New Relic's "Unique users" to the same per-browser userId
+  // SessionIdProcessor already stamps on every span as enduser.id (see
+  // src/frontend/gateways/Session.gateway.ts) - without this, NR has no
+  // identity to count and "Unique users" stays 0 even though sessions
+  // report fine.
+  window.addEventListener('load', () => {
+    if (!window.newrelic) return;
+    try {
+      const session = JSON.parse(localStorage.getItem('session'));
+      if (session && session.userId) {
+        newrelic.setUserId(session.userId);
+      }
+    } catch (e) {}
+  });
+</script>`;
 
 const http = require("http");
 const origCreate = http.createServer;

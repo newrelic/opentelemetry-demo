@@ -62,106 +62,437 @@ components:
         memory: 100Mi
       requests:
         memory: 50Mi
+    useDefault:
+      env: true
+    envOverrides:
+      - name: GOMEMLIMIT
+        value: 80MiB
+  agent:
+    useDefault:
+      env: true
+    envOverrides:
+      # Chart default. Agent/chatbot answers are replayed from
+      # src/agent/fixtures/vcr_cassettes, not real LLM calls. To hit a real
+      # LLM, set this to "False" and provide LLM_BASE_URL/API_KEY.
+      - name: USE_VCR
+        value: "True"
+  load-generator:
+    # Full env list at upstream default values, kept explicit rather than
+    # omitted. This chart's env is set as a plain array, which Helm
+    # replaces wholesale rather than merging - so a future change that
+    # only touches BROWSER_GENERATOR_VUS (e.g. to scale up concurrent
+    # browser sessions) won't silently drop K6_BROWSER_ENABLED,
+    # FLAGD_HOST, or any other var the base chart normally sets.
     env:
-      - name: PRODUCT_CATALOG_PORT
-        value: "8080"
+      - name: LOAD_GENERATOR_VUS
+        value: "10"
+      - name: BROWSER_GENERATOR_VUS
+        value: "1"
+      - name: K6_TARGET_URL
+        value: http://frontend-proxy:8080
+      - name: K6_BROWSER_ENABLED
+        value: "true"
+      - name: K6_BROWSER_ARGS
+        value: no-sandbox,disable-dev-shm-usage
       - name: FLAGD_HOST
         value: flagd
       - name: FLAGD_PORT
         value: "8013"
-      - name: GOMEMLIMIT
-        value: 80MiB
-      - name: DB_CONNECTION_STRING
-        value: postgres://otelu:otelp@postgresql/otel?sslmode=disable
-      - name: OTEL_SEMCONV_STABILITY_OPT_IN
-        value: database
+      - name: FLAGD_OFREP_PORT
+        value: "8016"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://$(OTEL_COLLECTOR_NAME):4317
-
-  # Disable non-NR components
-  load-generator:
+        value: http://$(OTEL_COLLECTOR_NAME):4318
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: http/protobuf
+      - name: K6_OTEL_EXPORTER_PROTOCOL
+        value: http/protobuf
+      - name: K6_OTEL_HTTP_EXPORTER_ENDPOINT
+        value: $(OTEL_COLLECTOR_NAME):4318
+      - name: K6_OTEL_HTTP_EXPORTER_INSECURE
+        value: "true"
+      - name: K6_OTEL_METRIC_PREFIX
+        value: k6.
+      - name: OTEL_RESOURCE_ATTRIBUTES_EXTRA
+        value: service.criticality=low
     additionalVolumes:
-      - name: patched-locustfile
+      - name: patched-script
         emptyDir: {}
     additionalVolumeMounts:
-      - name: patched-locustfile
-        mountPath: /usr/src/app/locustfile.py
-        subPath: locustfile.py
+      - name: patched-script
+        mountPath: /home/k6/script.js
+        subPath: script.js
     initContainers:
-      - name: patch-locustfile
-        image: ghcr.io/open-telemetry/demo:2.2.0-load-generator
+      # Temporary workaround, remove once these land upstream and this
+      # component picks up a released image that includes them:
+      #   - #3820: product-link click races page hydration under
+      #     imageSlowLoad, silently no-opping the SPA navigation (the
+      #     image-wait fix from #3171 was lost in the Locust->k6 rewrite)
+      #   - #3812: shared browser context across iterations breaks RUM
+      #     agents' session tracking, and context.close() cuts off
+      #     visibilitychange/pagehide-triggered sends before they finish
+      #   - #3813: browser scenario's VU count is hardcoded to 1, so it
+      #     can't be scaled independently of LOAD_GENERATOR_VUS
+      #
+      # Two-stage patch, same shape as the pre-v3.0.0 Locust-era
+      # locustfile.py patch this replaces: copy the shipped script.js out of
+      # the actual load-generator image (so the patch tracks upstream
+      # changes instead of vendoring a full copy here), then transform it
+      # with a small Python container since the k6 image has no python3
+      # (it's Alpine-based, sh/sed only - a single-image sed patch was
+      # considered but multi-line JS block replacement via sed is too
+      # fragile to be worth the one fewer container).
+      - name: copy-script
+        image: ghcr.io/open-telemetry/demo:3.0.0-load-generator
+        command:
+          - sh
+          - -c
+          - cp /home/k6/script.js /patched/script.js
+        volumeMounts:
+          - name: patched-script
+            mountPath: /patched
+      - name: patch-script
+        image: docker.io/library/python:3.12-slim
         command:
           - python
           - -c
           - |
-            with open('/usr/src/app/locustfile.py', 'r') as f:
+            import textwrap
+
+            with open('/patched/script.js', 'r') as f:
                 content = f.read()
 
-            # Indent vars
-            indent4sp = '    '
-            indent8sp = indent4sp+indent4sp
-            indent12sp = indent4sp+indent8sp
-            indent16sp = indent8sp+indent8sp
-            indent20sp = indent16sp+indent4sp
-            indent24sp = indent16sp+indent8sp
+            # The upstream 3.0.0-load-generator image has none of these fixes - none
+            # were ever merged upstream. This patches in:
+            #   1. waitForSelector instead of the no-op
+            #      waitForLoadState('domcontentloaded') after a client-side route
+            #      change (domcontentloaded already fired once for the initial load
+            #      and never fires again for a pushState transition, so the
+            #      add-to-cart click never finds its target).
+            #   2. A wait for the RoofBinoculars.jpg thumbnail response before
+            #      clicking the product link - imageSlowLoad delays that request by
+            #      up to 10s, and the homepage isn't hydrated/interactive until it
+            #      resolves, so an early click never reaches the Next.js router and
+            #      the SPA navigation silently no-ops.
+            #   3. A fresh browser context per iteration instead of a shared page, so
+            #      cookies/storage don't leak across simulated users for the VU's
+            #      entire 9999h lifetime.
+            #   4. Forcing visibilitychange/pagehide and giving the RUM agent's
+            #      session-trace blob harvest a real window to flush before the
+            #      context is torn down - page.close() alone cuts the beacon off
+            #      mid-flight.
+            orig_task = textwrap.dedent("""\
+                async function addProductToCartBrowser(page) {
+                    // Roof Binoculars (2ZYFJ3GM2N). Selects by href / data-cy rather than
+                    // :has-text(), which k6 browser's native CSS engine does not support
+                    // (it forwards selectors straight to document.querySelectorAll, unlike
+                    // Playwright's own selector engine).
+                    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
+                    await page.waitForSelector('a[href="/product/2ZYFJ3GM2N"]', { timeout: 15000 })
+                    await page.click('a[href="/product/2ZYFJ3GM2N"]')
+                    await page.waitForLoadState('domcontentloaded')
+                    await page.click('[data-cy="product-add-to-cart"]')
+                    await page.waitForLoadState('domcontentloaded')
+                    await page.waitForTimeout(2000)
+                }""")
 
-            #
-            # Original text sections
-            #
+            new_task = textwrap.dedent("""\
+                async function addProductToCartBrowser(page) {
+                    // Roof Binoculars (2ZYFJ3GM2N). Selects by href / data-cy rather than
+                    // :has-text(), which k6 browser's native CSS engine does not support
+                    // (it forwards selectors straight to document.querySelectorAll, unlike
+                    // Playwright's own selector engine).
+                    await Promise.all([
+                        page.waitForResponse(/\\/images\\/products\\/RoofBinoculars\\.jpg/, { timeout: 25000 }),
+                        page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' }),
+                    ])
+                    await page.waitForSelector('a[href="/product/2ZYFJ3GM2N"]', { timeout: 15000 })
+                    await page.click('a[href="/product/2ZYFJ3GM2N"]')
+                    await page.waitForSelector('[data-cy="product-add-to-cart"]', { timeout: 25000 })
+                    await page.click('[data-cy="product-add-to-cart"]')
+                    await page.waitForTimeout(2000)
+                }
 
-            # Remove __init__ entirely since it only set self.tracer which is no longer needed
-            orig_text0 =  indent8sp + 'def __init__(self, *args, **kwargs):\n'
-            orig_text0 += indent12sp + 'super().__init__(*args, **kwargs)\n'
-            orig_text0 += indent12sp + 'self.tracer = trace.get_tracer(__name__)\n'
-            orig_text0 += '\n'
+                async function viewProductPageBrowser(page) {
+                    // Unlike addProductToCartBrowser, this navigates straight to the
+                    // product URL (a real document load) rather than reaching it via
+                    // a client-side pushState click from "/". A pushState transition
+                    // never fires a new document load, so the RUM agent never records
+                    // /product/{id} as its own Page URL or gives it its own Web
+                    // Vitals - New Relic only ever showed "/" and "/cart" for that
+                    // reason.
+                    //
+                    // Do NOT use page.route()/context.route() here (or anywhere in
+                    // this scenario) to inject a delay header on this navigation -
+                    // this k6-browser version's CDP Fetch-domain interception has the
+                    // same "VU never reclaimed for a second iteration" bug documented
+                    // above for the baggage header: it silently stalls this VU
+                    // forever the first time it fires, permanently killing every
+                    // future browser iteration (currency/add_to_cart/view_product
+                    // alike), not just this one. Confirmed by reproducing it live:
+                    // one successful delayed load, then zero further iterations.
+                    //
+                    // The product hero image itself can't be used to demonstrate a
+                    // real LCP regression either: it's rendered via fetch()+blob()+
+                    // background-image (ProductCard/ProductDetail), which browsers
+                    // never treat as an LCP candidate since blob: URLs bypass the
+                    // real image resource pipeline the LCP algorithm hooks into.
+                    //
+                    // So the delay is applied server-side instead: frontend-proxy's
+                    // envoy.tmpl.yaml (see the frontend-proxy component override
+                    // above) has an extra route that fixed_delay's any /product/
+                    // request carrying a `slowLcp` query param - a plain query
+                    // param needs no CDP interception at all, so it can't trigger
+                    // the route()/VU-stall bug. Delaying the document delays every
+                    // paint on the page, guaranteeing a real LCP/FCP regression for
+                    // this URL. Gated on imageSlowLoad exactly like every other
+                    // chaos scenario in this demo - off by default.
+                    const product = randomChoice(products)
+                    const delayMs = getFlagdValue('imageSlowLoad')
+                    const url = delayMs > 0
+                        ? `${BASE_URL}/product/${product}?slowLcp=${delayMs}`
+                        : `${BASE_URL}/product/${product}`
+                    await page.goto(url, { waitUntil: 'domcontentloaded' })
+                    await page.waitForTimeout(2000)
+                }""")
 
-            # Replace self.tracer with local tracer in browser_change_currency span
-            orig_text1 = indent12sp + 'with self.tracer.start_as_current_span("browser_change_currency", context=Context()):'
+            orig_scenario = textwrap.dedent("""\
+                export async function browserScenario() {
+                    if (getFlagdValue('loadGeneratorTraffic') <= 0) {
+                        sleep(cryptoRandom() * 9 + 1)
+                        return
+                    }
 
-            # Replace self.tracer with local tracer in browser_add_to_cart span
-            orig_text2 = indent12sp + 'with self.tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+                    const page = await browser.newPage()
+                    const isCurrencyChange = cryptoRandom() < 0.5
+                    const span = tracer.startSpan(isCurrencyChange ? 'browser_change_currency' : 'browser_add_to_cart')
+                    try {
+                        await page.setExtraHTTPHeaders({ baggage: 'synthetic_request=true' })
+                        if (isCurrencyChange) {
+                            span.log('Currency changed to CHF')
+                            await changeCurrency(page)
+                        } else {
+                            span.log('Product added to cart successfully')
+                            await addProductToCartBrowser(page)
+                        }
+                    } catch (e) {
+                        console.error(`browser task error: ${e}`)
+                    } finally {
+                        span.end()
+                        await page.close()
+                    }
 
-            # Add wait_for_event for product image before and after clicking Roof Binoculars
-            orig_text3 =  indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
-            orig_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
-            orig_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
+                    sleep(cryptoRandom() * 9 + 1)
+                }""")
 
-            #
-            # Changes
-            #
+            new_scenario = textwrap.dedent("""\
+                export async function browserScenario() {
+                    if (getFlagdValue('loadGeneratorTraffic') <= 0) {
+                        sleep(cryptoRandom() * 9 + 1)
+                        return
+                    }
 
-            new_text0 = ''
+                    const context = await browser.newContext()
+                    const page = await context.newPage()
+                    // Tag first-party requests as synthetic via baggage (checkout/payment
+                    // annotate spans based on this) the same way the pre-k6
+                    // Locust/Playwright load-generator did, but scoped to same-origin
+                    // only. The old code (and, until this fix, this one) added the
+                    // header via a global page.setExtraHTTPHeaders/page.route matching
+                    // every request including third-party ones. A custom header on a
+                    // cross-origin request is a non-simple request under the Fetch
+                    // spec, forcing a real CORS preflight; k6/Playwright drives the page
+                    // through CDP, which loses Chromium's normal "simple cross-origin
+                    // request" fast path once a custom header is present. New Relic's
+                    // CDN doesn't answer OPTIONS preflights on its RUM agent's
+                    // chunk-loading domains, so that preflight failed and the agent's
+                    // harvester chunk (where its fetch/XHR/sendBeacon calls to New
+                    // Relic actually happen) never loaded - even though the base agent
+                    // initialized fine. The same bug independently broke loading Google
+                    // Fonts under k6/Playwright. Scoping the header to same-origin only
+                    // avoids triggering a preflight for any third-party resource.
+                    //
+                    // page.route()/context.route() intercepts via CDP's Fetch
+                    // domain, and something about that subscription doesn't
+                    // release cleanly on this k6-browser version - context.close()
+                    // reports success (confirmed clean via K6_BROWSER_DEBUG
+                    // tracing) but k6's own VU/executor never reclaims the VU for
+                    // a second iteration, silently stalling the whole scenario
+                    // forever after exactly one iteration, even with explicit
+                    // page.unroute() before close. Tagging same-origin
+                    // fetch/XHR calls via an in-page addInitScript() achieves the
+                    // same origin-scoped header without touching the CDP network
+                    // domain at all, avoiding whatever that interaction is.
+                    await context.addInitScript(() => {
+                        const origFetch = window.fetch
+                        window.fetch = function (input, init) {
+                            try {
+                                const url = typeof input === 'string' ? input : input.url
+                                if (url && url.startsWith(window.location.origin)) {
+                                    init = init || {}
+                                    const headers = new Headers(init.headers || {})
+                                    const existing = headers.get('baggage') || ''
+                                    headers.set('baggage', [existing, 'synthetic_request=true'].filter(Boolean).join(', '))
+                                    init.headers = headers
+                                }
+                            } catch (e) {}
+                            return origFetch.call(this, input, init)
+                        }
+                        const origOpen = XMLHttpRequest.prototype.open
+                        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+                            const result = origOpen.call(this, method, url, ...rest)
+                            try {
+                                if (url && (url.startsWith(window.location.origin) || url.startsWith('/'))) {
+                                    this.setRequestHeader('baggage', 'synthetic_request=true')
+                                }
+                            } catch (e) {}
+                            return result
+                        }
+                    })
+                    const r = cryptoRandom()
+                    const task = r < 1 / 3 ? 'currency' : r < 2 / 3 ? 'add_to_cart' : 'view_product'
+                    const spanName = {
+                        currency: 'browser_change_currency',
+                        add_to_cart: 'browser_add_to_cart',
+                        view_product: 'browser_view_product',
+                    }[task]
+                    const span = tracer.startSpan(spanName)
+                    try {
+                        if (task === 'currency') {
+                            span.log('Currency changed to CHF')
+                            await changeCurrency(page)
+                        } else if (task === 'add_to_cart') {
+                            span.log('Product added to cart successfully')
+                            await addProductToCartBrowser(page)
+                        } else {
+                            span.log('Viewed product page via direct navigation')
+                            await viewProductPageBrowser(page)
+                        }
+                    } catch (e) {
+                        console.error(`browser task error: ${e}`)
+                    } finally {
+                        span.end()
+                        // INP/RUM beacons are only finalized/sent by the New Relic
+                        // browser agent when its visibilitychange handler observes
+                        // document.visibilityState === "hidden" (checked inside the
+                        // handler, not inferred from the event alone). Dispatching a
+                        // bare 'visibilitychange' event does not change that real,
+                        // browser-computed property, so the agent's check silently
+                        // failed and no beacon was ever sent before context.close()
+                        // tore the page down. Override the getters first so the
+                        // agent's own check passes.
+                        await page.evaluate(() => {
+                            Object.defineProperty(document, 'visibilityState', { get: () => 'hidden', configurable: true })
+                            Object.defineProperty(document, 'hidden', { get: () => true, configurable: true })
+                            document.dispatchEvent(new Event('visibilitychange'))
+                            window.dispatchEvent(new Event('pagehide'))
+                        }).catch(() => {})
+                        await page.waitForTimeout(8000)
+                        await context.close()
+                    }
 
-            new_text1 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
-            new_text1 += indent12sp + 'with tracer.start_as_current_span("browser_change_currency", context=Context()):'
+                    sleep(cryptoRandom() * 9 + 1)
+                }""")
 
-            new_text2 =  indent12sp + 'tracer = trace.get_tracer(__name__)\n'
-            new_text2 += indent12sp + 'with tracer.start_as_current_span("browser_add_to_cart", context=Context()):'
+            # #3813: the browser scenario's VU count is hardcoded to 1, independent of
+            # LOAD_GENERATOR_VUS, so there's no way to run more than one concurrent
+            # browser/RUM session. Make it configurable the same way LOAD_GENERATOR_VUS
+            # already works for the HTTP scenario.
+            orig_vus = "                vus: 1,\n"
+            new_vus = "                vus: parseInt(__ENV.BROWSER_GENERATOR_VUS || '1'),\n"
 
-            new_text3 =  indent20sp + 'await page.wait_for_event(\n'
-            new_text3 += indent24sp + '"response",\n'
-            new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
-            new_text3 += indent24sp + 'timeout=15000\n'
-            new_text3 += indent20sp + ')\n'
-            new_text3 += indent20sp + 'await page.click(\'p:has-text("Roof Binoculars")\')\n'
-            new_text3 += indent20sp + 'await page.wait_for_load_state("domcontentloaded")\n'
-            new_text3 += indent20sp + 'await page.wait_for_event(\n'
-            new_text3 += indent24sp + '"response",\n'
-            new_text3 += indent24sp + 'predicate=lambda r: \'/images/products/RoofBinoculars.jpg\' in r.url and r.status == 200,\n'
-            new_text3 += indent24sp + 'timeout=15000\n'
-            new_text3 += indent20sp + ')\n'
-            new_text3 += indent20sp + 'await page.click(\'button:has-text("Add To Cart")\')'
+            assert orig_task in content, 'addProductToCartBrowser text not found - upstream script.js changed'
+            assert orig_scenario in content, 'browserScenario text not found - upstream script.js changed'
+            assert orig_vus in content, 'hardcoded browser vus line not found - upstream script.js changed'
 
-            content = content.replace(orig_text0, new_text0)
-            content = content.replace(orig_text1, new_text1)
-            content = content.replace(orig_text2, new_text2)
-            content = content.replace(orig_text3, new_text3)
+            content = content.replace(orig_task, new_task)
+            content = content.replace(orig_scenario, new_scenario)
+            content = content.replace(orig_vus, new_vus)
 
-            with open('/patched/locustfile.py', 'w') as f:
+            with open('/patched/script.js', 'w') as f:
                 f.write(content)
         volumeMounts:
-          - name: patched-locustfile
+          - name: patched-script
             mountPath: /patched
+
+
+  frontend-proxy:
+    additionalVolumes:
+      - name: patched-envoy-config
+        emptyDir: {}
+    additionalVolumeMounts:
+      - name: patched-envoy-config
+        mountPath: /home/envoy/envoy.tmpl.yaml
+        subPath: envoy.tmpl.yaml
+    initContainers:
+      # Same two-stage copy+patch pattern as the load-generator script.js
+      # patch above, for the same reason: copy the shipped envoy.tmpl.yaml
+      # out of the actual frontend-proxy image so this tracks upstream
+      # changes instead of vendoring a full copy here, then transform it
+      # with a small Python container since the envoy image has no python3.
+      - name: copy-envoy-config
+        image: ghcr.io/open-telemetry/demo:3.0.0-frontend-proxy
+        command:
+          - sh
+          - -c
+          - cp /home/envoy/envoy.tmpl.yaml /patched/envoy.tmpl.yaml
+        volumeMounts:
+          - name: patched-envoy-config
+            mountPath: /patched
+      - name: patch-envoy-config
+        image: docker.io/library/python:3.12-slim
+        command:
+          - python
+          - -c
+          - |
+            with open('/patched/envoy.tmpl.yaml', 'r') as f:
+                content = f.read()
+
+            # Insert the slowLcp fault-injection route right before the
+            # catch-all route, so unmatched /product/ traffic (no query
+            # param) keeps falling through to the catch-all exactly as
+            # before.
+            #
+            # No textwrap.dedent() here - the YAML block scalar above already
+            # strips this block's own outer nesting indentation before Python
+            # ever sees it, so these strings already carry the envoy file's
+            # real absolute indentation (24/26 spaces). Dedenting again would
+            # strip that too, and the exact-text match below would never hit.
+            orig_route = ("""\
+                                    - match: { prefix: "/" }  # Default/catch-all route - keep last since prefix:"/" matches everything
+                                      route: { cluster: frontend }""")
+
+            new_route = ("""\
+                                    # EXPERIMENTAL: server-side-only LCP degradation for
+                                    # testing - matched only when the client adds
+                                    # ?slowLcp=<ms>, so normal /product/ traffic (no query
+                                    # param) falls through to the catch-all route below
+                                    # exactly as before.
+                                    - match:
+                                        prefix: "/product/"
+                                        query_parameters:
+                                          - name: slowLcp
+                                            present_match: true
+                                      typed_per_filter_config:
+                                        envoy.filters.http.fault:
+                                          "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                                          delay:
+                                            fixed_delay: 10s
+                                            percentage:
+                                              numerator: 100
+                                      route: { cluster: frontend }
+                                    - match: { prefix: "/" }  # Default/catch-all route - keep last since prefix:"/" matches everything
+                                      route: { cluster: frontend }""")
+
+            assert orig_route in content, 'catch-all route text not found - upstream envoy.tmpl.yaml changed'
+
+            content = content.replace(orig_route, new_route)
+
+            with open('/patched/envoy.tmpl.yaml', 'w') as f:
+                f.write(content)
+        volumeMounts:
+          - name: patched-envoy-config
+            mountPath: /patched
+
 opensearch:
   enabled: false
 grafana:
