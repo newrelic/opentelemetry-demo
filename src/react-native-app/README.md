@@ -35,7 +35,7 @@ cd src/react-native-app
 npm install
 ```
 
-#### Android: Build and run app
+#### Android: Build and run from the command-line
 
 To run on Android, the following command will compile the Android app and deploy
 it to a running Android simulator or connected device. It will also start a
@@ -45,14 +45,22 @@ a server to provide the JS Bundle required by the app.
 npm run android
 ```
 
-#### iOS: Setup dependencies
+#### iOS: Build and run from the command-line
 
-Before building for iOS you will need to setup the iOS dependency management
-using CocoaPods. This command only needs to be run the first time before
-building the app for iOS.
+The iOS build uses the Ruby version in `.ruby-version` and Bundler to install
+the version of CocoaPods recorded in `Gemfile.lock`. Make sure `ruby --version`
+matches `.ruby-version`, then install the Ruby dependencies before building:
 
 ```bash
-cd ios && pod install && cd ..
+bundle install
+```
+
+You can build and run the app using the command line with the following
+command. This will compile the iOS app and deploy it to a running iOS simulator
+and start a server to provide the JS Bundle.
+
+```bash
+npm run ios
 ```
 
 #### iOS: Build and run with XCode
@@ -66,19 +74,22 @@ that directly through XCode in the next step).
 npm run start
 ```
 
-Then open XCode, open this as an existing project by opening
-`src/react-native-app/ios/react-native-app.xcworkspace` then trigger the build
-by hitting the Play button or from the menu using Product->Run.
-
-#### iOS: Build and run from the command-line
-
-You can build and run the app using the command line with the following
-command. This will compile the iOS app and deploy it to a running iOS simulator
-and start a server to provide the JS Bundle.
+The `ios/` folder is not committed to the repo it is generated from `app.json`
+by [Expo's continuous native generation](https://docs.expo.dev/workflow/continuous-native-generation/).
+Generate it, then install the CocoaPods dependencies:
 
 ```bash
-npm run ios
+npx expo prebuild --platform ios --no-install
+cd ios && bundle exec pod install && cd ..
 ```
+
+The `expo run:ios` and `expo run:android` scripts under `npm run ios` /
+`npm run android` run prebuild automatically, so you only need these commands
+for this manual XCode workflow.
+
+Then open XCode, open this as an existing project by opening
+`src/react-native-app/ios/AstronomyShopApp.xcworkspace` then trigger the build
+by hitting the Play button or from the menu using Product->Run.
 
 ### Build within a container
 
@@ -96,7 +107,7 @@ Or directly from this folder using.
 docker build -f android.Dockerfile --platform=linux/amd64 --output=. .
 ```
 
-This will create a `react-native-app.apk` file in the directory where you ran
+This will create a `reactnativeapp.apk` file in the directory where you ran
 the command. If you have an Android emulator running on your machine then you
 can drag and drop this file onto the emulator's window in order to install it.
 
@@ -125,21 +136,6 @@ cd src/react-native-app/android
 rm -rf ~/.gradle/caches/
 ```
 
-### iOS: pod install issues
-
-Note that the above is the quickest way to get going but you may end up with
-slightly different versions of the Pods than what has been committed to this
-repository, in order to install the precise versions first setup
-[rbenv](https://github.com/rbenv/rbenv#installation) followed by the following
-commands.
-
-```bash
-rbenv install 2.7.6 # the version of ruby we've pinned for this app
-bundle install
-cd ios
-bundle exec pod install
-```
-
 ### iOS: build app issues
 
 If you see a build failure related to pods try forcing a clean install with and
@@ -148,10 +144,10 @@ then attempt another build after:
 ```bash
   cd src/react-native-app/ios
   rm Podfile.lock
-  pod cache clean --all
-  pod repo update --verbose
-  pod deintegrate
-  pod install --repo-update --verbose
+  bundle exec pod cache clean --all
+  bundle exec pod repo update --verbose
+  bundle exec pod deintegrate
+  bundle exec pod install --repo-update --verbose
 ```
 
 If there is an error compiling or running the app try closing any open
