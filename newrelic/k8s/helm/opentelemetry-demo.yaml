@@ -210,6 +210,49 @@ components:
                     await page.waitForSelector('[data-cy="product-add-to-cart"]', { timeout: 25000 })
                     await page.click('[data-cy="product-add-to-cart"]')
                     await page.waitForTimeout(2000)
+                }
+
+                async function viewProductPageBrowser(page) {
+                    // Unlike addProductToCartBrowser, this navigates straight to the
+                    // product URL (a real document load) rather than reaching it via
+                    // a client-side pushState click from "/". A pushState transition
+                    // never fires a new document load, so the RUM agent never records
+                    // /product/{id} as its own Page URL or gives it its own Web
+                    // Vitals - New Relic only ever showed "/" and "/cart" for that
+                    // reason.
+                    //
+                    // Do NOT use page.route()/context.route() here (or anywhere in
+                    // this scenario) to inject a delay header on this navigation -
+                    // this k6-browser version's CDP Fetch-domain interception has the
+                    // same "VU never reclaimed for a second iteration" bug documented
+                    // above for the baggage header: it silently stalls this VU
+                    // forever the first time it fires, permanently killing every
+                    // future browser iteration (currency/add_to_cart/view_product
+                    // alike), not just this one. Confirmed by reproducing it live:
+                    // one successful delayed load, then zero further iterations.
+                    //
+                    // The product hero image itself can't be used to demonstrate a
+                    // real LCP regression either: it's rendered via fetch()+blob()+
+                    // background-image (ProductCard/ProductDetail), which browsers
+                    // never treat as an LCP candidate since blob: URLs bypass the
+                    // real image resource pipeline the LCP algorithm hooks into.
+                    //
+                    // So the delay is applied server-side instead: frontend-proxy's
+                    // envoy.tmpl.yaml (see the frontend-proxy component override
+                    // above) has an extra route that fixed_delay's any /product/
+                    // request carrying a `slowLcp` query param - a plain query
+                    // param needs no CDP interception at all, so it can't trigger
+                    // the route()/VU-stall bug. Delaying the document delays every
+                    // paint on the page, guaranteeing a real LCP/FCP regression for
+                    // this URL. Gated on imageSlowLoad exactly like every other
+                    // chaos scenario in this demo - off by default.
+                    const product = randomChoice(products)
+                    const delayMs = getFlagdValue('imageSlowLoad')
+                    const url = delayMs > 0
+                        ? `${BASE_URL}/product/${product}?slowLcp=${delayMs}`
+                        : `${BASE_URL}/product/${product}`
+                    await page.goto(url, { waitUntil: 'domcontentloaded' })
+                    await page.waitForTimeout(2000)
                 }""")
 
             orig_scenario = textwrap.dedent("""\
@@ -254,8 +297,8 @@ components:
                     // annotate spans based on this) the same way the pre-k6
                     // Locust/Playwright load-generator did, but scoped to same-origin
                     // only. The old code (and, until this fix, this one) added the
-                    // header via a global page.setExtraHTTPHeaders matching every
-                    // request including third-party ones. A custom header on a
+                    // header via a global page.setExtraHTTPHeaders/page.route matching
+                    // every request including third-party ones. A custom header on a
                     // cross-origin request is a non-simple request under the Fetch
                     // spec, forcing a real CORS preflight; k6/Playwright drives the page
                     // through CDP, which loses Chromium's normal "simple cross-origin
@@ -268,13 +311,17 @@ components:
                     // Fonts under k6/Playwright. Scoping the header to same-origin only
                     // avoids triggering a preflight for any third-party resource.
                     //
-                    // This is done via an in-page addInitScript() rather than
-                    // page.route()/route.continue() - CDP-level request interception -
-                    // because a page.route() handler here leaves the VU unable to start
-                    // a second iteration: context.close() reports a clean teardown
-                    // (visible even with K6_BROWSER_DEBUG=true), but k6's own
-                    // VU/executor never reclaims the VU afterward, silently stalling
-                    // the whole scenario after exactly one iteration.
+                    // page.route()/context.route() intercepts via CDP's Fetch
+                    // domain, and something about that subscription doesn't
+                    // release cleanly on this k6-browser version - context.close()
+                    // reports success (confirmed clean via K6_BROWSER_DEBUG
+                    // tracing) but k6's own VU/executor never reclaims the VU for
+                    // a second iteration, silently stalling the whole scenario
+                    // forever after exactly one iteration, even with explicit
+                    // page.unroute() before close. Tagging same-origin
+                    // fetch/XHR calls via an in-page addInitScript() achieves the
+                    // same origin-scoped header without touching the CDP network
+                    // domain at all, avoiding whatever that interaction is.
                     await context.addInitScript(() => {
                         const origFetch = window.fetch
                         window.fetch = function (input, init) {
@@ -301,15 +348,24 @@ components:
                             return result
                         }
                     })
-                    const isCurrencyChange = cryptoRandom() < 0.5
-                    const span = tracer.startSpan(isCurrencyChange ? 'browser_change_currency' : 'browser_add_to_cart')
+                    const r = cryptoRandom()
+                    const task = r < 1 / 3 ? 'currency' : r < 2 / 3 ? 'add_to_cart' : 'view_product'
+                    const spanName = {
+                        currency: 'browser_change_currency',
+                        add_to_cart: 'browser_add_to_cart',
+                        view_product: 'browser_view_product',
+                    }[task]
+                    const span = tracer.startSpan(spanName)
                     try {
-                        if (isCurrencyChange) {
+                        if (task === 'currency') {
                             span.log('Currency changed to CHF')
                             await changeCurrency(page)
-                        } else {
+                        } else if (task === 'add_to_cart') {
                             span.log('Product added to cart successfully')
                             await addProductToCartBrowser(page)
+                        } else {
+                            span.log('Viewed product page via direct navigation')
+                            await viewProductPageBrowser(page)
                         }
                     } catch (e) {
                         console.error(`browser task error: ${e}`)
@@ -320,7 +376,7 @@ components:
                         // document.visibilityState === "hidden" (checked inside the
                         // handler, not inferred from the event alone). Dispatching a
                         // bare 'visibilitychange' event does not change that real,
-                        // browser-computed property, so the agent's own check silently
+                        // browser-computed property, so the agent's check silently
                         // failed and no beacon was ever sent before context.close()
                         // tore the page down. Override the getters first so the
                         // agent's own check passes.
@@ -358,7 +414,85 @@ components:
           - name: patched-script
             mountPath: /patched
 
-# Disable non-NR components
+
+  frontend-proxy:
+    additionalVolumes:
+      - name: patched-envoy-config
+        emptyDir: {}
+    additionalVolumeMounts:
+      - name: patched-envoy-config
+        mountPath: /home/envoy/envoy.tmpl.yaml
+        subPath: envoy.tmpl.yaml
+    initContainers:
+      # Same two-stage copy+patch pattern as the load-generator script.js
+      # patch above, for the same reason: copy the shipped envoy.tmpl.yaml
+      # out of the actual frontend-proxy image so this tracks upstream
+      # changes instead of vendoring a full copy here, then transform it
+      # with a small Python container since the envoy image has no python3.
+      - name: copy-envoy-config
+        image: ghcr.io/open-telemetry/demo:3.0.0-frontend-proxy
+        command:
+          - sh
+          - -c
+          - cp /home/envoy/envoy.tmpl.yaml /patched/envoy.tmpl.yaml
+        volumeMounts:
+          - name: patched-envoy-config
+            mountPath: /patched
+      - name: patch-envoy-config
+        image: docker.io/library/python:3.12-slim
+        command:
+          - python
+          - -c
+          - |
+            with open('/patched/envoy.tmpl.yaml', 'r') as f:
+                content = f.read()
+
+            # Insert the slowLcp fault-injection route right before the
+            # catch-all route, so unmatched /product/ traffic (no query
+            # param) keeps falling through to the catch-all exactly as
+            # before.
+            #
+            # No textwrap.dedent() here - the YAML block scalar above already
+            # strips this block's own outer nesting indentation before Python
+            # ever sees it, so these strings already carry the envoy file's
+            # real absolute indentation (24/26 spaces). Dedenting again would
+            # strip that too, and the exact-text match below would never hit.
+            orig_route = ("""\
+                                    - match: { prefix: "/" }  # Default/catch-all route - keep last since prefix:"/" matches everything
+                                      route: { cluster: frontend }""")
+
+            new_route = ("""\
+                                    # EXPERIMENTAL: server-side-only LCP degradation for
+                                    # testing - matched only when the client adds
+                                    # ?slowLcp=<ms>, so normal /product/ traffic (no query
+                                    # param) falls through to the catch-all route below
+                                    # exactly as before.
+                                    - match:
+                                        prefix: "/product/"
+                                        query_parameters:
+                                          - name: slowLcp
+                                            present_match: true
+                                      typed_per_filter_config:
+                                        envoy.filters.http.fault:
+                                          "@type": type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                                          delay:
+                                            fixed_delay: 10s
+                                            percentage:
+                                              numerator: 100
+                                      route: { cluster: frontend }
+                                    - match: { prefix: "/" }  # Default/catch-all route - keep last since prefix:"/" matches everything
+                                      route: { cluster: frontend }""")
+
+            assert orig_route in content, 'catch-all route text not found - upstream envoy.tmpl.yaml changed'
+
+            content = content.replace(orig_route, new_route)
+
+            with open('/patched/envoy.tmpl.yaml', 'w') as f:
+                f.write(content)
+        volumeMounts:
+          - name: patched-envoy-config
+            mountPath: /patched
+
 opensearch:
   enabled: false
 grafana:
