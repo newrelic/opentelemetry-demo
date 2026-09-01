@@ -28,7 +28,7 @@ func handleDocker(action string, cfg *Config) {
 
 	if action == "uninstall" {
 		args = append(args, "down", "-v")
-		env := append(os.Environ(), "NEW_RELIC_LICENSE_KEY=DUMMY_LICENSE_KEY")
+		env := overrideEnv(map[string]string{"NEW_RELIC_LICENSE_KEY": "DUMMY_LICENSE_KEY"})
 		runCommand("docker", args, env)
 		return
 	}
@@ -77,7 +77,7 @@ services:
 	}
 
 	args = append(args, "up", "--force-recreate", "--remove-orphans", "--detach")
-	env := append(os.Environ(), "NEW_RELIC_LICENSE_KEY="+cfg.LicenseKey)
+	env := overrideEnv(map[string]string{"NEW_RELIC_LICENSE_KEY": cfg.LicenseKey})
 	runCommand("docker", args, env)
 
 	saveConfigToEnv(cfg)
