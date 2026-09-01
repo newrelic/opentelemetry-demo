@@ -1,0 +1,53 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+file_format: definition/2
+attributes:
+  - key: demo.product.id
+    type: string
+    brief: Product identifier
+    stability: stable
+    note: The unique identifier of the product being viewed, reviewed, or added to cart
+    examples: ["66VCHSJNUP", "OLJCESPC7Z", "9SOIN3QJO0"]
+  - key: demo.product.name
+    type: string
+    brief: Product name
+    stability: stable
+    note: The name or title of the product
+    examples: ["Wireless Headphones", "Coffee Maker", "Running Shoes"]
+  - key: demo.product.quantity
+    type: int
+    brief: Product quantity
+    stability: stable
+    note: The quantity of a product being added to cart or ordered
+    examples: [1, 2, 5]
+  - key: demo.product.count
+    type: int
+    brief: Total number of products available
+    stability: stable
+    note: The total number of products available in the product catalog
+    examples: [100, 500, 1000]
+  - key: demo.product.recommended.count
+    type: int
+    brief: Number of products recommended
+    stability: stable
+    note: The count of products recommended to the user
+    examples: [5, 10, 15]
+  - key: demo.product.filtered.count
+    type: int
+    brief: Number of products after filtering
+    stability: stable
+    note: The number of products remaining after applying filters (e.g., availability, category, price range)
+    examples: [5, 20, 50]
+  - key: demo.product.filtered.list
+    type: string[]
+    brief: List of filtered product IDs
+    stability: stable
+    note: A list of product IDs that were included in the filtered product set
+    examples: ["OLJCESPC7Z,9SOIN3QJO0,6E92ZMJLZN"]
+  - key: demo.product.search.count
+    type: int
+    brief: Number of search results
+    stability: stable
+    note: The count of products matching a search query
+    examples: [0, 10, 50]
