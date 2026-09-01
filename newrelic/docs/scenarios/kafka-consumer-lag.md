@@ -23,7 +23,6 @@ Overloads the Kafka `orders` topic while slowing one consumer, producing a consu
 
 Broker-side Kafka metrics (notably `kafka.consumer_group.lag`) are collected by the `kafkametrics`/`kafka_metrics` receiver added to the collector, faceted by `group` and `topic`.
 
-- **Dashboard** — the _Kafka_ section of the **Astronomy Services Baselines** dashboard: the _Consumer Group Lag_ tile shows `fraud-detection` climbing (to ~1000–1500+ at demo volume) while `accounting` stays flat near 0. Producer rate and consumer throughput tiles show the flood.
 - **Alerts** — two conditions on the _Astronomy Service Metric Health_ policy open critical incidents:
   - **Kafka Consumer Lag (fraud-detection / orders)** — lag above `var.kafka_consumer_lag_threshold` (default 100).
   - **Kafka Producer Rate Spike (orders topic)** — production rate above `var.kafka_producer_rate_threshold` (default 60/min).

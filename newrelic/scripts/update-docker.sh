@@ -42,11 +42,8 @@ yq eval -i 'del(.services.otel-collector.depends_on)' "$NR_DOCKER_COMPOSE_PATH"
 # shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.environment += [ "NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}" ]' "$NR_DOCKER_COMPOSE_PATH"
 
-# KAFKA_ADDR is needed by the kafkametrics receiver in otel-config-docker.yaml
-# (ENTERPRISE-31017 — Kafka scenario). The upstream root compose only passes it to
-# checkout/fraud-detection/accounting, not the collector, so add it here on the
-# generated NR collector. Passthrough form (no =value): resolved from .env like the
-# other services.
+# KAFKA_ADDR is needed by the kafkametrics receiver in otel-config-docker.yaml,
+# so add it to the collector's environment like the other services.
 # shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.environment += [ "KAFKA_ADDR" ]' "$NR_DOCKER_COMPOSE_PATH"
 

@@ -123,18 +123,9 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
 }
 
 ##############################
-## Kafka scenario alerts (ENTERPRISE-31843)
+## Kafka Alerts
 ##
-## Broker-side alerts for the kafkaQueueProblems scenario. Requires the
-## kafkametrics/kafka_metrics receiver (ENTERPRISE-31101 Docker, ENTERPRISE-31847 k8s)
-## so kafka.consumer_group.lag and kafka.partition.current_offset are collected.
-##
-## Thresholds come from live validation on k3s: fraud-detection lag sits at 0 at
-## rest and spikes to ~1000-1500 under the scenario, so a threshold well above 0
-## (default 100, sustained) cleanly separates scenario from baseline without noise.
-##
-## Consumer-lag alert (the cause-level signal): fraud-detection lags on the orders
-## topic because it consumes 1s/record while checkout floods the topic.
+
 resource "newrelic_nrql_alert_condition" "kafka_consumer_lag" {
   account_id                   = var.newrelic_account_id
   policy_id                    = newrelic_alert_policy.metric_alert_policy.id

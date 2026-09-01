@@ -83,24 +83,17 @@ deployment:
             postgresql.temp_files:
               enabled: true
 
-        # Kafka broker metrics (ENTERPRISE-31847 — Kafka scenario, k8s path).
-        # On k8s the demo's own collector is disabled and telemetry is *pushed* to
-        # this collector's otlp receiver — but broker-side consumer lag can only be
-        # *scraped*. This scraping receiver connects to the in-cluster kafka Service
-        # (kafka:9092, same namespace) and emits kafka.consumer_group.lag etc.
-        # Note: this collector image (contrib 0.153.0) renamed the receiver to
-        # `kafka_metrics` (the `kafkametrics` alias is deprecated). The Docker path
-        # runs an older image (0.142.0) that still uses `kafkametrics`; keep each
-        # path on the name its image expects.
+        # Kafka broker metrics for the kafkaQueueProblems scenario, scraped since
+        # telemetry is pushed to this collector on k8s and consumer lag can't be.
+        # This image (contrib 0.153.0) renamed the receiver to `kafka_metrics`; the
+        # Docker path runs 0.142.0 and still uses `kafkametrics`.
         kafka_metrics:
           brokers:
             - kafka:9092
           protocol_version: 2.0.0
-          # Intended to emit the `kafka.cluster.alias` resource attribute naming this
-          # cluster. NOTE: broken in this image's contrib version (see the
-          # transform/kafka_cluster_name comment below re PR #47605) — the attribute
-          # is not actually emitted, so kafka.cluster.name is set by that processor
-          # instead. Kept here as future-proofing for when the fix lands upstream.
+          # cluster_alias should emit the kafka.cluster.alias resource attribute, but
+          # this image's contrib version never emits it (see transform/kafka_cluster_name
+          # below). Kept as future-proofing for when the fix lands upstream.
           cluster_alias: otel-demo-kafka
           scrapers:
             - brokers
@@ -254,29 +247,12 @@ deployment:
               statements:
                 - set(attributes["error.type"], "SERVER ERROR")
 
-        # Kafka scenario: expose the cluster name for UI faceting (dashboards, RCA).
-        # Set `kafka.cluster.name` as a DATAPOINT attribute on Kafka metrics only.
+        # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
+        # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
         #
-        # Why datapoint (not resource): the Kafka broker/JVM services and the Kafka
-        # scrape metrics share a resource, so setting a *resource* attribute gated on
-        # the metric name leaks onto sibling non-Kafka metrics (jvm.*, otlp.exporter.*,
-        # rpc.* — verified leaking 2026-07-23). A datapoint attribute attaches only to
-        # the matched Kafka datapoints, so no bleed — and it sits alongside `group`/
-        # `topic` as a facetable metric dimension, which is what the dashboards want.
-        #
-        # WHY NOT USE THE RECEIVER'S cluster_alias?
-        # The kafka_metrics receiver has a `cluster_alias` option that is *supposed*
-        # to emit `kafka.cluster.alias` (we still set it on the receiver below, as
-        # future-proofing). But contrib v0.153.0 — baked into this collector image —
-        # has a bug where `cluster_alias` is accepted in config yet the attribute is
-        # NEVER emitted. Verified live 2026-07-23: kafka.consumer_group.lag arrived with
-        # NO kafka.cluster.alias attribute, so an alias-driven copy no-ops. See open PR:
-        #   https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/47605
-        #   "[receiver/kafkametrics] fix kafka.cluster.alias attribute never emitted"
-        # TODO: once the image moves to a contrib version that includes that fix,
-        # switch to copying the alias:
-        #   set(attributes["kafka.cluster.name"], resource.attributes["kafka.cluster.alias"])
-        #   where resource.attributes["kafka.cluster.alias"] != nil
+        # Not using the receiver's cluster_alias option because the baked contrib version
+        # never emits it — see https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/47605.
+        # TODO: once that lands, copy resource.attributes["kafka.cluster.alias"] instead.
         transform/kafka_cluster_name:
           error_mode: ignore
           metric_statements:
