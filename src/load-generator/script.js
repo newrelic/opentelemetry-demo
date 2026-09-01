@@ -29,7 +29,7 @@ export const options = {
             browser: {
                 executor: 'constant-vus',
                 exec: 'browserScenario',
-                vus: 1,
+                vus: parseInt(__ENV.BROWSER_GENERATOR_VUS || '1'),
                 duration: __ENV.K6_DURATION || '9999h',
                 options: {
                     browser: {
@@ -286,9 +286,14 @@ async function addProductToCartBrowser(page) {
     await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
     await page.waitForSelector('a[href="/product/2ZYFJ3GM2N"]', { timeout: 15000 })
     await page.click('a[href="/product/2ZYFJ3GM2N"]')
-    await page.waitForLoadState('domcontentloaded')
+    // The product-link click is a client-side (SPA/pushState) route change, not
+    // a full navigation - domcontentloaded already fired once for the initial
+    // page load and never fires again for this transition. waitForLoadState
+    // here is a no-op that resolves instantly, before React has rendered the
+    // new route, so the add-to-cart click below never finds its target. Wait
+    // for the actual element instead - correct for both SPA and full navigation.
+    await page.waitForSelector('[data-cy="product-add-to-cart"]', { timeout: 25000 })
     await page.click('[data-cy="product-add-to-cart"]')
-    await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(2000)
 }
 
@@ -300,7 +305,12 @@ export async function browserScenario() {
         return
     }
 
-    const page = await browser.newPage()
+    // Fresh context per iteration - a shared/persistent context (the k6
+    // browser default when only newPage() is called) leaks cookies and
+    // storage across every simulated "user" for the VU's entire 9999h
+    // lifetime, which breaks the RUM agent's session bookkeeping over time.
+    const context = await browser.newContext()
+    const page = await context.newPage()
     const isCurrencyChange = cryptoRandom() < 0.5
     const span = tracer.startSpan(isCurrencyChange ? 'browser_change_currency' : 'browser_add_to_cart')
     try {
@@ -316,7 +326,16 @@ export async function browserScenario() {
         console.error(`browser task error: ${e}`)
     } finally {
         span.end()
-        await page.close()
+        // INP is only finalized/sent by the RUM agent on visibilitychange/
+        // pagehide. context.close() tears the page down abruptly enough
+        // that the agent's beacon can get cut off mid-flight; force the
+        // event and give it a moment to actually hit the network first.
+        await page.evaluate(() => {
+            document.dispatchEvent(new Event('visibilitychange'))
+            window.dispatchEvent(new Event('pagehide'))
+        }).catch(() => {})
+        await page.waitForTimeout(300)
+        await context.close()
     }
 
     sleep(cryptoRandom() * 9 + 1)
