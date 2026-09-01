@@ -13,14 +13,12 @@ describe('Product Detail Page', () => {
     cy.intercept('GET', '/api/products/*').as('getProduct');
     cy.intercept('GET', '/api/data*').as('getAd');
     cy.intercept('GET', '/api/recommendations*').as('getRecommendations');
-    cy.intercept('GET', '/api/product-reviews/*').as('getProductReviews');
 
     getElementByField(CypressFields.ProductCard).first().click();
 
     cy.wait('@getProduct');
     cy.wait('@getAd');
     cy.wait('@getRecommendations');
-    cy.wait('@getProductReviews');
 
     getElementByField(CypressFields.ProductDetail).should('exist');
     getElementByField(CypressFields.ProductPicture).should('exist');
@@ -33,7 +31,27 @@ describe('Product Detail Page', () => {
       4
     );
     getElementByField(CypressFields.Ad).should('exist');
-    getElementByField(CypressFields.ProductReviews).should('exist');
+  });
+
+  it('should not render product picture or request undefined image when picture is missing', () => {
+    cy.intercept('GET', '/api/products/*', req => {
+      req.continue(res => {
+        delete res.body.picture;
+      });
+    }).as('getProduct');
+
+    cy.intercept('GET', '/images/products/undefined').as('undefinedImage');
+
+    getElementByField(CypressFields.ProductCard).first().click();
+    cy.wait('@getProduct');
+
+    getElementByField(CypressFields.ProductDetail).should('exist');
+    getElementByField(CypressFields.ProductPicture).should('not.exist');
+    getElementByField(CypressFields.ProductName).should('exist');
+    getElementByField(CypressFields.ProductDescription).should('exist');
+    getElementByField(CypressFields.ProductAddToCart).should('exist');
+
+    cy.get('@undefinedImage.all').should('have.length', 0);
   });
 
   it('should add item to cart', () => {
