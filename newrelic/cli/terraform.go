@@ -149,29 +149,19 @@ func buildEnvMap(cfg *Config) []string {
 		parentID = cfg.AccountId
 	}
 
-	accountID := cfg.SubAccountId
-	if accountID == "" {
-		accountID = cfg.AccountId
-	}
-
-	env := os.Environ()
 	// Keys MUST match variables.tf suffixes in lowercase
 	mapping := map[string]string{
 		"TF_VAR_newrelic_api_key":           cfg.ApiKey,
 		"TF_VAR_newrelic_parent_account_id": parentID,
-		"TF_VAR_newrelic_account_id":        accountID,
+		"TF_VAR_newrelic_account_id":        cfg.AccountId,
 		"TF_VAR_newrelic_region":            cfg.Region,
 		"TF_VAR_subaccount_name":            cfg.SubaccountName,
 		"TF_VAR_admin_group_name":           cfg.AdminGroupName,
 		"TF_VAR_readonly_user_email":        cfg.ReadonlyUserEmail,
 		"TF_VAR_readonly_user_name":         cfg.ReadonlyUserName,
 	}
-	for k, v := range mapping {
-		if v != "" {
-			env = append(env, k+"="+v)
-		}
-	}
-	return env
+
+	return overrideEnv(mapping)
 }
 
 func formatID(v interface{}) string {
