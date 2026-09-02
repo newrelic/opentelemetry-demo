@@ -5,13 +5,13 @@ kind: ServiceAccount
 automountServiceAccountToken: true
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.5
+    helm.sh/chart: kube-state-metrics-8.1.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: nr-k8s-otel-collector
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.19.1"
   name: nr-k8s-otel-collector-kube-state-metrics
   namespace: opentelemetry-demo
 ---
@@ -26,7 +26,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
   annotations:
 ---
 # Source: nr-k8s-otel-collector/templates/daemonset-configmap.yaml
@@ -40,11 +40,10 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
 data:
   daemonset-config.yaml: |
     receivers:
-      
       host_metrics:
         # TODO (chris): this is a linux specific configuration
         root_path: /hostfs
@@ -209,12 +208,9 @@ data:
         operators:
           - id: container-parser
             type: container
-
+      
 
     processors:
-      
-      
-
       groupbyattrs:
         keys:
           - pod
@@ -735,15 +731,15 @@ data:
             conditions:
               - resource.attributes["cloud.provider"] == "gcp" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.k8s.cluster.name"] != nil
             statements:
-              # /projects/{projectId}/locations/{location}/clusters/{clusterName}
+              # /projects/{projectId}/locations/{region}/clusters/{clusterName}
               - set(resource.attributes["cloud.resource_id"], Concat(["/projects/", resource.attributes["cloud.account.id"], "/locations/", resource.attributes["cloud.region"], "/clusters/", resource.attributes["cloud.k8s.cluster.name"]], ""))
           # GKE Zonal
           - context: resource
             conditions:
               - resource.attributes["cloud.provider"] == "gcp" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.availability_zone"] != nil and resource.attributes["cloud.k8s.cluster.name"] != nil
             statements:
-              # /projects/{projectId}/zones/{zone}/clusters/{clusterName}
-              - set(resource.attributes["cloud.resource_id"], Concat(["/projects/", resource.attributes["cloud.account.id"], "/zones/", resource.attributes["cloud.availability_zone"], "/clusters/", resource.attributes["cloud.k8s.cluster.name"]], ""))
+              # /projects/{projectId}/locations/{zone}/clusters/{clusterName}
+              - set(resource.attributes["cloud.resource_id"], Concat(["/projects/", resource.attributes["cloud.account.id"], "/locations/", resource.attributes["cloud.availability_zone"], "/clusters/", resource.attributes["cloud.k8s.cluster.name"]], ""))
 
       resource/newrelic:
         attributes:
@@ -753,7 +749,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.14.0
+            value: 0.14.2
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -822,19 +818,18 @@ data:
         send_batch_max_size: 1000
         timeout: 30s
         send_batch_size : 800
+      
+      
 
     exporters:
-      
-      
-
       otlp_http/newrelic:
         endpoint: https://otlp.nr-data.net
         headers:
           api-key: ${env:NR_LICENSE_KEY}
-
-    connectors:
+      
       
 
+    connectors:
       routing/nr_logs_pipelines:
         default_pipelines: [logs/pipeline]
         table:
@@ -893,6 +888,7 @@ data:
           - context: metric
             condition: instrumentation_scope.name == "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver"
             pipelines: [metrics/nr]
+      
 
     service:
       telemetry:
@@ -1040,11 +1036,10 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
 data:
   deployment-config.yaml: |
     receivers:
-      
       otlp:
         protocols:
           http:
@@ -1173,53 +1168,56 @@ data:
                 - action: replace
                   target_label: job_label
                   replacement: scheduler
+      postgresql:
+        collection_interval: 15s
+        connection_pool:
+          max_idle: 2
+          max_idle_time: 10m
+          max_lifetime: 0
+          max_open: 5
+        databases:
+        - otel
+        endpoint: postgresql.opentelemetry-demo.svc.cluster.local:5432
+        events:
+          db.server.query_sample:
+            enabled: true
+          db.server.top_query:
+            enabled: true
+        metrics:
+          postgresql.database.locks:
+            enabled: true
+          postgresql.deadlocks:
+            enabled: true
+          postgresql.function.calls:
+            enabled: true
+          postgresql.sequential_scans:
+            enabled: true
+          postgresql.temp.io:
+            enabled: true
+          postgresql.temp_files:
+            enabled: true
+        password: ${env:POSTGRES_PASSWORD}
+        query_sample_collection:
+          max_rows_per_query: 100
+        tls:
+          insecure: true
+          insecure_skip_verify: true
+        top_query_collection:
+          collection_interval: 60s
+          max_rows_per_query: 100
+          top_n_query: 100
+        transport: tcp
+        username: ${env:POSTGRES_USERNAME}
+      prometheus/ad:
+        config:
+          scrape_configs:
+          - job_name: ad
+            scrape_interval: 10s
+            static_configs:
+            - targets:
+              - ad:9465
 
     processors:
-      filter/drop-spanmetrics-services:
-        metrics:
-          datapoint:
-          - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"],
-            "(currency|quote|payment|product-reviews|recommendation)")
-          - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"],
-            "(currency|quote|payment|product-reviews|recommendation)")
-      filter/python-system-metrics:
-        error_mode: ignore
-        metrics:
-          metric:
-          - instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"
-      resource/newrelic_spanmetrics_flag:
-        attributes:
-        - action: upsert
-          key: newrelic.spanmetrics.enabled
-          value: true
-      resource/otel-demo:
-        attributes:
-        - action: insert
-          from_attribute: k8s.pod.uid
-          key: service.instance.id
-      resourcedetection/otel-demo:
-        detectors:
-        - env
-      transform/otel-demo:
-        error_mode: ignore
-        trace_statements:
-        - conditions:
-          - span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "frontend"
-            and span.attributes["http.route"] == nil
-          context: span
-          statements:
-          - set(span.attributes["http.route"], "/api/cart") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/cart")
-          - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/checkout")
-          - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/products\\/.*")
-          - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/recommendations")
-          - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/data.*")
-      
-
       transform/promote_job_label:
         metric_statements:
           - context: datapoint
@@ -1581,7 +1579,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.14.0
+            value: 0.14.2
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1599,7 +1597,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.14.0
+            value: 0.14.2
 
       transform/events:
         log_statements:
@@ -1751,45 +1749,86 @@ data:
         send_batch_max_size: 1000
         timeout: 30s
         send_batch_size : 800
+      filter/drop-spanmetrics-services:
+        metrics:
+          datapoint:
+          - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"],
+            "(currency|quote|payment|product-reviews|recommendation)")
+          - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"],
+            "(currency|quote|payment|product-reviews|recommendation)")
+      filter/python-system-metrics:
+        error_mode: ignore
+        metrics:
+          metric:
+          - instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"
+      gen_ai_normalizer:
+        sources:
+        - name: openllmetry
+      resource/newrelic_spanmetrics_flag:
+        attributes:
+        - action: upsert
+          key: newrelic.spanmetrics.enabled
+          value: true
+      resource/otel-demo:
+        attributes:
+        - action: insert
+          from_attribute: k8s.pod.uid
+          key: service.instance.id
+      resource/postgres_friendly_name:
+        attributes:
+        - action: upsert
+          key: service.instance.id
+          value: otel-demo-postgresql
+      resourcedetection/otel-demo:
+        detectors:
+        - env
+      transform/grpc_error_type:
+        error_mode: ignore
+        metric_statements:
+        - conditions:
+          - (metric.name == "rpc.server.call.duration" or metric.name == "rpc.client.call.duration")
+            and attributes["rpc.response.status_code"] != nil and attributes["rpc.response.status_code"]
+            != "OK"
+          context: datapoint
+          statements:
+          - set(attributes["error.type"], "SERVER ERROR")
+      transform/otel-demo:
+        error_mode: ignore
+        trace_statements:
+        - conditions:
+          - span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "frontend"
+            and span.attributes["http.route"] == nil
+          context: span
+          statements:
+          - set(span.attributes["http.route"], "/api/cart") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/cart")
+          - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/checkout")
+          - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/products\\/.*")
+          - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/recommendations")
+          - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"],
+            "\\/api\\/data.*")
+      transform/strip_ad_metric_metadata:
+        metric_statements:
+        - conditions:
+          - resource.attributes["service.name"] == "ad"
+          context: metric
+          statements:
+          - set(metric.description, "")
+          - set(metric.unit, "")
+      
 
     exporters:
-      debug: {}
-      
       otlp_http/newrelic:
         endpoint: https://otlp.nr-data.net
         headers:
           api-key: ${env:NR_LICENSE_KEY}
+      debug: {}
+      
 
     connectors:
-      spanmetrics:
-        aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
-        dimensions:
-        - name: http.method
-        - name: http.request.method
-        - name: http.route
-        - name: http.status_code
-        - name: http.response.status_code
-        - name: rpc.system
-        - name: rpc.service
-        - name: rpc.method
-        - name: rpc.response.status_code
-        - name: rpc.status_code
-        - name: db.system
-        - name: db.operation
-        - name: db.sql.table
-        - name: db.system.name
-        - name: error.type
-        - name: server.address
-        - name: net.peer.name
-        exclude_dimensions:
-        - span.name
-        - status.code
-        metrics_flush_interval: 30s
-        resource_metrics_key_attributes:
-        - service.name
-        - telemetry.sdk.language
-        - telemetry.sdk.name
-
       routing/nr_logs_pipelines:
         default_pipelines: [logs/pipeline]
         table:
@@ -1827,6 +1866,34 @@ data:
           - context: metric
             condition: instrumentation_scope.attributes["job_label"] == "scheduler"
             pipelines: [metrics/nr_controlplane]
+      spanmetrics:
+        aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
+        dimensions:
+        - name: http.method
+        - name: http.request.method
+        - name: http.route
+        - name: http.status_code
+        - name: http.response.status_code
+        - name: rpc.system
+        - name: rpc.service
+        - name: rpc.method
+        - name: rpc.response.status_code
+        - name: rpc.status_code
+        - name: db.system
+        - name: db.operation
+        - name: db.sql.table
+        - name: db.system.name
+        - name: error.type
+        - name: server.address
+        - name: net.peer.name
+        exclude_dimensions:
+        - span.name
+        - status.code
+        metrics_flush_interval: 30s
+        resource_metrics_key_attributes:
+        - service.name
+        - telemetry.sdk.language
+        - telemetry.sdk.name
 
     service:
       telemetry:
@@ -1844,6 +1911,16 @@ data:
           - batch
           receivers:
           - otlp
+        logs/postgres:
+          exporters:
+          - otlp_http/newrelic
+          processors:
+          - memory_limiter
+          - k8s_attributes/ksm
+          - resource/postgres_friendly_name
+          - batch
+          receivers:
+          - postgresql
         metrics/otel-demo:
           exporters:
           - otlp_http/newrelic
@@ -1853,9 +1930,23 @@ data:
           - resourcedetection/otel-demo
           - resource/otel-demo
           - k8s_attributes/ksm
+          - transform/strip_ad_metric_metadata
+          - transform/grpc_error_type
+          - cumulativetodelta
           - batch
           receivers:
           - otlp
+          - prometheus/ad
+        metrics/postgres:
+          exporters:
+          - otlp_http/newrelic
+          processors:
+          - memory_limiter
+          - k8s_attributes/ksm
+          - resource/postgres_friendly_name
+          - batch
+          receivers:
+          - postgresql
         metrics/spanmetrics:
           exporters:
           - otlp_http/newrelic
@@ -1876,6 +1967,7 @@ data:
           - resource/otel-demo
           - transform/otel-demo
           - k8s_attributes/ksm
+          - gen_ai_normalizer
           - batch
           receivers:
           - otlp
@@ -1984,13 +2076,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.5
+    helm.sh/chart: kube-state-metrics-8.1.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: nr-k8s-otel-collector
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.19.1"
   name: nr-k8s-otel-collector-kube-state-metrics
 rules:
 
@@ -2019,9 +2111,9 @@ rules:
   - deployments
   verbs: ["list", "watch"]
 
-- apiGroups: [""]
+- apiGroups: ["discovery.k8s.io"]
   resources:
-  - endpoints
+  - endpointslices
   verbs: ["list", "watch"]
 
 - apiGroups: ["autoscaling"]
@@ -2144,7 +2236,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
 rules:
   - apiGroups:
     - ""
@@ -2222,13 +2314,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.5
+    helm.sh/chart: kube-state-metrics-8.1.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: nr-k8s-otel-collector
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.19.1"
   name: nr-k8s-otel-collector-kube-state-metrics
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -2249,7 +2341,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
 subjects:
   - kind: ServiceAccount
     name: nr-k8s-otel-collector
@@ -2266,21 +2358,21 @@ metadata:
   name: nr-k8s-otel-collector-kube-state-metrics
   namespace: opentelemetry-demo
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.5
+    helm.sh/chart: kube-state-metrics-8.1.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: nr-k8s-otel-collector
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.19.1"
   annotations:
 spec:
   type: "ClusterIP"
   ports:
-  - name: "http"
+  - name: http
     protocol: TCP
     port: 8080
-    targetPort: 8080
+    targetPort: http
   
   selector:    
     app.kubernetes.io/name: kube-state-metrics
@@ -2297,7 +2389,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
 spec:
   type: ClusterIP
   ports:
@@ -2326,7 +2418,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
 spec:
   selector:
     matchLabels:
@@ -2340,7 +2432,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: daemonset
       annotations:
-        checksum/config: 817a23902830c6ffc94d6ad1ee3fbcdd03ae6fd72af63ba27a192d23ff6822b2
+        checksum/config: b9f7ef1b033fda648cbb78766b8668544af39e39d3599869f3bbcc1908be285a
     spec:
       serviceAccountName: nr-k8s-otel-collector
       initContainers:
@@ -2410,7 +2502,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.153.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.156.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2473,13 +2565,13 @@ metadata:
   name: nr-k8s-otel-collector-kube-state-metrics
   namespace: opentelemetry-demo
   labels:    
-    helm.sh/chart: kube-state-metrics-6.1.5
+    helm.sh/chart: kube-state-metrics-8.1.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: metrics
     app.kubernetes.io/part-of: kube-state-metrics
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/instance: nr-k8s-otel-collector
-    app.kubernetes.io/version: "2.16.0"
+    app.kubernetes.io/version: "2.19.1"
 spec:
   selector:
     matchLabels:      
@@ -2492,13 +2584,13 @@ spec:
   template:
     metadata:
       labels:        
-        helm.sh/chart: kube-state-metrics-6.1.5
+        helm.sh/chart: kube-state-metrics-8.1.3
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: metrics
         app.kubernetes.io/part-of: kube-state-metrics
         app.kubernetes.io/name: kube-state-metrics
         app.kubernetes.io/instance: nr-k8s-otel-collector
-        app.kubernetes.io/version: "2.16.0"
+        app.kubernetes.io/version: "2.19.1"
     spec:
       automountServiceAccountToken: true
       hostNetwork: false
@@ -2515,20 +2607,21 @@ spec:
       - name: kube-state-metrics
         args:
         - --port=8080
-        - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+        - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpointslices,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
         - --metric-labels-allowlist=pods=[*],namespaces=[*],deployments=[*]
         - --metric-annotations-allowlist=pods=[*],namespaces=[*],deployments=[*]
         imagePullPolicy: IfNotPresent
-        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.16.0
+        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.19.1
         ports:
         - containerPort: 8080
-          name: "http"
+          name: http
+        - containerPort: 8081
+          name: metrics
         livenessProbe:
           failureThreshold: 3
           httpGet:
-            httpHeaders:
             path: /livez
-            port: 8080
+            port: http
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -2537,9 +2630,8 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            httpHeaders:
             path: /readyz
-            port: 8081
+            port: metrics
             scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
@@ -2565,7 +2657,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.0
+    helm.sh/chart: nr-k8s-otel-collector-0.14.2
 spec:
   replicas: 1
   minReadySeconds: 5
@@ -2581,7 +2673,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 5863053ef40224b2ec02a77713fedfb19b4e3e75363071c10b681983e6c72fed
+        checksum/config: 2d9ecac3e90591bfb0ab63124b93289a31314f9346453836b7cde9b022b659ee
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2595,7 +2687,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.153.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.156.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2618,6 +2710,10 @@ spec:
                 secretKeyRef:
                   name: newrelic-license-key
                   key: license-key
+            - name: POSTGRES_USERNAME
+              value: otelu
+            - name: POSTGRES_PASSWORD
+              value: otelp
           ports:
             - name: http
               containerPort: 4318
