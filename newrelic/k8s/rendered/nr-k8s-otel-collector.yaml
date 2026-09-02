@@ -2502,7 +2502,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.156.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.159.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2687,7 +2687,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.156.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.159.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
