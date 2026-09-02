@@ -1044,64 +1044,7 @@ metadata:
 data:
   deployment-config.yaml: |
     receivers:
-      kafka_metrics:
-        brokers:
-        - kafka:9092
-        cluster_alias: otel-demo-kafka
-        collection_interval: 15s
-        protocol_version: 2.0.0
-        scrapers:
-        - brokers
-        - topics
-        - consumers
-      postgresql:
-        collection_interval: 15s
-        connection_pool:
-          max_idle: 2
-          max_idle_time: 10m
-          max_lifetime: 0
-          max_open: 5
-        databases:
-        - otel
-        endpoint: postgresql.opentelemetry-demo.svc.cluster.local:5432
-        events:
-          db.server.query_sample:
-            enabled: true
-          db.server.top_query:
-            enabled: true
-        metrics:
-          postgresql.database.locks:
-            enabled: true
-          postgresql.deadlocks:
-            enabled: true
-          postgresql.function.calls:
-            enabled: true
-          postgresql.sequential_scans:
-            enabled: true
-          postgresql.temp.io:
-            enabled: true
-          postgresql.temp_files:
-            enabled: true
-        password: ${env:POSTGRES_PASSWORD}
-        query_sample_collection:
-          max_rows_per_query: 100
-        tls:
-          insecure: true
-          insecure_skip_verify: true
-        top_query_collection:
-          collection_interval: 60s
-          max_rows_per_query: 100
-          top_n_query: 100
-        transport: tcp
-        username: ${env:POSTGRES_USERNAME}
-      prometheus/ad:
-        config:
-          scrape_configs:
-          - job_name: ad
-            scrape_interval: 10s
-            static_configs:
-            - targets:
-              - ad:9465
+      
       otlp:
         protocols:
           http:
@@ -1254,22 +1197,9 @@ data:
         - action: insert
           from_attribute: k8s.pod.uid
           key: service.instance.id
-      resource/postgres_friendly_name:
-        attributes:
-        - action: upsert
-          key: service.instance.id
-          value: otel-demo-postgresql
       resourcedetection/otel-demo:
         detectors:
         - env
-      transform/kafka_cluster_name:
-        error_mode: ignore
-        metric_statements:
-        - conditions:
-          - IsMatch(metric.name, "^kafka\\.")
-          context: datapoint
-          statements:
-          - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
       transform/otel-demo:
         error_mode: ignore
         trace_statements:
@@ -1914,16 +1844,6 @@ data:
           - batch
           receivers:
           - otlp
-        logs/postgres:
-          exporters:
-          - otlp_http/newrelic
-          processors:
-          - memory_limiter
-          - k8s_attributes/ksm
-          - resource/postgres_friendly_name
-          - batch
-          receivers:
-          - postgresql
         metrics/otel-demo:
           exporters:
           - otlp_http/newrelic
@@ -1932,24 +1852,10 @@ data:
           - filter/python-system-metrics
           - resourcedetection/otel-demo
           - resource/otel-demo
-          - transform/kafka_cluster_name
           - k8s_attributes/ksm
-          - cumulativetodelta
           - batch
           receivers:
           - otlp
-          - prometheus/ad
-          - kafka_metrics
-        metrics/postgres:
-          exporters:
-          - otlp_http/newrelic
-          processors:
-          - memory_limiter
-          - k8s_attributes/ksm
-          - resource/postgres_friendly_name
-          - batch
-          receivers:
-          - postgresql
         metrics/spanmetrics:
           exporters:
           - otlp_http/newrelic
@@ -2675,7 +2581,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 51a15f1d929b97d69eb036c43fc925a4b8dfcf60af02eb589b70ea6a11e64517
+        checksum/config: 5863053ef40224b2ec02a77713fedfb19b4e3e75363071c10b681983e6c72fed
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2712,10 +2618,6 @@ spec:
                 secretKeyRef:
                   name: newrelic-license-key
                   key: license-key
-            - name: POSTGRES_USERNAME
-              value: otelu
-            - name: POSTGRES_PASSWORD
-              value: otelp
           ports:
             - name: http
               containerPort: 4318
