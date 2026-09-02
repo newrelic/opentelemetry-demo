@@ -56,15 +56,20 @@ update_version_in_script() {
     fi
 }
 
-# Resolve the opentelemetry-collector-contrib version shipped by the demo chart.
-# The demo chart sets the collector image repository but defaults the tag to the
-# bundled opentelemetry-collector subchart appVersion, so we render the chart and
-# read the concrete resolved image tag.
-get_demo_collector_version() {
-    local chart_version="$1"
-    helm template otel-demo open-telemetry/opentelemetry-demo --version "$chart_version" 2>/dev/null \
-      | grep -oE 'otel/opentelemetry-collector-contrib:[0-9]+\.[0-9]+\.[0-9]+' \
-      | head -1 | cut -d: -f2
+update_go_const() {
+    local const_name="$1"
+    local version="$2"
+    local file="$3"
+    if [ -f "$file" ]; then
+        sed_i "s/^\([[:space:]]*${const_name}[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$version\"/" "$file"
+        echo "Updated $const_name in $file to $version"
+    fi
+}
+
+# Resolve the latest opentelemetry-collector-contrib release from GitHub.
+get_latest_contrib_version() {
+    gh api repos/open-telemetry/opentelemetry-collector-contrib/releases/latest --jq '.tag_name' 2>/dev/null \
+      | sed 's/^v//'
 }
 
 ensure_helm_repo "newrelic" "https://helm-charts.newrelic.com"
@@ -85,6 +90,7 @@ if [ "$LATEST_OTEL_DEMO_CHART_VERSION" != "" ] && [ "$LATEST_OTEL_DEMO_CHART_VER
   echo "Updating opentelemetry-demo chart to version $LATEST_OTEL_DEMO_CHART_VERSION"
   template_chart "otel-demo" "open-telemetry/opentelemetry-demo" "$LATEST_OTEL_DEMO_CHART_VERSION" "opentelemetry-demo" "$OTEL_DEMO_VALUES_PATH" "$OTEL_DEMO_RENDER_PATH"
   update_version_in_script "OTEL_DEMO_CHART_VERSION" "$LATEST_OTEL_DEMO_CHART_VERSION" "$COMMON_SCRIPT_PATH"
+  update_go_const "OtelDemoChartVersion" "$LATEST_OTEL_DEMO_CHART_VERSION" "$CONFIG_GO_PATH"
   echo "Completed updating the OpenTelemetry Demo app!"
   OTEL_DEMO_UPDATED=true
 else
@@ -92,13 +98,11 @@ else
 fi
 
 # Sync the opentelemetry-collector-contrib version used by the NR K8s collector and
-# the Docker Compose setup to whatever the latest demo chart ships. The NRDOT K8s
-# image lacks the spanmetrics connector, so we pin contrib to the demo's collector
-# version and propagate it from a single source of truth.
+# the Docker Compose setup to the latest upstream contrib release.
 CONTRIB_UPDATED=false
-CONTRIB_VERSION=$(get_demo_collector_version "$LATEST_OTEL_DEMO_CHART_VERSION")
+CONTRIB_VERSION=$(get_latest_contrib_version)
 if [ -z "$CONTRIB_VERSION" ]; then
-  echo "Error: could not resolve opentelemetry-collector-contrib version from opentelemetry-demo chart $LATEST_OTEL_DEMO_CHART_VERSION"
+  echo "Error: could not resolve latest opentelemetry-collector-contrib release from GitHub"
   exit 1
 fi
 CURR_CONTRIB_VERSION=$(yq '.images.collector.tag' "$NR_K8S_VALUES_PATH")
@@ -130,6 +134,7 @@ NR_K8S_UPDATED=false
 if [ "$LATEST_NR_K8S_CHART_VERSION" != "" ] && [ "$LATEST_NR_K8S_CHART_VERSION" != "$CURR_NR_K8S_CHART_VERSION" ]; then
   echo "Updating nr-k8s-otel-collector chart to version $LATEST_NR_K8S_CHART_VERSION"
   update_version_in_script "NR_K8S_CHART_VERSION" "$LATEST_NR_K8S_CHART_VERSION" "$COMMON_SCRIPT_PATH"
+  update_go_const "NrK8sChartVersion" "$LATEST_NR_K8S_CHART_VERSION" "$CONFIG_GO_PATH"
   NR_K8S_UPDATED=true
 else
   echo "NR K8s chart is up to date."
