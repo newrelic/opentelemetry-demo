@@ -82,7 +82,7 @@ install_or_upgrade_chart() {
 # command override.
 setup_pg_monitoring() {
   echo "Setting up postgresql receiver monitoring access for $POSTGRES_MONITOR_USER..."
-  if ! kubectl rollout status deployment/postgresql -n "$OTEL_DEMO_NAMESPACE" --timeout=120s; then
+  if ! kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s; then
     echo "Warning: postgresql deployment not ready; skipping monitoring setup. Run manually later."
     return
   fi
@@ -92,15 +92,15 @@ setup_pg_monitoring() {
   # the psql meta-command \c, not SQL).
   local app_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; CREATE SCHEMA IF NOT EXISTS otel; GRANT USAGE ON SCHEMA otel TO $POSTGRES_MONITOR_USER; GRANT USAGE ON SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT SELECT ON ALL TABLES IN SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT pg_monitor TO $POSTGRES_MONITOR_USER;"
   local postgres_db_ddl="CREATE EXTENSION IF NOT EXISTS pg_stat_statements; GRANT CONNECT ON DATABASE postgres TO $POSTGRES_MONITOR_USER; GRANT USAGE ON SCHEMA public TO $POSTGRES_MONITOR_USER; GRANT SELECT ON ALL TABLES IN SCHEMA public TO $POSTGRES_MONITOR_USER;"
-  if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/postgresql -- \
+  if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- \
       sh -c "psql -v ON_ERROR_STOP=1 -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c '$app_db_ddl'" \
-    && kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/postgresql -- \
+    && kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- \
       sh -c "psql -v ON_ERROR_STOP=1 -U \"\$POSTGRES_USER\" -d postgres -c '$postgres_db_ddl'"; then
     echo "postgresql monitoring configured for $POSTGRES_MONITOR_USER."
   else
     echo "Warning: failed to configure postgresql monitoring for $POSTGRES_MONITOR_USER. Run manually with:"
-    echo "  kubectl exec -n $OTEL_DEMO_NAMESPACE deployment/postgresql -- sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"$app_db_ddl\"'"
-    echo "  kubectl exec -n $OTEL_DEMO_NAMESPACE deployment/postgresql -- sh -c 'psql -U \"\$POSTGRES_USER\" -d postgres -c \"$postgres_db_ddl\"'"
+    echo "  kubectl exec -n $OTEL_DEMO_NAMESPACE deployment/astronomy-db -- sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -c \"$app_db_ddl\"'"
+    echo "  kubectl exec -n $OTEL_DEMO_NAMESPACE deployment/astronomy-db -- sh -c 'psql -U \"\$POSTGRES_USER\" -d postgres -c \"$postgres_db_ddl\"'"
   fi
 }
 
