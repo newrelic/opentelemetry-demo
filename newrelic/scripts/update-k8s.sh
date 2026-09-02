@@ -61,7 +61,7 @@ update_go_const() {
     local version="$2"
     local file="$3"
     if [ -f "$file" ]; then
-        sed_i "s/^\([[:space:]]*$const_name[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$version\"/" "$file"
+        sed_i "s/^\([[:space:]]*${const_name}[[:space:]]*=[[:space:]]*\)\"[^\"]*\"/\1\"$version\"/" "$file"
         echo "Updated $const_name in $file to $version"
     fi
 }
