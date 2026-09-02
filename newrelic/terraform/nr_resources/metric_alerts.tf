@@ -122,6 +122,65 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
   title_template     = "[{{conditionName}}] {{priority}}"
 }
 
+##############################
+## Kafka Alerts
+##
+
+resource "newrelic_nrql_alert_condition" "kafka_consumer_lag" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "Kafka Consumer Lag (fraud-detection / orders)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT latest(kafka.consumer_group.lag) FROM Metric WHERE topic = 'orders' AND `group` = 'fraud-detection' FACET `group`, topic"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.kafka_consumer_lag_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option        = "last_value"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
+## Producer-rate-spike alert: checkout floods the orders topic when the flag is on.
+## current_offset is a monotonic gauge, so the production rate is its derivative;
+## baseline is a few msgs/min, the scenario bursts ~100 messages per checkout.
+resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "Kafka Producer Rate Spike (orders topic)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT derivative(kafka.partition.current_offset, 1 minute) FROM Metric WHERE topic = 'orders' FACET topic"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.kafka_producer_rate_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option        = "none"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
 ##
 ## Tags for Metric Alert Conditions
 ##

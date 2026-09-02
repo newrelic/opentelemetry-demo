@@ -78,6 +78,41 @@ resource "newrelic_service_level" "latency_slo" {
   }
 }
 
+# Create Kafka consumer-lag SLO
+data "newrelic_entity" "fraud_detection" {
+  name   = "fraud-detection"
+  domain = "EXT"
+  type   = "SERVICE"
+}
+
+resource "newrelic_service_level" "kafka_consumer_lag_slo" {
+  guid        = data.newrelic_entity.fraud_detection.guid
+  name        = "fraud-detection - Kafka Consumer Lag (<= ${var.kafka_consumer_lag_threshold})"
+  description = "Consumer-lag SLO for the fraud-detection group on the orders topic; degrades under the kafkaQueueProblems scenario."
+
+  events {
+    account_id = var.newrelic_account_id
+    valid_events {
+      from  = "Metric"
+      where = "metricName = 'kafka.consumer_group.lag' AND `group` = 'fraud-detection' AND topic = 'orders'"
+    }
+    good_events {
+      from  = "Metric"
+      where = "metricName = 'kafka.consumer_group.lag' AND `group` = 'fraud-detection' AND topic = 'orders' AND `kafka.consumer_group.lag` <= ${var.kafka_consumer_lag_threshold}"
+    }
+  }
+
+  objective {
+    target = 99.0
+    time_window {
+      rolling {
+        count = 1
+        unit  = "DAY"
+      }
+    }
+  }
+}
+
 # Alert Policy
 ## Disabling, will reevaluate at another date
 

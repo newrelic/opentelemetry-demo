@@ -38,8 +38,20 @@ variable "low_throughput_alert_enabled" {
   default     = false
 }
 
+variable "kafka_consumer_lag_threshold" {
+  description = "Consumer lag (messages) above which the Kafka consumer-lag alert fires"
+  type        = number
+  default     = 100
+}
 
-## 
+variable "kafka_producer_rate_threshold" {
+  description = "Orders-topic production rate (messages/min) above which the Kafka producer-spike alert fires"
+  type        = number
+  default     = 60
+}
+
+
+##
 ## Maps services to thresholds for alerts are defined using metric values.
 ##
 variable "metric_alert_map" {

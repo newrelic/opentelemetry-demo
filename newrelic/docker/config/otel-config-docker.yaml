@@ -54,6 +54,21 @@ receivers:
   httpcheck/frontend-proxy:
     targets:
     - endpoint: http://frontend-proxy:8080
+  # Kafka broker metrics, including kafka.consumer_group.lag for the
+  # kafkaQueueProblems scenario.
+  kafkametrics:
+    brokers:
+    - ${env:KAFKA_ADDR}
+    protocol_version: 2.0.0
+    # cluster_alias should emit the kafka.cluster.alias resource attribute, but this
+    # image's contrib version never emits it (see transform/kafka_cluster_name below).
+    # Kept as future-proofing for when the fix lands upstream.
+    cluster_alias: otel-demo-kafka
+    scrapers:
+    - brokers
+    - topics
+    - consumers
+    collection_interval: 15s
   otlp:
     protocols:
       grpc:
@@ -130,6 +145,20 @@ processors:
       statements:
       - replace_pattern(name, "\\?.*", "")
       - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+  # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
+  # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
+  #
+  # Not using the receiver's cluster_alias option because the baked contrib version
+  # never emits it — see https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/47605.
+  # TODO: once that lands, copy resource.attributes["kafka.cluster.alias"] instead.
+  transform/kafka_cluster_name:
+    error_mode: ignore
+    metric_statements:
+    - context: datapoint
+      conditions:
+      - IsMatch(metric.name, "^kafka\\.")
+      statements:
+      - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
 
 exporters:
   debug: {}
@@ -161,11 +190,13 @@ service:
       - memory_limiter
       - resource
       - resourcedetection/env
+      - transform/kafka_cluster_name
       - cumulativetodelta
       - batch
       receivers:
       - hostmetrics
       - docker_stats
+      - kafkametrics
       - redis
       - otlp
       - prometheus/ad

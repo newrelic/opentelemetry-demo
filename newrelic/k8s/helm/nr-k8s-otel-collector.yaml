@@ -83,6 +83,24 @@ deployment:
             postgresql.temp_files:
               enabled: true
 
+        # Kafka broker metrics for the kafkaQueueProblems scenario, scraped since
+        # telemetry is pushed to this collector on k8s and consumer lag can't be.
+        # This image (contrib 0.153.0) renamed the receiver to `kafka_metrics`; the
+        # Docker path runs 0.142.0 and still uses `kafkametrics`.
+        kafka_metrics:
+          brokers:
+            - kafka:9092
+          protocol_version: 2.0.0
+          # cluster_alias should emit the kafka.cluster.alias resource attribute, but
+          # this image's contrib version never emits it (see transform/kafka_cluster_name
+          # below). Kept as future-proofing for when the fix lands upstream.
+          cluster_alias: otel-demo-kafka
+          scrapers:
+            - brokers
+            - topics
+            - consumers
+          collection_interval: 15s
+
       connectors:
         spanmetrics:
           metrics_flush_interval: 30s
@@ -229,6 +247,21 @@ deployment:
               statements:
                 - set(attributes["error.type"], "SERVER ERROR")
 
+        # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
+        # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
+        #
+        # Not using the receiver's cluster_alias option because the baked contrib version
+        # never emits it — see https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/47605.
+        # TODO: once that lands, copy resource.attributes["kafka.cluster.alias"] instead.
+        transform/kafka_cluster_name:
+          error_mode: ignore
+          metric_statements:
+            - context: datapoint
+              conditions:
+                - IsMatch(metric.name, "^kafka\\.")
+              statements:
+                - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+
       pipelines:
 
         # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
@@ -273,11 +306,13 @@ deployment:
           receivers:
             - otlp
             - prometheus/ad
+            - kafka_metrics
           processors:
             - memory_limiter
             - filter/python-system-metrics
             - resourcedetection/otel-demo
             - resource/otel-demo
+            - transform/kafka_cluster_name
             - k8s_attributes/ksm
             - transform/strip_ad_metric_metadata
             - transform/grpc_error_type
