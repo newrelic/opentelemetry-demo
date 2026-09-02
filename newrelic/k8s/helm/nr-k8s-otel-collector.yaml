@@ -15,6 +15,14 @@ images:
 # By adding this, we can disable the OTel Collector shipped as part of the OpenTelemetry Demo application,
 # and rely solely on the NRDOT K8s OTel Collector instances.
 deployment:
+  # Environment variables injected into the deployment collector container.
+  # Referenced by the postgresql receiver config below via ${env:...} so the
+  # credentials live in a single place rather than being hard-coded inline.
+  envs:
+    - name: POSTGRES_USERNAME
+      value: otelu
+    - name: POSTGRES_PASSWORD
+      value: otelp
   configMap:
     extraConfig:
       receivers:
@@ -28,6 +36,52 @@ deployment:
                 scrape_interval: 10s
                 static_configs:
                   - targets: ["ad:9465"]
+
+        postgresql:
+          endpoint: postgresql.opentelemetry-demo.svc.cluster.local:5432
+          transport: tcp
+          username: ${env:POSTGRES_USERNAME}
+          password: ${env:POSTGRES_PASSWORD}
+          databases:
+            - otel
+          collection_interval: 15s
+          tls:
+            insecure: true
+            insecure_skip_verify: true
+            # ca_file: /home/otel/authorities.crt
+            # cert_file: /home/otel/mypostgrescert.crt
+            # key_file: /home/otel/mypostgreskey.key
+          events:
+            db.server.query_sample:
+              enabled: true
+            db.server.top_query:
+              enabled: true
+          query_sample_collection:
+            max_rows_per_query: 100
+          top_query_collection:
+            max_rows_per_query: 100
+            top_n_query: 100
+            collection_interval: 60s
+          connection_pool:
+            max_idle_time: 10m
+            max_lifetime: 0
+            max_idle: 2
+            max_open: 5
+          # Enabled on top of the receiver's metric defaults: required for the
+          # out-of-the-box New Relic PostgreSQL dashboard but off by default.
+          metrics:
+            postgresql.database.locks:
+              enabled: true
+            postgresql.deadlocks:
+              enabled: true
+            postgresql.function.calls:
+              enabled: true
+            postgresql.sequential_scans:
+              enabled: true
+            postgresql.temp.io:
+              enabled: true
+            postgresql.temp_files:
+              enabled: true
 
       connectors:
         spanmetrics:
@@ -138,6 +192,17 @@ deployment:
               from_attribute: k8s.pod.uid
               action: insert
 
+        # NR's PostgreSQL entity synthesis names the entity after
+        # service.instance.id (host:port by default), which renders as the
+        # unreadable internal cluster DNS name in the UI. Override it to a
+        # human-readable name; server.address/server.port tags still carry
+        # the real endpoint for anyone who needs it.
+        resource/postgres_friendly_name:
+          attributes:
+            - key: service.instance.id
+              value: "otel-demo-postgresql"
+              action: upsert
+
         # otelgrpc never sets error.type on rpc.server.call.duration /
         # rpc.client.call.duration even when the RPC failed, so NR's
         # error.type-based error-rate rule can't match gRPC traffic. This is
@@ -177,6 +242,32 @@ deployment:
             - batch
           receivers:
             - spanmetrics
+
+        metrics/postgres:
+          exporters:
+            - otlp_http/newrelic
+          processors:
+            - memory_limiter
+            - k8s_attributes/ksm
+            - resource/postgres_friendly_name
+            - batch
+          receivers:
+            - postgresql
+
+        # The postgresql receiver emits db.server.query_sample and
+        # db.server.top_query as log records, not metrics. They need a logs
+        # pipeline to reach New Relic; the metrics/postgres pipeline above only
+        # carries the postgresql.* metrics.
+        logs/postgres:
+          exporters:
+            - otlp_http/newrelic
+          processors:
+            - memory_limiter
+            - k8s_attributes/ksm
+            - resource/postgres_friendly_name
+            - batch
+          receivers:
+            - postgresql
 
         metrics/otel-demo:
           receivers:

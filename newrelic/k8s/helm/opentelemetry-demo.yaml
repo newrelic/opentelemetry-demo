@@ -76,6 +76,30 @@ components:
       # LLM, set this to "False" and provide LLM_BASE_URL/API_KEY.
       - name: USE_VCR
         value: "True"
+  postgresql:
+    # Preload pg_stat_statements so the NR collector's postgresql receiver can
+    # read db.server.top_query; must be set at server start (not via CREATE
+    # EXTENSION alone). See install-k8s.sh for the CREATE EXTENSION + grant step.
+    command:
+      - docker-entrypoint.sh
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - pg_stat_statements.max=10000
+      - -c
+      - pg_stat_statements.save=on
+      - -c
+      - track_activity_query_size=4096
+      - -c
+      - track_functions=all
+    resources:
+      limits:
+        memory: 200Mi
+      requests:
+        memory: 100Mi
   load-generator:
     # Full env list at upstream default values, kept explicit rather than
     # omitted. This chart's env is set as a plain array, which Helm
