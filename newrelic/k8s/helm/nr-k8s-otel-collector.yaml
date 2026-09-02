@@ -20,9 +20,9 @@ deployment:
   # credentials live in a single place rather than being hard-coded inline.
   envs:
     - name: POSTGRES_USERNAME
-      value: otelu
+      value: monitoring_user
     - name: POSTGRES_PASSWORD
-      value: otelp
+      value: monitoring_password
   configMap:
     extraConfig:
       receivers:
@@ -38,12 +38,12 @@ deployment:
                   - targets: ["ad:9465"]
 
         postgresql:
-          endpoint: postgresql.opentelemetry-demo.svc.cluster.local:5432
+          endpoint: astronomy-db.opentelemetry-demo.svc.cluster.local:5432
           transport: tcp
           username: ${env:POSTGRES_USERNAME}
           password: ${env:POSTGRES_PASSWORD}
           databases:
-            - otel
+            - astronomy_db
           collection_interval: 15s
           tls:
             insecure: true
@@ -218,7 +218,7 @@ deployment:
         resource/postgres_friendly_name:
           attributes:
             - key: service.instance.id
-              value: "otel-demo-postgresql"
+              value: "otel-demo-astronomy-db"
               action: upsert
 
         # otelgrpc never sets error.type on rpc.server.call.duration /

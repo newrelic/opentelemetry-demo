@@ -76,7 +76,7 @@ components:
       # LLM, set this to "False" and provide LLM_BASE_URL/API_KEY.
       - name: USE_VCR
         value: "True"
-  postgresql:
+  astronomy-db:
     # Preload pg_stat_statements so the NR collector's postgresql receiver can
     # read db.server.top_query; must be set at server start (not via CREATE
     # EXTENSION alone). See install-k8s.sh for the CREATE EXTENSION + grant step.

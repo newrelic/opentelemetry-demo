@@ -16,8 +16,9 @@ NR_K8S_RELEASE_NAME=nr-k8s-otel-collector
 OTEL_DEMO_NAMESPACE=opentelemetry-demo
 NR_LICENSE_SECRET=newrelic-license-key
 # Postgres user (created by the demo's init.sql) that the NR collector's
-# postgresql receiver connects as; needs pg_monitor for query_sample/top_query.
-POSTGRES_MONITOR_USER=otelu
+# postgresql receiver connects as; already has pg_monitor granted for
+# query_sample/top_query.
+POSTGRES_MONITOR_USER=monitoring_user
 OTEL_DEMO_VALUES_PATH=${OTEL_DEMO_VALUES_PATH:-"$SCRIPT_DIR/../k8s/helm/opentelemetry-demo.yaml"}
 OTEL_DEMO_RENDER_PATH=${OTEL_DEMO_RENDER_PATH:-"$SCRIPT_DIR/../k8s/rendered/opentelemetry-demo.yaml"}
 NR_K8S_VALUES_PATH=${NR_K8S_VALUES_PATH:-"$SCRIPT_DIR/../k8s/helm/nr-k8s-otel-collector.yaml"}
