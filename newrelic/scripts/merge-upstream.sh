@@ -83,6 +83,15 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+echo "regenerating newrelic/docker/docker-compose.yml from merged upstream compose files"
+"$(dirname "$0")/update-docker.sh"
+if ! git diff --quiet -- newrelic/docker/docker-compose.yml; then
+  git add newrelic/docker/docker-compose.yml
+  git commit -m "chore: regenerate newrelic/docker/docker-compose.yml"
+else
+  echo "newrelic/docker/docker-compose.yml already up to date"
+fi
+
 echo "pushing merge branch to origin"
 git push -u origin chore/sync-upstream_$TS
 

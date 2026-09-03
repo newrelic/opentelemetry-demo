@@ -20,9 +20,12 @@ set -euo pipefail
 
 source "$(dirname "$0")/common.sh"
 check_tool_installed docker
+check_tool_installed yq
 
-# Copy the YAML file
-cp "$DOCKER_COMPOSE_PATH" "$NR_DOCKER_COMPOSE_PATH"
+# Merge upstream's core/full/observability compose files into one, since NR always
+# runs the full stack. yq eval-all deep-merges without resolving ${VAR} interpolation.
+yq eval-all 'select(fileIndex==0) * select(fileIndex==1) * select(fileIndex==2) * select(fileIndex==3)' \
+  "${DOCKER_COMPOSE_SOURCE_PATHS[@]}" > "$NR_DOCKER_COMPOSE_PATH"
 
 # delete containers that are not required
 yq eval -i 'del(.services.grafana)' "$NR_DOCKER_COMPOSE_PATH"

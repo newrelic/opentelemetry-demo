@@ -26,7 +26,14 @@ NR_K8S_RENDER_PATH=${NR_K8S_RENDER_PATH:-"$SCRIPT_DIR/../k8s/rendered/nr-k8s-ote
 CONFIG_GO_PATH=${CONFIG_GO_PATH:-"$SCRIPT_DIR/../cli/config.go"}
 
 # Docker variables
-DOCKER_COMPOSE_PATH=${DOCKER_COMPOSE_PATH:-"$SCRIPT_DIR/../../docker-compose.yml"}
+# Upstream v3.0.0 split the old monolithic docker-compose.yml into these layered
+# files; NR's compose always runs the full stack, so update-docker.sh merges all three.
+DOCKER_COMPOSE_SOURCE_PATHS=(
+  "$SCRIPT_DIR/../../compose.yaml"
+  "$SCRIPT_DIR/../../compose.full.yaml"
+  "$SCRIPT_DIR/../../compose.observability.yaml"
+  "$SCRIPT_DIR/../../compose.agent.yaml"
+)
 NR_DOCKER_COMPOSE_PATH=${NR_DOCKER_COMPOSE_PATH:-"$SCRIPT_DIR/../docker/docker-compose.yml"}
 ENV_PATH=${ENV_PATH:-"$SCRIPT_DIR/../../.env"}
 
