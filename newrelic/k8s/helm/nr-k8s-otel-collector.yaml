@@ -62,6 +62,11 @@ deployment:
             max_rows_per_query: 100
             top_n_query: 100
             collection_interval: 60s
+            # Disabled as a workaround for an upstream bug: the receiver tries
+            # to EXPLAIN its own query_sample query, which contains
+            # EXTRACT(field FROM ...), and that fails with a Postgres syntax
+            # error. See open-telemetry/opentelemetry-collector-contrib#50670.
+            max_explain_each_interval: 0
           connection_pool:
             max_idle_time: 10m
             max_lifetime: 0
