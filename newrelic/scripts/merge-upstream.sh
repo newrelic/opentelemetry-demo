@@ -44,6 +44,7 @@ TAG_REGEX='^([0-9a-fA-F]+),refs/tags/([0-9]+\.[0-9]+\.[0-9]+)$'
 
 git fetch $UPSTREAM_REMOTE
 
+SYNC_TAG=""
 if [ "$MERGE_BASE" == "" ]; then
   echo "MERGE_BASE is not set, using latest tag"
   TAGS=$(git ls-remote --tags --sort='-creatordate' $UPSTREAM_REMOTE | awk '{ print $1 "," $2 }')
@@ -51,12 +52,14 @@ if [ "$MERGE_BASE" == "" ]; then
   for TAG in "${ATAGS[@]}"; do
     if [[ $TAG =~ $TAG_REGEX ]]; then
       MERGE_BASE=${BASH_REMATCH[1]}
-      DISPLAY_MERGE_BASE="$UPSTREAM_REMOTE/${BASH_REMATCH[2]}"
+      SYNC_TAG="${BASH_REMATCH[2]}"
+      DISPLAY_MERGE_BASE="$UPSTREAM_REMOTE/$SYNC_TAG"
       echo "using latest tag $DISPLAY_MERGE_BASE as MERGE_BASE"
       break
     fi
   done
 else
+  SYNC_TAG="$MERGE_BASE"
   MERGE_BASE="$UPSTREAM_REMOTE/$MERGE_BASE"
   DISPLAY_MERGE_BASE="$MERGE_BASE"
   echo "using provided MERGE_BASE on $UPSTREAM_REMOTE: $DISPLAY_MERGE_BASE"
@@ -65,15 +68,21 @@ fi
 echo "starting merge from $DISPLAY_MERGE_BASE"
 git checkout main
 
-AHEAD=$(git rev-list $MERGE_BASE..main --count)
-BEHIND=$(git rev-list main..$MERGE_BASE --count)
+# This repo only allows squash merges, so git ancestry can't tell us whether
+# $SYNC_TAG was already synced (squash drops the merge commit's second
+# parent). Compare against the tracked marker file instead - its content
+# survives squashing even though the commit graph doesn't.
+LAST_SYNCED_TAG=""
+if [ -f "$UPSTREAM_SYNC_TAG_PATH" ]; then
+  LAST_SYNCED_TAG=$(cat "$UPSTREAM_SYNC_TAG_PATH")
+fi
 
-if [ $BEHIND -eq 0 ]; then
-  echo "main already up-to-date with merge base, no merge needed"
+if [ "$SYNC_TAG" == "$LAST_SYNCED_TAG" ]; then
+  echo "main already synced with $DISPLAY_MERGE_BASE, no merge needed"
   exit 0
 fi
 
-echo "main is behind merge base by $BEHIND commits and ahead by $AHEAD commits"
+echo "main last synced with upstream tag '$LAST_SYNCED_TAG', merging up to $DISPLAY_MERGE_BASE"
 git checkout -b chore/sync-upstream_$TS
 
 echo "merging changes from $DISPLAY_MERGE_BASE into local main branch"
@@ -91,6 +100,10 @@ if ! git diff --quiet -- newrelic/docker/docker-compose.yml; then
 else
   echo "newrelic/docker/docker-compose.yml already up to date"
 fi
+
+echo "$SYNC_TAG" > "$UPSTREAM_SYNC_TAG_PATH"
+git add "$UPSTREAM_SYNC_TAG_PATH"
+git commit -m "chore: record upstream sync tag $SYNC_TAG"
 
 echo "pushing merge branch to origin"
 git push -u origin chore/sync-upstream_$TS
