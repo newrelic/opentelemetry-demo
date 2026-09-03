@@ -44,6 +44,14 @@ default:
       value: "10000"
 
 components:
+  shipping:
+    initContainers:
+      - name: wait-for-flagd
+        image: busybox:1.36
+        command:
+          - sh
+          - "-c"
+          - "until nc -z -v -w30 flagd 8013; do echo waiting for flagd; sleep 2; done"
   accounting:
     resources:
       limits:
