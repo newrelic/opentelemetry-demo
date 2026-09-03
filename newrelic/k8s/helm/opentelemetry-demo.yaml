@@ -45,6 +45,8 @@ default:
 
 components:
   shipping:
+    # Workaround until the upstream chart waits for flagd itself; remove once
+    # https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2384 merges.
     initContainers:
       - name: wait-for-flagd
         image: busybox:1.36
