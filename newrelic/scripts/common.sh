@@ -37,6 +37,13 @@ DOCKER_COMPOSE_SOURCE_PATHS=(
 NR_DOCKER_COMPOSE_PATH=${NR_DOCKER_COMPOSE_PATH:-"$SCRIPT_DIR/../docker/docker-compose.yml"}
 ENV_PATH=${ENV_PATH:-"$SCRIPT_DIR/../../.env"}
 
+# Tracks the last upstream tag merge-upstream.sh successfully synced with.
+# This repo only allows squash merges, which drop the second parent of a
+# merge commit, so git ancestry (rev-list main..upstream) can't be trusted
+# to detect "already synced" - a committed marker file survives squashing
+# since it's just file content, not commit graph structure.
+UPSTREAM_SYNC_TAG_PATH=${UPSTREAM_SYNC_TAG_PATH:-"$SCRIPT_DIR/.upstream-sync-tag"}
+
 # Check if required tools are installed and error out if not
 check_tool_installed() {
     if ! command -v "$1" &> /dev/null; then
