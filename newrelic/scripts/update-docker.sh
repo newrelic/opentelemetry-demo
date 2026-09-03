@@ -20,6 +20,7 @@ set -euo pipefail
 
 source "$(dirname "$0")/common.sh"
 check_tool_installed docker
+check_tool_installed yq
 
 # Merge upstream's core/full/observability compose files into one, since NR always
 # runs the full stack. yq eval-all deep-merges without resolving ${VAR} interpolation.
