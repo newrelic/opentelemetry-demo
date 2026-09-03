@@ -86,6 +86,8 @@ components:
       # LLM, set this to "False" and provide LLM_BASE_URL/API_KEY.
       - name: USE_VCR
         value: "True"
+      - name: TRACELOOP_TRACE_CONTENT
+        value: "true"
   astronomy-db:
     # Preload pg_stat_statements so the NR collector's postgresql receiver can
     # read db.server.top_query; must be set at server start (not via CREATE
