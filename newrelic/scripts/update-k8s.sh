@@ -68,7 +68,7 @@ update_go_const() {
 
 # Resolve the latest opentelemetry-collector-contrib release from GitHub.
 get_latest_contrib_version() {
-    gh api repos/open-telemetry/opentelemetry-collector-contrib/releases/latest --jq '.tag_name' 2>/dev/null \
+    gh api repos/open-telemetry/opentelemetry-collector-contrib/releases/latest --jq '.tag_name' \
       | sed 's/^v//'
 }
 
@@ -79,6 +79,10 @@ check_file_exists "$OTEL_DEMO_VALUES_PATH"
 check_file_exists "$NR_K8S_VALUES_PATH"
 
 LATEST_OTEL_DEMO_CHART_VERSION=$(helm search repo open-telemetry/opentelemetry-demo --versions | awk 'NR==2 {print $2}')
+if [[ -z "$LATEST_OTEL_DEMO_CHART_VERSION" ]]; then
+    echo "Failed to fetch latest opentelemetry-demo chart version from helm search."
+    exit 1
+fi
 CURR_OTEL_DEMO_CHART_VERSION=$(cat $COMMON_SCRIPT_PATH | sed -n 's/^OTEL_DEMO_CHART_VERSION="\([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)"$/\1/p')
 
 echo "Latest OpenTelemetry Demo chart version: $LATEST_OTEL_DEMO_CHART_VERSION"
@@ -86,7 +90,7 @@ echo "Current OpenTelemetry Demo chart version: $CURR_OTEL_DEMO_CHART_VERSION"
 
 OTEL_DEMO_UPDATED=false
 
-if [ "$LATEST_OTEL_DEMO_CHART_VERSION" != "" ] && [ "$LATEST_OTEL_DEMO_CHART_VERSION" != "$CURR_OTEL_DEMO_CHART_VERSION" ]; then
+if [ "$LATEST_OTEL_DEMO_CHART_VERSION" != "$CURR_OTEL_DEMO_CHART_VERSION" ]; then
   echo "Updating opentelemetry-demo chart to version $LATEST_OTEL_DEMO_CHART_VERSION"
   template_chart "otel-demo" "open-telemetry/opentelemetry-demo" "$LATEST_OTEL_DEMO_CHART_VERSION" "opentelemetry-demo" "$OTEL_DEMO_VALUES_PATH" "$OTEL_DEMO_RENDER_PATH"
   update_version_in_script "OTEL_DEMO_CHART_VERSION" "$LATEST_OTEL_DEMO_CHART_VERSION" "$COMMON_SCRIPT_PATH"
@@ -106,6 +110,10 @@ if [ -z "$CONTRIB_VERSION" ]; then
   exit 1
 fi
 CURR_CONTRIB_VERSION=$(yq '.images.collector.tag' "$NR_K8S_VALUES_PATH")
+if [[ "$CURR_CONTRIB_VERSION" == "null" ]] || [[ -z "$CURR_CONTRIB_VERSION" ]]; then
+  echo "Error: could not read current collector tag from $NR_K8S_VALUES_PATH"
+  exit 1
+fi
 
 echo "Latest demo collector (contrib) version: $CONTRIB_VERSION"
 echo "Current NR K8s collector (contrib) tag: $CURR_CONTRIB_VERSION"
@@ -200,10 +208,15 @@ if [ -n "$EXISTING_PR" ]; then
 fi
 
 git checkout -b chore/update-charts_$TS
-git commit -a -m "$COMMIT_MSG"
-git push -u origin chore/update-charts_$TS
+if ! git diff --quiet --cached; then
+  git commit -a -m "$COMMIT_MSG"
+  git push -u origin chore/update-charts_$TS
+else
+  echo "No changes detected. Skipping commit and PR creation."
+  exit 0
+fi
 
-gh pr create --head $REPO_OWNER:chore/update-charts_$TS \
+gh pr create --head "$REPO_OWNER:chore/update-charts_$TS" \
   --title "$COMMIT_MSG" \
   --body "$PR_BODY" \
   --base main \
