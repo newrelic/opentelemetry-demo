@@ -68,6 +68,61 @@ jobs:
       - name: run yamllint
         run: yamllint newrelic/ -c newrelic/.yamllint.yaml -f github
 
+  k8s-chart-validation:
+    name: K8s Chart Validation (newrelic/**)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: latest
+
+      - name: Install yq and otelcol
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yq
+          # Extract collector version from values file
+          COLLECTOR_VERSION=$(yq -r '.images.collector.tag' newrelic/k8s/helm/nr-k8s-otel-collector.yaml)
+          echo "Using otelcol version: $COLLECTOR_VERSION"
+
+          # Try to download and install otelcol-contrib matching the configured
+          # version. Fall back to the latest release (with a warning) if that
+          # exact version's asset isn't published; skip binary validation
+          # entirely (also with a warning) if even that fails.
+          install_otelcol() {
+            wget -q "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${1}/otelcol-contrib_${1}_linux_amd64.tar.gz" -O /tmp/otelcol.tar.gz 2>/dev/null || return 1
+            tar -xzf /tmp/otelcol.tar.gz -C /tmp/ 2>/dev/null || return 1
+            sudo mv /tmp/otelcol-contrib /usr/local/bin/ 2>/dev/null || return 1
+            sudo chmod +x /usr/local/bin/otelcol-contrib 2>/dev/null || return 1
+          }
+
+          if install_otelcol "${COLLECTOR_VERSION}"; then
+            echo "otelcol-contrib installed (version $COLLECTOR_VERSION, matches configured collector)"
+          else
+            LATEST_VERSION=$(curl -s https://api.github.com/repos/open-telemetry/opentelemetry-collector-releases/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+            if [ -n "$LATEST_VERSION" ] && install_otelcol "${LATEST_VERSION}"; then
+              echo "::warning::otelcol-contrib v${COLLECTOR_VERSION} release asset not found; installed latest (v${LATEST_VERSION}) instead"
+            else
+              echo "::warning::Could not install any otelcol-contrib release; validation will skip binary checks"
+            fi
+          fi
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add newrelic https://helm-charts.newrelic.com
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm repo update
+
+      - name: Run chart validation
+        run: ./newrelic/scripts/validate-k8s-charts.sh
+        env:
+          NR_K8S_VALUES_PATH: "newrelic/k8s/helm/nr-k8s-otel-collector.yaml"
+          NR_K8S_RENDERED_PATH: "newrelic/k8s/rendered/nr-k8s-otel-collector.yaml"
+
   js-lint:
     name: JS (newrelic/docker/config)
     runs-on: ubuntu-latest
