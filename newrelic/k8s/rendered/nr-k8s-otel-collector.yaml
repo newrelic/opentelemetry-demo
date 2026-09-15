@@ -1829,6 +1829,31 @@ data:
             "\\/api\\/recommendations")
           - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"],
             "\\/api\\/data.*")
+      transform/semconv_to_kafka_producer:
+        error_mode: ignore
+        metric_statements:
+        - conditions:
+          - metric.name == "messaging.client.sent.messages"
+          context: datapoint
+          statements:
+          - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+          - set(attributes["topic"], "orders")
+        - conditions:
+          - metric.name == "messaging.client.operation.duration"
+          context: datapoint
+          statements:
+          - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+          - set(attributes["topic"], "orders")
+        - conditions:
+          - metric.name == "messaging.client.sent.messages"
+          context: metric
+          statements:
+          - set(metric.name, "kafka.producer.messages")
+        - conditions:
+          - metric.name == "messaging.client.operation.duration"
+          context: metric
+          statements:
+          - set(metric.name, "kafka.producer.request_latency")
       transform/strip_ad_metric_metadata:
         metric_statements:
         - conditions:
@@ -1949,6 +1974,7 @@ data:
           - resourcedetection/otel-demo
           - resource/otel-demo
           - transform/kafka_cluster_name
+          - transform/semconv_to_kafka_producer
           - k8s_attributes/ksm
           - transform/strip_ad_metric_metadata
           - transform/grpc_error_type
@@ -2523,7 +2549,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.160.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.161.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2694,7 +2720,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 3978f4ab0ff15485be9339b13011633379ad25ae0b0c1649c98cffbbacd93051
+        checksum/config: f5b43dc19312527e31b1a0f419a7bc8ed1fea2e27dedab4deac60c1b396ca6da
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2708,7 +2734,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.160.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.161.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config

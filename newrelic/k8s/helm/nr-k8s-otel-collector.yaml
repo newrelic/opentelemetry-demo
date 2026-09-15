@@ -8,7 +8,7 @@ images:
   collector:
     registry: ""
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.160.0"
+    tag: "0.161.0"
     pullPolicy: IfNotPresent
 
 # This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
@@ -267,6 +267,33 @@ deployment:
               statements:
                 - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
 
+        # Transforms semconv messaging.client.* metrics to kafka.producer.* with required attributes for entity accounting
+        transform/semconv_to_kafka_producer:
+          error_mode: ignore
+          metric_statements:
+            - context: datapoint
+              conditions:
+                - metric.name == "messaging.client.sent.messages"
+              statements:
+                - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+                - set(attributes["topic"], "orders")
+            - context: datapoint
+              conditions:
+                - metric.name == "messaging.client.operation.duration"
+              statements:
+                - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+                - set(attributes["topic"], "orders")
+            - context: metric
+              conditions:
+                - metric.name == "messaging.client.sent.messages"
+              statements:
+                - set(metric.name, "kafka.producer.messages")
+            - context: metric
+              conditions:
+                - metric.name == "messaging.client.operation.duration"
+              statements:
+                - set(metric.name, "kafka.producer.request_latency")
+
       pipelines:
 
         # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
@@ -318,6 +345,7 @@ deployment:
             - resourcedetection/otel-demo
             - resource/otel-demo
             - transform/kafka_cluster_name
+            - transform/semconv_to_kafka_producer
             - k8s_attributes/ksm
             - transform/strip_ad_metric_metadata
             - transform/grpc_error_type
