@@ -87,7 +87,7 @@ There may be underlying changes to the official OpenTelemetry Demo that conflict
 After syncing the fork, you can validate that New Relic's demo works as expected, and make changes as required.
 
 The `scripts/update-docker.sh` script can help you update the synced `docker-compose.yml` to contain aspects needed for best integration with New Relic.
-The `scripts/update-k8s.sh` script will change installation scripts to use the latest chart version, which may be needed when updating to the latest demo version.
+The `scripts/update-k8s.sh` script will change installation scripts to use the latest chart version, which may be needed when updating to the latest demo version. Run with `--dry-run` to validate changes locally without creating a PR.
 
 You can commit any changes and include them in same PR in Step 6, so that user's of this demo get a working environment.
 

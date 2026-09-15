@@ -8,33 +8,42 @@
 #   Should be run after syncing with the latest upstream changes.
 #
 # How to run:
-#   ./update-k8s.sh
+#   ./update-k8s.sh [--dry-run]
 #   (Run from the newrelic/scripts directory)
+#
+# Options:
+#   --dry-run         Render charts and update files locally without creating a PR.
+#                     Useful for testing changes before committing.
 #
 # Environment variables:
 #   TARGET_REPO       - Optional. GitHub repository to create the pull request
 #                       against in the format 'owner/repo'. Defaults to
-#                       'newrelic/opentelemetry-demo'.
-#   GH_TOKEN or GITHUB_TOKEN - Required. GitHub token with permissions to create
-#                              issues and pull requests. gh auth login can also
+#                       'newrelic/opentelemetry-demo'. (Ignored with --dry-run)
+#   GH_TOKEN or GITHUB_TOKEN - Required for PR creation. GitHub token with permissions
+#                              to create issues and pull requests. gh auth login can also
 #                              be used to authenticate the GitHub CLI prior to
-#                              running this script. When used in GitHub Actions,
-#                              the token should also have permissions to modify
-#                              repository contents.
+#                              running this script. (Not needed with --dry-run)
 #
 # Dependencies:
 #   - helm
 #   - yq (YAML processor)
-#   - gh (GitHub CLI)
+#   - gh (GitHub CLI) - only needed if not using --dry-run
 #   - Access to the project source and Helm values files
 # -----------------------------------------------------------------------------
 set -euo pipefail
+
+DRY_RUN=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN=true
+fi
 
 source "$(dirname "$0")/common.sh"
 
 check_tool_installed helm
 check_tool_installed yq
-check_tool_installed gh
+if [[ "$DRY_RUN" == false ]]; then
+  check_tool_installed gh
+fi
 
 template_chart() {
     local release="$1"
@@ -68,7 +77,7 @@ update_go_const() {
 
 # Resolve the latest opentelemetry-collector-contrib release from GitHub.
 get_latest_contrib_version() {
-    gh api repos/open-telemetry/opentelemetry-collector-contrib/releases/latest --jq '.tag_name' 2>/dev/null \
+    gh api repos/open-telemetry/opentelemetry-collector-contrib/releases/latest --jq '.tag_name' \
       | sed 's/^v//'
 }
 
@@ -79,6 +88,10 @@ check_file_exists "$OTEL_DEMO_VALUES_PATH"
 check_file_exists "$NR_K8S_VALUES_PATH"
 
 LATEST_OTEL_DEMO_CHART_VERSION=$(helm search repo open-telemetry/opentelemetry-demo --versions | awk 'NR==2 {print $2}')
+if [[ -z "$LATEST_OTEL_DEMO_CHART_VERSION" ]]; then
+    echo "Failed to fetch latest opentelemetry-demo chart version from helm search."
+    exit 1
+fi
 CURR_OTEL_DEMO_CHART_VERSION=$(cat $COMMON_SCRIPT_PATH | sed -n 's/^OTEL_DEMO_CHART_VERSION="\([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)"$/\1/p')
 
 echo "Latest OpenTelemetry Demo chart version: $LATEST_OTEL_DEMO_CHART_VERSION"
@@ -86,7 +99,7 @@ echo "Current OpenTelemetry Demo chart version: $CURR_OTEL_DEMO_CHART_VERSION"
 
 OTEL_DEMO_UPDATED=false
 
-if [ "$LATEST_OTEL_DEMO_CHART_VERSION" != "" ] && [ "$LATEST_OTEL_DEMO_CHART_VERSION" != "$CURR_OTEL_DEMO_CHART_VERSION" ]; then
+if [ "$LATEST_OTEL_DEMO_CHART_VERSION" != "$CURR_OTEL_DEMO_CHART_VERSION" ]; then
   echo "Updating opentelemetry-demo chart to version $LATEST_OTEL_DEMO_CHART_VERSION"
   template_chart "otel-demo" "open-telemetry/opentelemetry-demo" "$LATEST_OTEL_DEMO_CHART_VERSION" "opentelemetry-demo" "$OTEL_DEMO_VALUES_PATH" "$OTEL_DEMO_RENDER_PATH"
   update_version_in_script "OTEL_DEMO_CHART_VERSION" "$LATEST_OTEL_DEMO_CHART_VERSION" "$COMMON_SCRIPT_PATH"
@@ -106,6 +119,10 @@ if [ -z "$CONTRIB_VERSION" ]; then
   exit 1
 fi
 CURR_CONTRIB_VERSION=$(yq '.images.collector.tag' "$NR_K8S_VALUES_PATH")
+if [[ "$CURR_CONTRIB_VERSION" == "null" ]] || [[ -z "$CURR_CONTRIB_VERSION" ]]; then
+  echo "Error: could not read current collector tag from $NR_K8S_VALUES_PATH"
+  exit 1
+fi
 
 echo "Latest demo collector (contrib) version: $CONTRIB_VERSION"
 echo "Current NR K8s collector (contrib) tag: $CURR_CONTRIB_VERSION"
@@ -199,11 +216,22 @@ if [ -n "$EXISTING_PR" ]; then
   exit 0
 fi
 
-git checkout -b chore/update-charts_$TS
-git commit -a -m "$COMMIT_MSG"
-git push -u origin chore/update-charts_$TS
+if [[ "$DRY_RUN" == true ]]; then
+  echo "Dry run: skipping git and PR creation"
+  echo "Chart updates rendered successfully. Review changes with: git diff"
+  exit 0
+fi
 
-gh pr create --head $REPO_OWNER:chore/update-charts_$TS \
+git checkout -b chore/update-charts_$TS
+if ! git diff --quiet --cached; then
+  git commit -a -m "$COMMIT_MSG"
+  git push -u origin chore/update-charts_$TS
+else
+  echo "No changes detected. Skipping commit and PR creation."
+  exit 0
+fi
+
+gh pr create --head "$REPO_OWNER:chore/update-charts_$TS" \
   --title "$COMMIT_MSG" \
   --body "$PR_BODY" \
   --base main \
