@@ -6,8 +6,7 @@ provider "newrelic" {
 
 # Create a New Relic sub-account
 resource "newrelic_account_management" "subaccount" {
-  name   = var.subaccount_name
-  region = upper(var.newrelic_region) == "US" ? "us01" : upper(var.newrelic_region) == "EU" ? "eu01" : "jp01"
+  name = var.subaccount_name
 }
 
 # Get admin authentication domain
