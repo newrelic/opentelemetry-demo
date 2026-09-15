@@ -8,33 +8,42 @@
 #   Should be run after syncing with the latest upstream changes.
 #
 # How to run:
-#   ./update-k8s.sh
+#   ./update-k8s.sh [--dry-run]
 #   (Run from the newrelic/scripts directory)
+#
+# Options:
+#   --dry-run         Render charts and update files locally without creating a PR.
+#                     Useful for testing changes before committing.
 #
 # Environment variables:
 #   TARGET_REPO       - Optional. GitHub repository to create the pull request
 #                       against in the format 'owner/repo'. Defaults to
-#                       'newrelic/opentelemetry-demo'.
-#   GH_TOKEN or GITHUB_TOKEN - Required. GitHub token with permissions to create
-#                              issues and pull requests. gh auth login can also
+#                       'newrelic/opentelemetry-demo'. (Ignored with --dry-run)
+#   GH_TOKEN or GITHUB_TOKEN - Required for PR creation. GitHub token with permissions
+#                              to create issues and pull requests. gh auth login can also
 #                              be used to authenticate the GitHub CLI prior to
-#                              running this script. When used in GitHub Actions,
-#                              the token should also have permissions to modify
-#                              repository contents.
+#                              running this script. (Not needed with --dry-run)
 #
 # Dependencies:
 #   - helm
 #   - yq (YAML processor)
-#   - gh (GitHub CLI)
+#   - gh (GitHub CLI) - only needed if not using --dry-run
 #   - Access to the project source and Helm values files
 # -----------------------------------------------------------------------------
 set -euo pipefail
+
+DRY_RUN=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN=true
+fi
 
 source "$(dirname "$0")/common.sh"
 
 check_tool_installed helm
 check_tool_installed yq
-check_tool_installed gh
+if [[ "$DRY_RUN" == false ]]; then
+  check_tool_installed gh
+fi
 
 template_chart() {
     local release="$1"
@@ -204,6 +213,12 @@ EXISTING_PR=$(gh pr list --state open --repo "$TARGET_REPO" --base main \
   --json number,headRefName --jq '.[] | select(.headRefName | startswith("chore/update-charts_")) | .number' | head -1)
 if [ -n "$EXISTING_PR" ]; then
   echo "An open chart update PR already exists (#$EXISTING_PR). Skipping creation of a new PR."
+  exit 0
+fi
+
+if [[ "$DRY_RUN" == true ]]; then
+  echo "Dry run: skipping git and PR creation"
+  echo "Chart updates rendered successfully. Review changes with: git diff"
   exit 0
 fi
 
