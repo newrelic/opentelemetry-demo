@@ -775,16 +775,24 @@ processors:
     metric_statements:
     - conditions:
       - metric.name == "messaging.client.sent.messages"
+      context: datapoint
+      statements:
+      - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+      - set(attributes["topic"], "orders")
+    - conditions:
+      - metric.name == "messaging.client.operation.duration"
+      context: datapoint
+      statements:
+      - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+      - set(attributes["topic"], "orders")
+    - conditions:
+      - metric.name == "messaging.client.sent.messages"
       statements:
       - set(metric.name, "kafka.producer.messages")
-      - set(datapoint.attributes["kafka.cluster.name"], "otel-demo-kafka")
-      - set(datapoint.attributes["topic"], "orders")
     - conditions:
       - metric.name == "messaging.client.operation.duration"
       statements:
       - set(metric.name, "kafka.producer.request_latency")
-      - set(datapoint.attributes["kafka.cluster.name"], "otel-demo-kafka")
-      - set(datapoint.attributes["topic"], "orders")
   transform/otel-demo:
     error_mode: ignore
     trace_statements:
