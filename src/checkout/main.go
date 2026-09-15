@@ -21,7 +21,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconvv1260 "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/IBM/sarama"
@@ -72,6 +74,9 @@ var (
 	tracer            trace.Tracer
 	resource          *sdkresource.Resource
 	initResourcesOnce sync.Once
+
+	kafkaProducerDuration     metric.Float64Histogram
+	kafkaProducerSentMessages metric.Int64Counter
 )
 
 func initResource() *sdkresource.Resource {
@@ -121,6 +126,29 @@ func initMeterProvider() *sdkmetric.MeterProvider {
 	)
 	otel.SetMeterProvider(mp)
 	return mp
+}
+
+// initKafkaProducerMetrics creates the instruments used to report Kafka
+// producer telemetry following the OTel messaging metrics semantic conventions.
+func initKafkaProducerMetrics(mp *sdkmetric.MeterProvider) error {
+	meter := mp.Meter("checkout")
+
+	var err error
+	kafkaProducerDuration, err = meter.Float64Histogram(
+		"messaging.client.operation.duration",
+		metric.WithDescription("Duration of messaging operation initiated by a producer client."),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		return err
+	}
+
+	kafkaProducerSentMessages, err = meter.Int64Counter(
+		"messaging.client.sent.messages",
+		metric.WithDescription("Number of messages producer attempted to send to the broker."),
+		metric.WithUnit("{message}"),
+	)
+	return err
 }
 
 func initLoggerProvider() *sdklog.LoggerProvider {
@@ -207,6 +235,9 @@ func main() {
 	openfeature.AddHooks(otelhooks.NewTracesHook())
 
 	tracer = tp.Tracer("checkout")
+	if err := initKafkaProducerMetrics(mp); err != nil {
+		logger.Error(fmt.Sprintf("Error creating kafka producer metric instruments: %v", err))
+	}
 
 	svc := new(checkout)
 	svc.httpClient = &http.Client{
@@ -671,33 +702,41 @@ func (cs *checkout) sendToPostProcessor(ctx context.Context, result *pb.OrderRes
 	case cs.KafkaProducerClient.Input() <- &msg:
 		select {
 		case successMsg := <-cs.KafkaProducerClient.Successes():
+			duration := time.Since(startTime)
 			span.SetAttributes(
 				attribute.Bool("messaging.kafka.producer.success", true),
-				attribute.Int("messaging.kafka.producer.duration_ms", int(time.Since(startTime).Milliseconds())),
+				attribute.Int("messaging.kafka.producer.duration_ms", int(duration.Milliseconds())),
 				attribute.KeyValue(semconv.MessagingKafkaMessageOffset(int(successMsg.Offset))),
 			)
-			logger.Info(fmt.Sprintf("Successful to write message. offset: %v, duration: %v", successMsg.Offset, time.Since(startTime)))
+			recordKafkaProducerMetrics(ctx, duration, "")
+			logger.Info(fmt.Sprintf("Successful to write message. offset: %v, duration: %v", successMsg.Offset, duration))
 		case errMsg := <-cs.KafkaProducerClient.Errors():
+			duration := time.Since(startTime)
 			span.SetAttributes(
 				attribute.Bool("messaging.kafka.producer.success", false),
-				attribute.Int("messaging.kafka.producer.duration_ms", int(time.Since(startTime).Milliseconds())),
+				attribute.Int("messaging.kafka.producer.duration_ms", int(duration.Milliseconds())),
 			)
 			span.SetStatus(otelcodes.Error, errMsg.Err.Error())
+			recordKafkaProducerMetrics(ctx, duration, "send_error")
 			logger.Error(fmt.Sprintf("Failed to write message: %v", errMsg.Err))
 		case <-ctx.Done():
+			duration := time.Since(startTime)
 			span.SetAttributes(
 				attribute.Bool("messaging.kafka.producer.success", false),
-				attribute.Int("messaging.kafka.producer.duration_ms", int(time.Since(startTime).Milliseconds())),
+				attribute.Int("messaging.kafka.producer.duration_ms", int(duration.Milliseconds())),
 			)
 			span.SetStatus(otelcodes.Error, "Context cancelled: "+ctx.Err().Error())
+			recordKafkaProducerMetrics(ctx, duration, "context_cancelled")
 			logger.Warn(fmt.Sprintf("Context canceled before success message received: %v", ctx.Err()))
 		}
 	case <-ctx.Done():
+		duration := time.Since(startTime)
 		span.SetAttributes(
 			attribute.Bool("messaging.kafka.producer.success", false),
-			attribute.Int("messaging.kafka.producer.duration_ms", int(time.Since(startTime).Milliseconds())),
+			attribute.Int("messaging.kafka.producer.duration_ms", int(duration.Milliseconds())),
 		)
 		span.SetStatus(otelcodes.Error, "Failed to send: "+ctx.Err().Error())
+		recordKafkaProducerMetrics(ctx, duration, "context_cancelled")
 		logger.Error(fmt.Sprintf("Failed to send message to Kafka within context deadline: %v", ctx.Err()))
 		return
 	}
@@ -713,6 +752,29 @@ func (cs *checkout) sendToPostProcessor(ctx context.Context, result *pb.OrderRes
 		}
 		logger.Info(fmt.Sprintf("Done with #%d messages for overload simulation.", ffValue))
 	}
+}
+
+// recordKafkaProducerMetrics reports the messaging.client.operation.duration and
+// messaging.client.sent.messages metrics for a Kafka publish attempt, per the
+// OTel messaging metrics semantic conventions. errType is empty on success.
+func recordKafkaProducerMetrics(ctx context.Context, duration time.Duration, errType string) {
+	if kafkaProducerDuration == nil || kafkaProducerSentMessages == nil {
+		return
+	}
+
+	attrs := []attribute.KeyValue{
+		semconvv1260.MessagingOperationName("send"),
+		semconv.MessagingSystemKafka,
+		semconv.MessagingDestinationName(kafka.Topic),
+		attribute.String("topic", kafka.Topic),
+	}
+	if errType != "" {
+		attrs = append(attrs, semconv.ErrorTypeKey.String(errType))
+	}
+
+	opts := metric.WithAttributes(attrs...)
+	kafkaProducerDuration.Record(ctx, duration.Seconds(), opts)
+	kafkaProducerSentMessages.Add(ctx, 1, opts)
 }
 
 func createProducerSpan(ctx context.Context, msg *sarama.ProducerMessage) trace.Span {
