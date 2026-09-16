@@ -223,7 +223,7 @@ if [[ "$DRY_RUN" == true ]]; then
 fi
 
 git checkout -b chore/update-charts_$TS
-if ! git diff --quiet --cached; then
+if ! git diff --quiet; then
   git commit -a -m "$COMMIT_MSG"
   git push -u origin chore/update-charts_$TS
 else
