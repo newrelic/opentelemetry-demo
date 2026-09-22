@@ -8,7 +8,7 @@ images:
   collector:
     registry: ""
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.161.0"
+    tag: "0.160.0"
     pullPolicy: IfNotPresent
 
 # Second --config merges in internal telemetry for New Relic's Collector Observability UI.
