@@ -819,6 +819,7 @@ services:
     environment:
       - KAFKA_ADDR
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - NEW_RELIC_OTLP_ENDPOINT
       - KAFKA_ADDR
   # Accounting service (Kafka consumer)
   accounting:
