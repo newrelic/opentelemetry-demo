@@ -9,8 +9,8 @@ TS=$(date +"%Y%m%d_%H%M%S")
 TS_FULL=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Kubernetes variables
-OTEL_DEMO_CHART_VERSION="0.41.2"
-NR_K8S_CHART_VERSION="0.14.2"
+OTEL_DEMO_CHART_VERSION="0.42.1"
+NR_K8S_CHART_VERSION="0.14.3"
 OTEL_DEMO_RELEASE_NAME=otel-demo
 NR_K8S_RELEASE_NAME=nr-k8s-otel-collector
 OTEL_DEMO_NAMESPACE=opentelemetry-demo
@@ -24,6 +24,7 @@ OTEL_DEMO_RENDER_PATH=${OTEL_DEMO_RENDER_PATH:-"$SCRIPT_DIR/../k8s/rendered/open
 NR_K8S_VALUES_PATH=${NR_K8S_VALUES_PATH:-"$SCRIPT_DIR/../k8s/helm/nr-k8s-otel-collector.yaml"}
 NR_K8S_RENDER_PATH=${NR_K8S_RENDER_PATH:-"$SCRIPT_DIR/../k8s/rendered/nr-k8s-otel-collector.yaml"}
 CONFIG_GO_PATH=${CONFIG_GO_PATH:-"$SCRIPT_DIR/../cli/config.go"}
+CHART_VERSIONS_PATH=${CHART_VERSIONS_PATH:-"$SCRIPT_DIR/../k8s/chart-versions.yaml"}
 
 # Docker variables
 # Upstream v3.0.0 split the old monolithic docker-compose.yml into these layered
