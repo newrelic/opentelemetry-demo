@@ -10,8 +10,8 @@ import (
 const (
 	// NOTE: keep these in sync with newrelic/scripts/common.sh
 	// (OTEL_DEMO_CHART_VERSION / NR_K8S_CHART_VERSION). Tracked for de-duplication.
-	OtelDemoChartVersion = "0.42.0"
-	NrK8sChartVersion    = "0.14.2"
+	OtelDemoChartVersion = "0.42.1"
+	NrK8sChartVersion    = "0.14.3"
 	OtelDemoNamespace    = "opentelemetry-demo"
 )
 
