@@ -1,0 +1,398 @@
+cluster: "opentelemetry-demo"
+customSecretName: "newrelic-license-key"
+customSecretLicenseKey: "license-key"
+
+# NRDOT K8s OTel Collector image does not ship with the spanmetrics connector. Using contrib instead.
+# Will remove if/when spanmetrics is added to NRDOT.
+images:
+  collector:
+    registry: ""
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.161.0"
+    pullPolicy: IfNotPresent
+
+# Second --config merges in internal telemetry for New Relic's Collector Observability UI.
+# https://docs.newrelic.com/docs/opentelemetry/collector-observability/collector-observability/
+daemonset:
+  # Update to match otlp_http/newrelic's endpoint if global.region is EU/JP.
+  envs:
+    - name: INTERNAL_TELEMETRY_OTLP_ENDPOINT
+      value: https://otlp.nr-data.net
+  extraArgs:
+    - |-
+      --config=yaml:service:
+        telemetry:
+          metrics:
+            level: detailed
+            readers:
+              - periodic:
+                  exporter:
+                    otlp:
+                      protocol: http/protobuf
+                      endpoint: "${env:INTERNAL_TELEMETRY_OTLP_ENDPOINT}"
+                      headers:
+                        - name: api-key
+                          value: ${env:NR_LICENSE_KEY}
+          logs:
+            level: INFO
+            sampling:
+              enabled: true
+              tick: 10s
+              initial: 10
+              thereafter: 100
+            processors:
+              - batch:
+                  exporter:
+                    otlp:
+                      protocol: http/protobuf
+                      endpoint: "${env:INTERNAL_TELEMETRY_OTLP_ENDPOINT}"
+                      headers:
+                        - name: api-key
+                          value: ${env:NR_LICENSE_KEY}
+          # Very low ratio; demo purposes only.
+          traces:
+            level: "${env:INTERNAL_TELEMETRY_TRACE_LEVEL:-basic}"
+            sampler:
+              parent_based:
+                root:
+                  trace_id_ratio_based:
+                    ratio: ${env:INTERNAL_TELEMETRY_TRACE_SAMPLE_RATIO:-0.001}
+          resource:
+            newrelic.service.type: otel_collector
+            service.name: nr-k8s-otel-collector-daemonset
+
+# This configuration adds pipeline support for the OpenTelemetry Demo application telemetry.
+# By adding this, we can disable the OTel Collector shipped as part of the OpenTelemetry Demo application,
+# and rely solely on the NRDOT K8s OTel Collector instances.
+deployment:
+  # Environment variables injected into the deployment collector container.
+  # Referenced by the postgresql receiver config below via ${env:...} so the
+  # credentials live in a single place rather than being hard-coded inline.
+  envs:
+    - name: POSTGRES_USERNAME
+      value: monitoring_user
+    - name: POSTGRES_PASSWORD
+      value: monitoring_password
+    # Update to match otlp_http/newrelic's endpoint if global.region is EU/JP.
+    - name: INTERNAL_TELEMETRY_OTLP_ENDPOINT
+      value: https://otlp.nr-data.net
+  # service.name differs from the daemonset's so both show up as separate APM entities.
+  extraArgs:
+    - |-
+      --config=yaml:service:
+        telemetry:
+          metrics:
+            level: detailed
+            readers:
+              - periodic:
+                  exporter:
+                    otlp:
+                      protocol: http/protobuf
+                      endpoint: "${env:INTERNAL_TELEMETRY_OTLP_ENDPOINT}"
+                      headers:
+                        - name: api-key
+                          value: ${env:NR_LICENSE_KEY}
+          logs:
+            level: INFO
+            sampling:
+              enabled: true
+              tick: 10s
+              initial: 10
+              thereafter: 100
+            processors:
+              - batch:
+                  exporter:
+                    otlp:
+                      protocol: http/protobuf
+                      endpoint: "${env:INTERNAL_TELEMETRY_OTLP_ENDPOINT}"
+                      headers:
+                        - name: api-key
+                          value: ${env:NR_LICENSE_KEY}
+          # Very low ratio; demo purposes only.
+          traces:
+            level: "${env:INTERNAL_TELEMETRY_TRACE_LEVEL:-basic}"
+            sampler:
+              parent_based:
+                root:
+                  trace_id_ratio_based:
+                    ratio: ${env:INTERNAL_TELEMETRY_TRACE_SAMPLE_RATIO:-0.001}
+          resource:
+            newrelic.service.type: otel_collector
+            service.name: nr-k8s-otel-collector-deployment
+  configMap:
+    extraConfig:
+      receivers:
+        # Demo: scrape a Prometheus /metrics endpoint exposed by the ad
+        # service using the Prometheus Java client library, bridging
+        # existing Prometheus-client instrumentation into the OTel pipeline.
+        prometheus/ad:
+          config:
+            scrape_configs:
+              - job_name: ad
+                scrape_interval: 10s
+                static_configs:
+                  - targets: ["ad:9465"]
+
+        postgresql:
+          endpoint: astronomy-db.opentelemetry-demo.svc.cluster.local:5432
+          transport: tcp
+          username: ${env:POSTGRES_USERNAME}
+          password: ${env:POSTGRES_PASSWORD}
+          databases:
+            - astronomy_db
+          collection_interval: 15s
+          tls:
+            insecure: true
+            insecure_skip_verify: true
+            # ca_file: /home/otel/authorities.crt
+            # cert_file: /home/otel/mypostgrescert.crt
+            # key_file: /home/otel/mypostgreskey.key
+          events:
+            db.server.query_sample:
+              enabled: true
+            db.server.top_query:
+              enabled: true
+          query_sample_collection:
+            max_rows_per_query: 100
+          top_query_collection:
+            max_rows_per_query: 100
+            top_n_query: 100
+            collection_interval: 60s
+            # Disabled as a workaround for an upstream bug: the receiver tries
+            # to EXPLAIN its own query_sample query, which contains
+            # EXTRACT(field FROM ...), and that fails with a Postgres syntax
+            # error. See open-telemetry/opentelemetry-collector-contrib#50670.
+            max_explain_each_interval: 0
+          connection_pool:
+            max_idle_time: 10m
+            max_lifetime: 0
+            max_idle: 2
+            max_open: 5
+          # Enabled on top of the receiver's metric defaults: required for the
+          # out-of-the-box New Relic PostgreSQL dashboard but off by default.
+          metrics:
+            postgresql.database.locks:
+              enabled: true
+            postgresql.deadlocks:
+              enabled: true
+            postgresql.function.calls:
+              enabled: true
+            postgresql.sequential_scans:
+              enabled: true
+            postgresql.temp.io:
+              enabled: true
+            postgresql.temp_files:
+              enabled: true
+
+        # Kafka broker metrics for the kafkaQueueProblems scenario, scraped since
+        # telemetry is pushed to this collector on k8s and consumer lag can't be.
+        # This image (contrib 0.153.0) renamed the receiver to `kafka_metrics`; the
+        # Docker path runs 0.142.0 and still uses `kafkametrics`.
+        kafka_metrics:
+          brokers:
+            - kafka:9092
+          protocol_version: 2.0.0
+          # cluster_alias should emit the kafka.cluster.alias resource attribute, but
+          # this image's contrib version never emits it (see transform/kafka_cluster_name
+          # below). Kept as future-proofing for when the fix lands upstream.
+          cluster_alias: otel-demo-kafka
+          scrapers:
+            - brokers
+            - topics
+            - consumers
+          collection_interval: 15s
+
+      connectors:
+        spanmetrics:
+          metrics_flush_interval: 30s
+          aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
+          dimensions:
+            - name: http.method
+            - name: http.request.method
+            - name: http.route
+            - name: http.status_code
+            - name: http.response.status_code
+            - name: rpc.system
+            - name: rpc.service
+            - name: rpc.method
+            - name: rpc.response.status_code
+            - name: rpc.status_code
+            - name: db.system
+            - name: db.operation
+            - name: db.sql.table
+            - name: db.system.name
+            - name: error.type
+            - name: server.address
+            - name: net.peer.name
+          exclude_dimensions:
+            - span.name
+            - status.code
+          resource_metrics_key_attributes:
+            - service.name
+            - telemetry.sdk.language
+            - telemetry.sdk.name
+
+      exporters:
+        debug: {}
+
+      processors:
+        # Strip description/unit from all metrics scraped from the ad
+        # service's Prometheus endpoint, mirroring NRDOT's own
+        # transform/low_data_mode_inator approach for its bundled metrics.
+        # Scoped by the ad job's resource attribute (set by the prometheus
+        # receiver from the scrape job name) rather than a specific metric
+        # name, so it covers whatever ad exposes, not just today's counter.
+        transform/strip_ad_metric_metadata:
+          metric_statements:
+            - context: metric
+              conditions:
+                - resource.attributes["service.name"] == "ad"
+              statements:
+                - set(metric.description, "")
+                - set(metric.unit, "")
+
+        # Drop Python system metrics since they're duplicates of hostmetrics
+        # https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/system_metrics/system_metrics.html
+        filter/python-system-metrics:
+          error_mode: ignore
+          metrics:
+            metric:
+              - 'instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"'
+
+        # Drop spanmetrics metrics for services that DO publish metrics by default
+        filter/drop-spanmetrics-services:
+          metrics:
+            datapoint:
+              - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+              - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+
+        # Required to enable spanmetrics in the New Relic summary UI
+        resource/newrelic_spanmetrics_flag:
+          attributes:
+            - action: upsert
+              key: newrelic.spanmetrics.enabled
+              value: true
+
+        resourcedetection/otel-demo:
+          detectors: [env]
+
+        # Converts Traceloop/OpenLLMetry telemetry from agent/mcp/chatbot into
+        # official gen_ai.* semconv attributes.
+        gen_ai_normalizer:
+          sources:
+            - name: openllmetry
+
+        resource/otel-demo:
+          attributes:
+            - key: service.instance.id
+              from_attribute: k8s.pod.uid
+              action: insert
+
+        # NR's PostgreSQL entity synthesis names the entity after
+        # service.instance.id (host:port by default), which renders as the
+        # unreadable internal cluster DNS name in the UI. Override it to a
+        # human-readable name; server.address/server.port tags still carry
+        # the real endpoint for anyone who needs it.
+        resource/postgres_friendly_name:
+          attributes:
+            - key: service.instance.id
+              value: "otel-demo-astronomy-db"
+              action: upsert
+
+        # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
+        # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
+        #
+        # Not using the receiver's cluster_alias option because the baked contrib version
+        # never emits it — see https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/47605.
+        # TODO: once that lands, copy resource.attributes["kafka.cluster.alias"] instead.
+        transform/kafka_cluster_name:
+          error_mode: ignore
+          metric_statements:
+            - context: datapoint
+              conditions:
+                - IsMatch(metric.name, "^kafka\\.")
+              statements:
+                - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+
+      pipelines:
+
+        # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
+        metrics/spanmetrics:
+          exporters:
+            - otlp_http/newrelic
+          processors:
+            - memory_limiter
+            - filter/drop-spanmetrics-services
+            - resource/newrelic_spanmetrics_flag
+            - batch
+          receivers:
+            - spanmetrics
+
+        metrics/postgres:
+          exporters:
+            - otlp_http/newrelic
+          processors:
+            - memory_limiter
+            - k8s_attributes/ksm
+            - resource/postgres_friendly_name
+            - batch
+          receivers:
+            - postgresql
+
+        # The postgresql receiver emits db.server.query_sample and
+        # db.server.top_query as log records, not metrics. They need a logs
+        # pipeline to reach New Relic; the metrics/postgres pipeline above only
+        # carries the postgresql.* metrics.
+        logs/postgres:
+          exporters:
+            - otlp_http/newrelic
+          processors:
+            - memory_limiter
+            - k8s_attributes/ksm
+            - resource/postgres_friendly_name
+            - batch
+          receivers:
+            - postgresql
+
+        metrics/otel-demo:
+          receivers:
+            - otlp
+            - prometheus/ad
+            - kafka_metrics
+          processors:
+            - memory_limiter
+            - filter/python-system-metrics
+            - resourcedetection/otel-demo
+            - resource/otel-demo
+            - transform/kafka_cluster_name
+            - k8s_attributes/ksm
+            - transform/strip_ad_metric_metadata
+            - cumulativetodelta
+            - batch
+          exporters:
+            - otlp_http/newrelic
+
+        traces/otel-demo:
+          exporters:
+            - spanmetrics
+            - otlp_http/newrelic
+          processors:
+            - memory_limiter
+            - resourcedetection/otel-demo
+            - resource/otel-demo
+            - k8s_attributes/ksm
+            - gen_ai_normalizer
+            - batch
+          receivers:
+            - otlp
+
+        logs/otel-demo:
+          receivers:
+            - otlp
+          processors:
+            - memory_limiter
+            - resourcedetection/otel-demo
+            - resource/otel-demo
+            - batch
+          exporters:
+            - otlp_http/newrelic

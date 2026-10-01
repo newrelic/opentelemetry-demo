@@ -58,3 +58,4 @@ src/frontend/cypress/screenshots
 src/shipping/target/
 
 !src/currency/build
+newrelic/terraform/**/*.tfstate*

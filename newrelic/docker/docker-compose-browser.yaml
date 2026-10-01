@@ -1,0 +1,8 @@
+services:
+  frontend:
+    volumes:
+      - ./config/monkey-patch-injected.js:/app/monkey-patch.js:z
+    command:
+      - "--require=./Instrumentation.js"
+      - "--require=./monkey-patch.js"
+      - "server.js"
