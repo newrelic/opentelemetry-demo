@@ -108,7 +108,7 @@ components:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4318
-        
+
 opensearch:
   enabled: false
 grafana:
