@@ -1,0 +1,7 @@
+# SC1091: Don't require shellcheck to follow `source` statements — paths are
+#         resolved at runtime and not statically available.
+disable=SC1091
+
+# SC2034: Variables defined in common.sh are intentionally used by sourcing
+#         scripts, so "unused variable" warnings here are false positives.
+disable=SC2034

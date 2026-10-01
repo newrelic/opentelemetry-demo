@@ -1,0 +1,87 @@
+# GENERATED FILE - DO NOT EDIT DIRECTLY
+components:
+  frontend:
+    command:
+      - "/nodejs/bin/node"
+      - "--require=./Instrumentation.js"
+      - "--require=./monkey-patch.js"
+      - "server.js"
+
+    mountedConfigMaps:
+      - name: frontend-patch-volume
+        mountPath: /app/monkey-patch.js
+        subPath: monkey-patch.js
+        data:
+          monkey-patch.js: |
+            const http = require('http');
+            const nrSnippet = `
+              <script type="text/javascript">!function(){if(navigator.sendBeacon){const n=navigator.sendBeacon,a="/v1/traces";navigator.sendBeacon=function(t,e){return!(!t||"string"!=typeof t||!t.includes(a))||n.apply(this,arguments)}}}();</script>
+              <script type="text/javascript">window.NREUM||(NREUM={});NREUM.init={session_replay:{enabled:true,block_selector:'',mask_text_selector:'*',sampling_rate:10.0,error_sampling_rate:100.0,mask_all_inputs:true,collect_fonts:true,inline_images:false,inline_stylesheet:true,fix_stylesheets:true,preload:false,mask_input_options:{}},distributed_tracing:{enabled:true,exclude_newrelic_header:true,cors_use_newrelic_header:false,cors_use_tracecontext_headers:true},performance:{capture_measures:true},browser_consent_mode:{enabled:false},privacy:{cookies_enabled:true},ajax:{deny_list:["bam.nr-data.net", ]}};NREUM.loader_config={accountID:"{{ .AccountID }}",trustKey:"{{ .TrustKey }}",agentID:"{{ .AgentID }}",licenseKey:"{{ .LicenseKey }}",applicationID:"{{ .AppID }}"};NREUM.info={beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",licenseKey:"{{ .LicenseKey }}",applicationID:"{{ .AppID }}",sa:1};</script>
+              <script src="https://js-agent.nr-assets.net/nr-loader-spa-1.320.0.min.js"></script>
+              <script type="text/javascript">!function(){const t=t=>t.startsWith("/cart/checkout/")&&t.length>15?"/cart/checkout/[orderId]":t.startsWith("/product/")&&t.length>9?"/product/[productId]":void 0,e=()=>{setTimeout((()=>{if(window.newrelic&&"function"==typeof window.newrelic.interaction){const e=t(window.location.pathname);newrelic.interaction().setName(e).save(),newrelic.setCurrentRouteName(e)}}),150)},n=history.pushState;history.pushState=function(){n.apply(this,arguments),e()};const i=history.replaceState;history.replaceState=function(){i.apply(this,arguments),e()};let r=window.location.pathname;setInterval((()=>{window.location.pathname!==r&&(r=window.location.pathname,e())}),500),window.addEventListener("popstate",e),window.addEventListener("load",(()=>{if(window.newrelic){const e=t(window.location.pathname);newrelic.setPageViewName(e)}}))}();</script>
+              <script type="text/javascript">
+                // Ties New Relic's "Unique users" to the same per-browser
+                // userId SessionIdProcessor already stamps on every span as
+                // enduser.id (see src/frontend/gateways/Session.gateway.ts) -
+                // without this, NR has no identity to count and "Unique
+                // users" stays 0 even though sessions report fine.
+                window.addEventListener('load', () => {
+                  if (!window.newrelic) return;
+                  try {
+                    const session = JSON.parse(localStorage.getItem('session'));
+                    if (session && session.userId) {
+                      newrelic.setUserId(session.userId);
+                    }
+                  } catch (e) {}
+                });
+              </script>
+            `;
+
+            // 2. Intercept the HTTP Stream
+            const origCreate = http.createServer;
+            http.createServer = (handler) => origCreate.call(http, (req, res) => {
+              delete req.headers['accept-encoding'];
+
+              const origSetHeader = res.setHeader;
+              res.setHeader = function(name, value) {
+                if (name.toLowerCase() === 'content-length' || name.toLowerCase() === 'etag') {
+                  return this;
+                }
+                return origSetHeader.call(this, name, value);
+              };
+
+              const origWriteHead = res.writeHead;
+              res.writeHead = function(...args) {
+                this.removeHeader('content-length');
+                this.removeHeader('etag');
+                return origWriteHead.apply(this, args);
+              };
+
+              const origWrite = res.write;
+              let injected = false;
+              res.write = function(chunk, ...args) {
+                const cType = this.getHeader('content-type');
+                // Only inject if the script has finished downloading
+                if (!injected && nrSnippet !== '' && cType && cType.includes('text/html') && chunk) {
+                  let s = chunk.toString();
+                  // Inject directly into the <head> tag
+                  if (/(<head[^>]*>)/i.test(s)) {
+                    s = s.replace(/(<head[^>]*>)/i, '$1\n' + nrSnippet);
+                    chunk = Buffer.from(s);
+                    injected = true;
+                  }
+                }
+                return origWrite.call(this, chunk, ...args);
+              };
+
+              const origEnd = res.end;
+              res.end = function(chunk, ...args) {
+                if (chunk && typeof chunk !== 'function') {
+                  this.write(chunk);
+                  return origEnd.call(this, undefined, ...args);
+                }
+                return origEnd.call(this, chunk, ...args);
+              };
+
+              if (handler) handler(req, res);
+            });
