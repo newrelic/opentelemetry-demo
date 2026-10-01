@@ -105,15 +105,10 @@ components:
     # Uses upstream defaults for LOCUST_* and FLAGD_* vars
     # NewRelic customizations:
     # - OTEL_EXPORTER_OTLP_ENDPOINT: gRPC endpoint for Locust (Python) traces/metrics export
-    # - NEXT_PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: empty to disable browser trace export from
-    #   Playwright/frontend (avoids CORS errors and duplication with RUM agent)
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4318
-      - name: NEXT_PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-        value: ""
-
-
+        
 opensearch:
   enabled: false
 grafana:
