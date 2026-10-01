@@ -118,6 +118,15 @@ processors:
       # Setting to host.name for now.
       from_attribute: host.name
       key: service.instance.id
+  # Use a stable host identity for Docker entity relationships.
+  resource/host_identity:
+    attributes:
+    - action: upsert
+      key: host.id
+      value: otel-demo-host
+    - action: upsert
+      key: host.name
+      value: otel-demo-host
   resourcedetection/env:
     detectors:
     - env
@@ -163,7 +172,7 @@ processors:
 exporters:
   debug: {}
   otlphttp/newrelic:
-    endpoint: https://otlp.nr-data.net:4318
+    endpoint: ${env:NEW_RELIC_OTLP_ENDPOINT}
     headers:
       api-key: ${env:NEW_RELIC_LICENSE_KEY}
 
@@ -178,6 +187,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - transform
       - batch
       receivers:
@@ -189,6 +199,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - resourcedetection/env
       - transform/kafka_cluster_name
       - cumulativetodelta
@@ -207,6 +218,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - resourcedetection/env
       - transform
       - gen_ai_normalizer
