@@ -50,14 +50,8 @@ variable "kafka_producer_rate_threshold" {
   default     = 60
 }
 
-##
-## kafkaConsumerDead scenario (detect_consumer_liveness). A healthy consumer group
-## reports members >= 1; when fraud-detection unsubscribes the group empties and
-## members drops to 0. The alert fires below this threshold, so the default of 1
-## means "fire when the group has no members".
-##
 variable "kafka_dead_consumer_members_threshold" {
-  description = "Consumer-group member count below which the Kafka dead-consumer-group alert fires (default 1 => fires at 0 members)"
+  description = "Member count below which the Kafka dead-consumer alert fires"
   type        = number
   default     = 1
 }

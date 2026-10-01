@@ -181,17 +181,7 @@ resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   title_template     = "[{{conditionName}}] {{priority}}"
 }
 
-## Dead-consumer-group alert for the kafkaConsumerDead scenario: fraud-detection
-## unsubscribes from the orders topic, so the group empties and
-## kafka.consumer_group.members drops to 0 while checkout keeps producing (lag still
-## climbs). This is the demo counterpart to the SRE Agent's detect_consumer_liveness
-## (members == 0 AND lag_present). The demo condition can stay simple — it fires on
-## members dropping to 0 for any group; the co-occurring lag is already covered by the
-## consumer-lag alert above and by the producer that keeps running.
-##
-## Implemented as "below 1" rather than "equals 0": for an integer member count the two
-## are equivalent, and "below" plays nicely with fill_option = last_value on the demo's
-## intermittent telemetry (a live consumer reads as 1, a departed one as 0).
+## Alert when any Kafka consumer group has no active members.
 resource "newrelic_nrql_alert_condition" "kafka_dead_consumer_group" {
   account_id                   = var.newrelic_account_id
   policy_id                    = newrelic_alert_policy.metric_alert_policy.id

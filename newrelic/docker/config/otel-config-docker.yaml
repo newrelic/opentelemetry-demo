@@ -118,16 +118,7 @@ processors:
       # Setting to host.name for now.
       from_attribute: host.name
       key: service.instance.id
-  # Entity-graph / Kafka scenario: pin a STABLE host identity so the single Docker
-  # host resolves to ONE INFRA-HOST entity and every service (the kafka broker
-  # included) forms a "runs on" edge to it. Without this, host.name comes from the
-  # collector container's ephemeral hostname and host.id from a machine-id that is
-  # not readable in these distroless images, so the host entity is unstable/absent
-  # and the broker->host relationship never synthesizes (the recurring "broker-host
-  # metrics weren't resolvable via the entity graph" finding). One VM => one host id
-  # is the accurate topology here. Placed AFTER `resource` so the service.instance.id
-  # derivation above is unaffected, and upserts so it wins over resourcedetection/env's
-  # system detector (which runs next with override:false).
+  # Use a stable host identity for Docker entity relationships.
   resource/host_identity:
     attributes:
     - action: upsert
