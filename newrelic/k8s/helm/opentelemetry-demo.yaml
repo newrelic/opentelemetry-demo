@@ -112,7 +112,7 @@ components:
         value: http://$(OTEL_COLLECTOR_NAME):4318
       - name: NEXT_PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
         value: ""
-        
+
 
 opensearch:
   enabled: false
