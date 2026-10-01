@@ -65,31 +65,6 @@ install_or_upgrade_chart() {
   fi
 }
 
-# Set up the NR collector postgresql receiver's monitoring access, per
-# https://docs.newrelic.com/docs/opentelemetry/database/postgresql/hosted/.
-# The chart's init.sql already creates $POSTGRES_MONITOR_USER with pg_monitor
-# and enables pg_stat_statements in both astronomy_db and postgres, but it
-# doesn't grant access to the app's catalog/accounting schemas, which
-# top_query's EXPLAIN needs to read. ALTER DEFAULT PRIVILEGES covers tables
-# services create after this script runs.
-# All statements are idempotent (no-op if already applied) and require no DB
-# restart, since shared_preload_libraries is set via the chart's postgresql
-# command override.
-setup_pg_monitoring() {
-  echo "Setting up postgresql receiver monitoring access for $POSTGRES_MONITOR_USER..."
-  if ! kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s; then
-    echo "Warning: astronomy-db deployment not ready; skipping monitoring setup. Run manually later."
-    return
-  fi
-  local app_db_ddl="GRANT USAGE ON SCHEMA catalog TO $POSTGRES_MONITOR_USER; GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO $POSTGRES_MONITOR_USER; ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO $POSTGRES_MONITOR_USER; GRANT USAGE ON SCHEMA accounting TO $POSTGRES_MONITOR_USER; GRANT SELECT ON ALL TABLES IN SCHEMA accounting TO $POSTGRES_MONITOR_USER; ALTER DEFAULT PRIVILEGES IN SCHEMA accounting GRANT SELECT ON TABLES TO $POSTGRES_MONITOR_USER;"
-  if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- \
-      sh -c "psql -v ON_ERROR_STOP=1 -U postgres -d astronomy_db -c '$app_db_ddl'"; then
-    echo "postgresql monitoring configured for $POSTGRES_MONITOR_USER."
-  else
-    echo "Warning: failed to configure postgresql monitoring for $POSTGRES_MONITOR_USER. Run manually with:"
-    echo "  kubectl exec -n $OTEL_DEMO_NAMESPACE deployment/astronomy-db -- sh -c 'psql -U postgres -d astronomy_db -c \"$app_db_ddl\"'"
-  fi
-}
 
 # Create namespace if it doesn't exist
 if kubectl get ns "$OTEL_DEMO_NAMESPACE" &> /dev/null; then
@@ -109,7 +84,24 @@ install_or_upgrade_chart "$NR_K8S_RELEASE_NAME" "newrelic/nr-k8s-otel-collector"
 ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetry-helm-charts"
 install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry-demo" "$OTEL_DEMO_CHART_VERSION" "../k8s/helm/opentelemetry-demo.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
 
-# Set up postgres db grants
-setup_pg_monitoring
+# Set up postgres db grants after deployment is ready
+# NOTE: This section will be superseded by https://github.com/open-telemetry/opentelemetry-demo/pull/4019
+# which moves grants to init.sql with scoped permissions (excludes accounting.shipping for PII protection)
+echo "Setting up postgresql receiver monitoring access..."
+if kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s >/dev/null 2>&1; then
+  # Wait for postgres to be accepting connections
+  for i in {1..30}; do
+    if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- pg_isready -U postgres >/dev/null 2>&1; then
+      kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- psql -U postgres -d astronomy_db -c \
+        "GRANT USAGE ON SCHEMA accounting TO monitoring_user; \
+         GRANT SELECT ON ALL TABLES IN SCHEMA accounting TO monitoring_user; \
+         ALTER DEFAULT PRIVILEGES IN SCHEMA accounting GRANT SELECT ON TABLES TO monitoring_user; \
+         GRANT USAGE ON SCHEMA catalog TO monitoring_user; \
+         GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO monitoring_user; \
+         ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user;" 2>/dev/null && break
+    fi
+    sleep 1
+  done
+fi
 
 echo "OpenTelemetry Demo installation completed successfully!"

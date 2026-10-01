@@ -1796,16 +1796,6 @@ data:
       resourcedetection/otel-demo:
         detectors:
         - env
-      transform/grpc_error_type:
-        error_mode: ignore
-        metric_statements:
-        - conditions:
-          - (metric.name == "rpc.server.call.duration" or metric.name == "rpc.client.call.duration")
-            and attributes["rpc.response.status_code"] != nil and attributes["rpc.response.status_code"]
-            != "OK"
-          context: datapoint
-          statements:
-          - set(attributes["error.type"], "SERVER ERROR")
       transform/kafka_cluster_name:
         error_mode: ignore
         metric_statements:
@@ -1814,24 +1804,6 @@ data:
           context: datapoint
           statements:
           - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
-      transform/otel-demo:
-        error_mode: ignore
-        trace_statements:
-        - conditions:
-          - span.kind == SPAN_KIND_SERVER and resource.attributes["service.name"] == "frontend"
-            and span.attributes["http.route"] == nil
-          context: span
-          statements:
-          - set(span.attributes["http.route"], "/api/cart") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/cart")
-          - set(span.attributes["http.route"], "/api/checkout") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/checkout")
-          - set(span.attributes["http.route"], "/api/products/{productId}") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/products\\/.*")
-          - set(span.attributes["http.route"], "/api/recommendations") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/recommendations")
-          - set(span.attributes["http.route"], "/api/data") where IsMatch(span.attributes["http.target"],
-            "\\/api\\/data.*")
       transform/strip_ad_metric_metadata:
         metric_statements:
         - conditions:
@@ -1929,7 +1901,6 @@ data:
           - memory_limiter
           - resourcedetection/otel-demo
           - resource/otel-demo
-          - transform/otel-demo
           - batch
           receivers:
           - otlp
@@ -1954,7 +1925,6 @@ data:
           - transform/kafka_cluster_name
           - k8s_attributes/ksm
           - transform/strip_ad_metric_metadata
-          - transform/grpc_error_type
           - cumulativetodelta
           - batch
           receivers:
@@ -1989,7 +1959,6 @@ data:
           - memory_limiter
           - resourcedetection/otel-demo
           - resource/otel-demo
-          - transform/otel-demo
           - k8s_attributes/ksm
           - gen_ai_normalizer
           - batch
@@ -2748,7 +2717,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: dd069fe37a6b3e2f09e661efc4683f5d3237ddbbd96dd165409f491237515859
+        checksum/config: 56c00e1ac427bd2a7e10bbdf41802d1d6b73a267b5eee1d2bb43ce1c834b84c7
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
