@@ -55,6 +55,13 @@ template_chart() {
     helm template "$release" "$chart" --version "$version" -n "$namespace" --create-namespace -f "$values" > "$output"
 }
 
+write_chart_versions_yaml() {
+  local otel_demo nr_k8s
+  otel_demo=$(sed -n 's/^OTEL_DEMO_CHART_VERSION="\(.*\)"$/\1/p' "$COMMON_SCRIPT_PATH")
+  nr_k8s=$(sed -n 's/^NR_K8S_CHART_VERSION="\(.*\)"$/\1/p' "$COMMON_SCRIPT_PATH")
+  printf 'otelDemoChartVersion: "%s"\nnrK8sChartVersion: "%s"\n' "$otel_demo" "$nr_k8s" > "$CHART_VERSIONS_PATH"
+}
+
 update_version_in_script() {
     local var_name="$1"
     local version="$2"
@@ -156,6 +163,8 @@ if [ "$LATEST_NR_K8S_CHART_VERSION" != "" ] && [ "$LATEST_NR_K8S_CHART_VERSION" 
 else
   echo "NR K8s chart is up to date."
 fi
+
+write_chart_versions_yaml
 
 # Re-render the NR K8s manifest when the chart version changed OR the contrib tag changed.
 # The render is gated on a values change too (not just a chart bump) so that an updated
