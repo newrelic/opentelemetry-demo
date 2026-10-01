@@ -18,9 +18,6 @@ This repository contains a fork of the OpenTelemetry Astronomy Shop, a microserv
   - [Terraform Automation (Optional)](#terraform-automation-optional)
 - [Validating the Install](#validating-the-install)
 - [Accessing the Flagd UI](#accessing-the-flagd-ui)
-- [Scenarios](#scenarios)
-  - [Kafka Consumer Lag (`kafkaQueueProblems`)](docs/scenarios/kafka-consumer-lag.md)
-  - [Kafka Dead Consumer Group (`kafkaConsumerDead`)](docs/scenarios/kafka-dead-consumer-group.md)
 - [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
