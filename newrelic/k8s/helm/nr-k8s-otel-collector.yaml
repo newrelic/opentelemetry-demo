@@ -9,7 +9,7 @@ images:
     registry: ""
     # Keep 0.161.0: the 0.162.0 tag does not exist on Docker Hub.
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.161.0"
+    tag: "0.162.0"
     pullPolicy: IfNotPresent
 
 # Second --config merges in internal telemetry for New Relic's Collector Observability UI.
