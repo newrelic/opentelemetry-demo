@@ -84,40 +84,8 @@ install_or_upgrade_chart "$NR_K8S_RELEASE_NAME" "newrelic/nr-k8s-otel-collector"
 ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetry-helm-charts"
 install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry-demo" "$OTEL_DEMO_CHART_VERSION" "../k8s/helm/opentelemetry-demo.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
 
-# Set up postgres db grants after deployment is ready
-# TODO(temporary workaround): every grant below exists only because the chart's bundled init.sql lags the
-# demo's src/postgresql/init.sql. The grants are two separate groups; drop each when its condition is met.
-#
-# DROP first, after https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2450 (sync chart
-# init.sql with demo 3.1.0) is merged and released in a chart version we pin:
-#   - "GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user" (the last statement below).
-#     Needed by the productCatalogLockContention flag, since LOCK TABLE needs UPDATE; the chart only grants
-#     SELECT today, and 3.1.0's init.sql already grants SELECT, UPDATE.
-#
-# KEEP until a chart syncs a demo release newer than 3.1.0, then DROP:
-#   - all the monitoring_user grants (every statement above the astronomy_user one). Needed by the
-#     PostgreSQL receiver's top_query metric. Demo main already provides them via
-#     https://github.com/open-telemetry/opentelemetry-demo/pull/4019 (merged after 3.1.0), so neither
-#     3.1.0 nor #2450 includes them. Note these are broader than upstream's: upstream scopes accounting
-#     to "order" and orderitem only, excluding accounting.shipping (customer addresses, PII).
-#
-# Delete this whole block (including the wait loop) once both groups are dropped.
-echo "Setting up postgresql receiver monitoring access..."
-if kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s >/dev/null 2>&1; then
-  # Wait for postgres to be accepting connections
-  for i in {1..30}; do
-    if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- pg_isready -U postgres >/dev/null 2>&1; then
-      kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- psql -U postgres -d astronomy_db -c \
-        "GRANT USAGE ON SCHEMA accounting TO monitoring_user; \
-         GRANT SELECT ON ALL TABLES IN SCHEMA accounting TO monitoring_user; \
-         ALTER DEFAULT PRIVILEGES IN SCHEMA accounting GRANT SELECT ON TABLES TO monitoring_user; \
-         GRANT USAGE ON SCHEMA catalog TO monitoring_user; \
-         GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO monitoring_user; \
-         ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user; \
-         GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user;" 2>/dev/null && break
-    fi
-    sleep 1
-  done
-fi
+# NOTE: the postgres DB grants (monitoring_user schema access, astronomy_user UPDATE on catalog) are no
+# longer applied here. They are applied at DB creation by the zz-grants.sql init script mounted via
+# newrelic/k8s/helm/opentelemetry-demo.yaml (astronomy-db.mountedConfigMaps); see the TODO there.
 
 echo "OpenTelemetry Demo installation completed successfully!"
