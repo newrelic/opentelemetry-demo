@@ -85,15 +85,23 @@ ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetr
 install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry-demo" "$OTEL_DEMO_CHART_VERSION" "../k8s/helm/opentelemetry-demo.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
 
 # Set up postgres db grants after deployment is ready
-# TODO(temporary workaround): every grant in this block is temporary and is removed in two steps, as the
-# chart's bundled init.sql catches up with the demo's src/postgresql/init.sql:
-#   1. astronomy_user UPDATE on catalog (needed by the productCatalogLockContention flag, since LOCK TABLE
-#      needs UPDATE): remove once https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2450
-#      (sync chart init.sql with demo 3.1.0) is merged and released in a chart version we pin.
-#   2. monitoring_user grants (scoped, excludes accounting.shipping for PII protection): already in demo
-#      main via https://github.com/open-telemetry/opentelemetry-demo/pull/4019, but merged after 3.1.0, so
-#      neither 3.1.0 nor #2450 includes them. Remove once the chart syncs a later demo release.
-# Delete the whole block (including the wait loop) once both are removed.
+# TODO(temporary workaround): every grant below exists only because the chart's bundled init.sql lags the
+# demo's src/postgresql/init.sql. The grants are two separate groups; drop each when its condition is met.
+#
+# DROP first, after https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2450 (sync chart
+# init.sql with demo 3.1.0) is merged and released in a chart version we pin:
+#   - "GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user" (the last statement below).
+#     Needed by the productCatalogLockContention flag, since LOCK TABLE needs UPDATE; the chart only grants
+#     SELECT today, and 3.1.0's init.sql already grants SELECT, UPDATE.
+#
+# KEEP until a chart syncs a demo release newer than 3.1.0, then DROP:
+#   - all the monitoring_user grants (every statement above the astronomy_user one). Needed by the
+#     PostgreSQL receiver's top_query metric. Demo main already provides them via
+#     https://github.com/open-telemetry/opentelemetry-demo/pull/4019 (merged after 3.1.0), so neither
+#     3.1.0 nor #2450 includes them. Note these are broader than upstream's: upstream scopes accounting
+#     to "order" and orderitem only, excluding accounting.shipping (customer addresses, PII).
+#
+# Delete this whole block (including the wait loop) once both groups are dropped.
 echo "Setting up postgresql receiver monitoring access..."
 if kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s >/dev/null 2>&1; then
   # Wait for postgres to be accepting connections
