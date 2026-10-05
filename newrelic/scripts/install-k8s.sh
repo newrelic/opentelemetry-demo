@@ -85,15 +85,15 @@ ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetr
 install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry-demo" "$OTEL_DEMO_CHART_VERSION" "../k8s/helm/opentelemetry-demo.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
 
 # Set up postgres db grants after deployment is ready
-# NOTE: This section will be superseded by https://github.com/open-telemetry/opentelemetry-demo/pull/4019
-# which moves grants to init.sql with scoped permissions (excludes accounting.shipping for PII protection)
-# TODO(temporary workaround): remove ALL of the grants in this block once the pinned chart version's
-# init.sql provides them, and delete the whole block when it is empty.
-#   - astronomy_user UPDATE on catalog (needed by the productCatalogLockContention flag, since LOCK TABLE
-#     needs UPDATE): provided once https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2450
-#     (sync chart init.sql with demo 3.1.0) is merged and released in a chart we pin.
-#   - monitoring_user grants: provided once the chart syncs a demo release that includes
-#     https://github.com/open-telemetry/opentelemetry-demo/pull/4019 (not in 3.1.0's init.sql).
+# TODO(temporary workaround): every grant in this block is temporary and is removed in two steps, as the
+# chart's bundled init.sql catches up with the demo's src/postgresql/init.sql:
+#   1. astronomy_user UPDATE on catalog (needed by the productCatalogLockContention flag, since LOCK TABLE
+#      needs UPDATE): remove once https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2450
+#      (sync chart init.sql with demo 3.1.0) is merged and released in a chart version we pin.
+#   2. monitoring_user grants (scoped, excludes accounting.shipping for PII protection): already in demo
+#      main via https://github.com/open-telemetry/opentelemetry-demo/pull/4019, but merged after 3.1.0, so
+#      neither 3.1.0 nor #2450 includes them. Remove once the chart syncs a later demo release.
+# Delete the whole block (including the wait loop) once both are removed.
 echo "Setting up postgresql receiver monitoring access..."
 if kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s >/dev/null 2>&1; then
   # Wait for postgres to be accepting connections
