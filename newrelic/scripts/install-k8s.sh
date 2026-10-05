@@ -84,8 +84,4 @@ install_or_upgrade_chart "$NR_K8S_RELEASE_NAME" "newrelic/nr-k8s-otel-collector"
 ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetry-helm-charts"
 install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry-demo" "$OTEL_DEMO_CHART_VERSION" "../k8s/helm/opentelemetry-demo.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
 
-# NOTE: the postgres DB grants (monitoring_user schema access, astronomy_user UPDATE on catalog) are no
-# longer applied here. They are applied at DB creation by the zz-grants.sql init script mounted via
-# newrelic/k8s/helm/opentelemetry-demo.yaml (astronomy-db.mountedConfigMaps); see the TODO there.
-
 echo "OpenTelemetry Demo installation completed successfully!"
