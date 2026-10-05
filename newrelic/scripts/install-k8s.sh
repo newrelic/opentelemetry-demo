@@ -87,6 +87,9 @@ install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry
 # Set up postgres db grants after deployment is ready
 # NOTE: This section will be superseded by https://github.com/open-telemetry/opentelemetry-demo/pull/4019
 # which moves grants to init.sql with scoped permissions (excludes accounting.shipping for PII protection)
+# The astronomy_user UPDATE grant is required by the productCatalogLockContention flag (LOCK TABLE needs
+# UPDATE). The chart's bundled init.sql only grants SELECT until the chart's init.sql is synced with
+# the demo's src/postgresql/init.sql; remove it once the pinned chart version includes it.
 echo "Setting up postgresql receiver monitoring access..."
 if kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s >/dev/null 2>&1; then
   # Wait for postgres to be accepting connections
@@ -98,7 +101,8 @@ if kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --ti
          ALTER DEFAULT PRIVILEGES IN SCHEMA accounting GRANT SELECT ON TABLES TO monitoring_user; \
          GRANT USAGE ON SCHEMA catalog TO monitoring_user; \
          GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO monitoring_user; \
-         ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user;" 2>/dev/null && break
+         ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user; \
+         GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user;" 2>/dev/null && break
     fi
     sleep 1
   done
