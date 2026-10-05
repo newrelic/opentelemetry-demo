@@ -95,6 +95,36 @@ components:
       - track_activity_query_size=4096
       - -c
       - track_functions=all
+    # TODO(temporary workaround): extra init script with the DB grants the chart's bundled init.sql lacks
+    # until it catches up with the demo's src/postgresql/init.sql. Runs once, on first DB start, after
+    # init.sql (postgres runs /docker-entrypoint-initdb.d files in name order, hence the zz- prefix).
+    # Helm replaces lists instead of merging, so the chart's own postgresql-init mount is repeated here.
+    #   - astronomy_user UPDATE on catalog: needed by the productCatalogLockContention flag (LOCK TABLE needs
+    #     UPDATE). DROP once https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2450 (sync
+    #     chart init.sql with demo 3.1.0) is merged and released in a chart version we pin.
+    #   - monitoring_user grants: needed by the PostgreSQL receiver's top_query metric. KEEP until a chart
+    #     syncs a demo release newer than 3.1.0 that includes
+    #     https://github.com/open-telemetry/opentelemetry-demo/pull/4019, then DROP. These are broader than
+    #     upstream's: upstream scopes accounting to "order" and orderitem, excluding accounting.shipping (PII).
+    # Once both are dropped, remove the zz-grants entry and this whole mountedConfigMaps override.
+    mountedConfigMaps:
+      - name: postgresql-init
+        mountPath: /docker-entrypoint-initdb.d/init.sql
+        subPath: init.sql
+        existingConfigMap: postgresql-init
+      - name: postgresql-grants
+        mountPath: /docker-entrypoint-initdb.d/zz-grants.sql
+        subPath: zz-grants.sql
+        data:
+          zz-grants.sql: |
+            \connect astronomy_db
+            GRANT USAGE ON SCHEMA accounting TO monitoring_user;
+            GRANT SELECT ON ALL TABLES IN SCHEMA accounting TO monitoring_user;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA accounting GRANT SELECT ON TABLES TO monitoring_user;
+            GRANT USAGE ON SCHEMA catalog TO monitoring_user;
+            GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO monitoring_user;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user;
+            GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user;
     resources:
       limits:
         memory: 200Mi
