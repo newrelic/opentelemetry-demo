@@ -84,24 +84,4 @@ install_or_upgrade_chart "$NR_K8S_RELEASE_NAME" "newrelic/nr-k8s-otel-collector"
 ensure_helm_repo "open-telemetry" "https://open-telemetry.github.io/opentelemetry-helm-charts"
 install_or_upgrade_chart "$OTEL_DEMO_RELEASE_NAME" "open-telemetry/opentelemetry-demo" "$OTEL_DEMO_CHART_VERSION" "../k8s/helm/opentelemetry-demo.yaml" "$OTEL_DEMO_NAMESPACE" "$IS_OPENSHIFT_CLUSTER"
 
-# Set up postgres db grants after deployment is ready
-# NOTE: This section will be superseded by https://github.com/open-telemetry/opentelemetry-demo/pull/4019
-# which moves grants to init.sql with scoped permissions (excludes accounting.shipping for PII protection)
-echo "Setting up postgresql receiver monitoring access..."
-if kubectl rollout status deployment/astronomy-db -n "$OTEL_DEMO_NAMESPACE" --timeout=120s >/dev/null 2>&1; then
-  # Wait for postgres to be accepting connections
-  for i in {1..30}; do
-    if kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- pg_isready -U postgres >/dev/null 2>&1; then
-      kubectl exec -n "$OTEL_DEMO_NAMESPACE" deployment/astronomy-db -- psql -U postgres -d astronomy_db -c \
-        "GRANT USAGE ON SCHEMA accounting TO monitoring_user; \
-         GRANT SELECT ON ALL TABLES IN SCHEMA accounting TO monitoring_user; \
-         ALTER DEFAULT PRIVILEGES IN SCHEMA accounting GRANT SELECT ON TABLES TO monitoring_user; \
-         GRANT USAGE ON SCHEMA catalog TO monitoring_user; \
-         GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO monitoring_user; \
-         ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user;" 2>/dev/null && break
-    fi
-    sleep 1
-  done
-fi
-
 echo "OpenTelemetry Demo installation completed successfully!"

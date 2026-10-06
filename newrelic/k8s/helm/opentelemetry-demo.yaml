@@ -95,6 +95,44 @@ components:
       - track_activity_query_size=4096
       - -c
       - track_functions=all
+    # Extra DB grants on top of the chart's init.sql, run after it (zz- prefix). The
+    # postgresql-init mount is repeated because Helm replaces lists.
+    # Permanent: the New Relic-only grants (otel/public schemas for monitoring_user) have no
+    # upstream equivalent, so this override stays. Parts of it are temporary, see the
+    # REMOVE/KEEP comments inside zz-grants.sql:
+    #   - astronomy_user UPDATE (productCatalogLockContention needs it): DROP once
+    #     https://github.com/open-telemetry/opentelemetry-helm-charts/pull/2450 is in a pinned chart.
+    #   - other monitoring_user grants: DROP once a chart syncs a demo release with
+    #     https://github.com/open-telemetry/opentelemetry-demo/pull/4019 (after 3.1.0).
+    mountedConfigMaps:
+      - name: postgresql-init
+        mountPath: /docker-entrypoint-initdb.d/init.sql
+        subPath: init.sql
+        existingConfigMap: postgresql-init
+      - name: postgresql-grants
+        mountPath: /docker-entrypoint-initdb.d/zz-grants.sql
+        subPath: zz-grants.sql
+        data:
+          zz-grants.sql: |
+            \connect astronomy_db
+            -- REMOVE once a pinned chart syncs demo PR 4019 (upstream init.sql grants these).
+            GRANT USAGE ON SCHEMA accounting TO monitoring_user;
+            GRANT SELECT ON accounting."order" TO monitoring_user;
+            GRANT SELECT ON accounting.orderitem TO monitoring_user;
+            GRANT USAGE ON SCHEMA catalog TO monitoring_user;
+            GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO monitoring_user;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user;
+            -- REMOVE once helm-charts PR 2450 is in a pinned chart.
+            GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user;
+            -- REMOVE once the pinned chart's init.sql runs these (already in upstream demo main).
+            GRANT pg_monitor TO monitoring_user;
+            CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+            -- KEEP: New Relic-only grants, no upstream equivalent. If these are all that
+            -- remains, shrink this file to \connect + these lines.
+            CREATE SCHEMA IF NOT EXISTS otel;
+            GRANT USAGE ON SCHEMA otel TO monitoring_user;
+            GRANT USAGE ON SCHEMA public TO monitoring_user;
+            GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring_user;
     resources:
       limits:
         memory: 200Mi
