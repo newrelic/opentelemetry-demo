@@ -124,9 +124,6 @@ components:
             ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user;
             -- REMOVE once helm-charts PR 2450 is in a pinned chart.
             GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user;
-            -- REMOVE once the pinned chart's init.sql runs these (already in upstream demo main).
-            GRANT pg_monitor TO monitoring_user;
-            CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
             -- KEEP: New Relic-only grants, no upstream equivalent. If these are all that
             -- remains, shrink this file to \connect + these lines.
             CREATE SCHEMA IF NOT EXISTS otel;
