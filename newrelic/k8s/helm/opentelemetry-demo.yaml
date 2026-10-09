@@ -133,9 +133,17 @@ components:
             GRANT USAGE ON SCHEMA otel TO monitoring_user;
             GRANT USAGE ON SCHEMA public TO monitoring_user;
             GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring_user;
+    additionalVolumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+    additionalVolumeMounts:
+      - name: dshm
+        mountPath: /dev/shm
     resources:
       limits:
-        memory: 200Mi
+        memory: 384Mi
       requests:
         memory: 100Mi
   load-generator:
