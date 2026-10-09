@@ -5,7 +5,7 @@ kind: ServiceAccount
 metadata:
   name: otel-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     
     app.kubernetes.io/version: "3.1.0"
@@ -20,7 +20,7 @@ metadata:
   name: agent-fixtures
   namespace: opentelemetry-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     
     app.kubernetes.io/version: "3.1.0"
@@ -786,9 +786,47 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: astronomy-db-postgresql-grants
+  labels:
+    helm.sh/chart: opentelemetry-demo-0.42.3
+    
+    opentelemetry.io/name: astronomy-db
+    
+    app.kubernetes.io/version: "3.1.0"
+    app.kubernetes.io/component: astronomy-db
+    app.kubernetes.io/name: astronomy-db
+    app.kubernetes.io/part-of: opentelemetry-demo
+    app.kubernetes.io/managed-by: Helm
+data:
+  zz-grants.sql: |
+    \connect astronomy_db
+    -- REMOVE once a pinned chart syncs demo PR 4019 (upstream init.sql grants these).
+    GRANT USAGE ON SCHEMA accounting TO monitoring_user;
+    GRANT SELECT ON accounting."order" TO monitoring_user;
+    GRANT SELECT ON accounting.orderitem TO monitoring_user;
+    GRANT USAGE ON SCHEMA catalog TO monitoring_user;
+    GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO monitoring_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA catalog GRANT SELECT ON TABLES TO monitoring_user;
+    -- REMOVE once helm-charts PR 2450 is in a pinned chart.
+    GRANT UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user;
+    -- REMOVE once the pinned chart's init.sql runs these (already in upstream demo main).
+    GRANT pg_monitor TO monitoring_user;
+    CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+    -- KEEP: New Relic-only grants, no upstream equivalent. If these are all that
+    -- remains, shrink this file to \connect + these lines.
+    CREATE SCHEMA IF NOT EXISTS otel;
+    GRANT USAGE ON SCHEMA otel TO monitoring_user;
+    GRANT USAGE ON SCHEMA public TO monitoring_user;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring_user;
+
+---
+# Source: opentelemetry-demo/templates/component.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: product-catalog-product-catalog-otel-config
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: product-catalog
     
@@ -835,7 +873,7 @@ metadata:
   name: flagd-config
   namespace: opentelemetry-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     
     app.kubernetes.io/version: "3.1.0"
@@ -1054,7 +1092,7 @@ metadata:
   name: postgresql-init
   namespace: opentelemetry-demo
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     
     app.kubernetes.io/version: "3.1.0"
@@ -1062,7 +1100,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 data:
   
-  init.sql: |
+  init.sql: |-
     -- Copyright The OpenTelemetry Authors
     -- SPDX-License-Identifier: Apache-2.0
   
@@ -1139,7 +1177,10 @@ data:
     );
   
     -- Product Catalog Service: grant permission to schema
-    GRANT SELECT ON ALL TABLES IN SCHEMA catalog TO astronomy_user;
+    -- UPDATE is required to acquire the ACCESS EXCLUSIVE lock used by the
+    -- productCatalogLockContention fault-injection flag; the service otherwise
+    -- only reads from this schema.
+    GRANT SELECT, UPDATE ON ALL TABLES IN SCHEMA catalog TO astronomy_user;
   
     -- Product Catalog Service: add product data
     INSERT INTO catalog.products (id, name, description, picture, price_currency_code, price_units, price_nanos, categories)
@@ -1162,7 +1203,7 @@ kind: Service
 metadata:
   name: ad
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: ad
     
@@ -1191,7 +1232,7 @@ kind: Service
 metadata:
   name: agent
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: agent
     
@@ -1217,7 +1258,7 @@ kind: Service
 metadata:
   name: astronomy-db
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: astronomy-db
     
@@ -1243,7 +1284,7 @@ kind: Service
 metadata:
   name: cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: cart
     
@@ -1269,7 +1310,7 @@ kind: Service
 metadata:
   name: chatbot
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: chatbot
     
@@ -1295,7 +1336,7 @@ kind: Service
 metadata:
   name: checkout
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: checkout
     
@@ -1321,7 +1362,7 @@ kind: Service
 metadata:
   name: currency
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: currency
     
@@ -1347,7 +1388,7 @@ kind: Service
 metadata:
   name: email
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: email
     
@@ -1373,7 +1414,7 @@ kind: Service
 metadata:
   name: flagd
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: flagd
     
@@ -1405,7 +1446,7 @@ kind: Service
 metadata:
   name: frontend
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: frontend
     
@@ -1431,7 +1472,7 @@ kind: Service
 metadata:
   name: frontend-proxy
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: frontend-proxy
     
@@ -1457,7 +1498,7 @@ kind: Service
 metadata:
   name: image-provider
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: image-provider
     
@@ -1483,7 +1524,7 @@ kind: Service
 metadata:
   name: kafka
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: kafka
     
@@ -1512,7 +1553,7 @@ kind: Service
 metadata:
   name: load-generator
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: load-generator
     
@@ -1538,7 +1579,7 @@ kind: Service
 metadata:
   name: mcp
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: mcp
     
@@ -1564,7 +1605,7 @@ kind: Service
 metadata:
   name: opamp-server
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: opamp-server
     
@@ -1593,7 +1634,7 @@ kind: Service
 metadata:
   name: payment
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: payment
     
@@ -1619,7 +1660,7 @@ kind: Service
 metadata:
   name: product-catalog
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: product-catalog
     
@@ -1645,7 +1686,7 @@ kind: Service
 metadata:
   name: quote
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: quote
     
@@ -1671,7 +1712,7 @@ kind: Service
 metadata:
   name: recommendation
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: recommendation
     
@@ -1697,7 +1738,7 @@ kind: Service
 metadata:
   name: shipping
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: shipping
     
@@ -1723,7 +1764,7 @@ kind: Service
 metadata:
   name: telemetry-docs
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: telemetry-docs
     
@@ -1749,7 +1790,7 @@ kind: Service
 metadata:
   name: valkey-cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: valkey-cart
     
@@ -1775,7 +1816,7 @@ kind: Deployment
 metadata:
   name: accounting
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: accounting
     
@@ -1876,7 +1917,7 @@ kind: Deployment
 metadata:
   name: ad
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: ad
     
@@ -1978,7 +2019,7 @@ kind: Deployment
 metadata:
   name: agent
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: agent
     
@@ -2107,7 +2148,7 @@ kind: Deployment
 metadata:
   name: astronomy-db
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: astronomy-db
     
@@ -2193,11 +2234,18 @@ spec:
               memory: 100Mi
           volumeMounts:
             - name: postgresql-init
-              mountPath: /docker-entrypoint-initdb.d
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
+            - name: postgresql-grants
+              mountPath: /docker-entrypoint-initdb.d/zz-grants.sql
+              subPath: zz-grants.sql
       volumes:
         - name: postgresql-init
           configMap:
             name: postgresql-init
+        - name: postgresql-grants
+          configMap:
+            name: astronomy-db-postgresql-grants
 
 ---
 # Source: opentelemetry-demo/templates/component.yaml
@@ -2206,7 +2254,7 @@ kind: Deployment
 metadata:
   name: cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: cart
     
@@ -2316,7 +2364,7 @@ kind: Deployment
 metadata:
   name: chatbot
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: chatbot
     
@@ -2420,7 +2468,7 @@ kind: Deployment
 metadata:
   name: checkout
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: checkout
     
@@ -2551,7 +2599,7 @@ kind: Deployment
 metadata:
   name: currency
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: currency
     
@@ -2645,7 +2693,7 @@ kind: Deployment
 metadata:
   name: email
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: email
     
@@ -2741,7 +2789,7 @@ kind: Deployment
 metadata:
   name: flagd
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: flagd
     
@@ -2920,7 +2968,7 @@ kind: Deployment
 metadata:
   name: fraud-detection
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: fraud-detection
     
@@ -3025,7 +3073,7 @@ kind: Deployment
 metadata:
   name: frontend
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: frontend
     
@@ -3149,7 +3197,7 @@ kind: Deployment
 metadata:
   name: frontend-proxy
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: frontend-proxy
     
@@ -3300,7 +3348,7 @@ kind: Deployment
 metadata:
   name: image-provider
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: image-provider
     
@@ -3398,7 +3446,7 @@ kind: Deployment
 metadata:
   name: kafka
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: kafka
     
@@ -3504,7 +3552,7 @@ kind: Deployment
 metadata:
   name: load-generator
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: load-generator
     
@@ -3624,7 +3672,7 @@ kind: Deployment
 metadata:
   name: mcp
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: mcp
     
@@ -3722,7 +3770,7 @@ kind: Deployment
 metadata:
   name: opamp-server
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: opamp-server
     
@@ -3779,7 +3827,7 @@ kind: Deployment
 metadata:
   name: payment
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: payment
     
@@ -3881,7 +3929,7 @@ kind: Deployment
 metadata:
   name: product-catalog
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: product-catalog
     
@@ -4011,7 +4059,7 @@ kind: Deployment
 metadata:
   name: quote
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: quote
     
@@ -4111,7 +4159,7 @@ kind: Deployment
 metadata:
   name: recommendation
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: recommendation
     
@@ -4213,7 +4261,7 @@ kind: Deployment
 metadata:
   name: shipping
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: shipping
     
@@ -4326,7 +4374,7 @@ kind: Deployment
 metadata:
   name: telemetry-docs
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: telemetry-docs
     
@@ -4422,7 +4470,7 @@ kind: Deployment
 metadata:
   name: valkey-cart
   labels:
-    helm.sh/chart: opentelemetry-demo-0.42.2
+    helm.sh/chart: opentelemetry-demo-0.42.3
     
     opentelemetry.io/name: valkey-cart
     
