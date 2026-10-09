@@ -8,18 +8,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   merge:
     permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+      contents: write  # Push merge commits to repo
+      pull-requests: write  # Create pull requests for merges
+      issues: write  # Create issues for failures
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Git
         run: |
