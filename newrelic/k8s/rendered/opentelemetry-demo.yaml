@@ -3653,7 +3653,7 @@ spec:
             - name: AGENT_PORT
               value: "8010"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: http://$(OTEL_COLLECTOR_NAME):4318
+              value: http://$(OTEL_COLLECTOR_NAME):4317
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=3.1.0, service.instance.id=$(OTEL_POD_NAME),
