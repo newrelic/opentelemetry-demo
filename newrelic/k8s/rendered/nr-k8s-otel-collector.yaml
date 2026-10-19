@@ -26,7 +26,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
   annotations:
     
 ---
@@ -41,7 +41,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
 data:
   daemonset-config.yaml: |
     receivers:
@@ -750,7 +750,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.14.3
+            value: 0.14.4
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1039,7 +1039,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
 data:
   deployment-config.yaml: |
     receivers:
@@ -1593,7 +1593,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.14.3
+            value: 0.14.4
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1611,7 +1611,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.14.3
+            value: 0.14.4
 
       transform/events:
         log_statements:
@@ -2233,7 +2233,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
 rules:
   - apiGroups:
     - ""
@@ -2338,7 +2338,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
 subjects:
   - kind: ServiceAccount
     name: nr-k8s-otel-collector
@@ -2387,7 +2387,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
 spec:
   type: ClusterIP
   ports:
@@ -2417,7 +2417,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
 spec:
   selector:
     matchLabels:
@@ -2431,7 +2431,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: daemonset
       annotations:
-        checksum/config: d51212bbd4f36c67552893e950bc27d478c2bc917f4daf2140472fedd3dd5cc7
+        checksum/config: 06599922bcd6e2ef99c202e47e255a1fdf566a8194b3500a8513e3268835e01d
     spec:
       serviceAccountName: nr-k8s-otel-collector
       initContainers:
@@ -2501,7 +2501,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.162.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.163.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
@@ -2701,7 +2701,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.14.3
+    helm.sh/chart: nr-k8s-otel-collector-0.14.4
 spec:
   replicas: 1
   minReadySeconds: 5
@@ -2717,7 +2717,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 56c00e1ac427bd2a7e10bbdf41802d1d6b73a267b5eee1d2bb43ce1c834b84c7
+        checksum/config: 013f7d4418f1655d68d815a191534af569ca66003fa608e9c0bb6a8eb2bc9ca1
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2731,7 +2731,7 @@ spec:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             runAsUser: 1001
-          image: "docker.io/otel/opentelemetry-collector-contrib:0.162.0"
+          image: "docker.io/otel/opentelemetry-collector-contrib:0.163.0"
           imagePullPolicy: IfNotPresent
           args:
             - --config
