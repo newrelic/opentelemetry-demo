@@ -3,9 +3,6 @@ name: NewRelic Lint
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'newrelic/**'
-      - '**/*.md'
   workflow_dispatch:
 
 permissions:
