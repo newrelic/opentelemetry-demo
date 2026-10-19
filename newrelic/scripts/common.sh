@@ -36,7 +36,6 @@ DOCKER_COMPOSE_SOURCE_PATHS=(
   "$SCRIPT_DIR/../../compose.agent.yaml"
 )
 NR_DOCKER_COMPOSE_PATH=${NR_DOCKER_COMPOSE_PATH:-"$SCRIPT_DIR/../docker/docker-compose.yml"}
-ENV_PATH=${ENV_PATH:-"$SCRIPT_DIR/../../.env"}
 
 # Tracks the last upstream tag merge-upstream.sh successfully synced with.
 # This repo only allows squash merges, which drop the second parent of a
