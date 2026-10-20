@@ -1875,7 +1875,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -1982,7 +1982,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2082,7 +2082,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2323,7 +2323,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2333,15 +2333,15 @@ spec:
             - name: ASPNETCORE_URLS
               value: http://*:$(CART_PORT)
             - name: VALKEY_ADDR
-              value: valkey-cart:6379
+              value: valkey-cart.opentelemetry-demo.svc.cluster.local:6379
             - name: FLAGD_HOST
-              value: flagd
+              value: flagd.opentelemetry-demo.svc.cluster.local
             - name: FLAGD_PORT
               value: "8013"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://$(OTEL_COLLECTOR_NAME):4317
             - name: OPAMP_SERVER_ENDPOINT
-              value: ws://opamp-server:4320/v1/opamp
+              value: ws://opamp-server.opentelemetry-demo.svc.cluster.local:4320/v1/opamp
             - name: OPAMP_SERVER_TLS_INSECURE_SKIP_VERIFY
               value: "false"
             - name: OTEL_RESOURCE_ATTRIBUTES
@@ -2433,7 +2433,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2537,7 +2537,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2668,7 +2668,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2762,7 +2762,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2774,7 +2774,7 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://$(OTEL_COLLECTOR_NAME):4318
             - name: FLAGD_HOST
-              value: flagd
+              value: flagd.opentelemetry-demo.svc.cluster.local
             - name: FLAGD_PORT
               value: "8013"
             - name: OTEL_RESOURCE_ATTRIBUTES
@@ -2869,7 +2869,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -2924,7 +2924,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3033,7 +3033,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3142,7 +3142,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3271,7 +3271,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3423,7 +3423,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3517,13 +3517,13 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: PLAINTEXT://kafka:9092
+              value: PLAINTEXT://kafka.opentelemetry-demo.svc.cluster.local:9092
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://$(OTEL_COLLECTOR_NAME):4318
             - name: KAFKA_HEAP_OPTS
@@ -3533,7 +3533,7 @@ spec:
             - name: KAFKA_CONTROLLER_LISTENER_NAMES
               value: CONTROLLER
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: 1@kafka:9093
+              value: 1@kafka.opentelemetry-demo.svc.cluster.local:9093
             - name: OTEL_EXPERIMENTAL_SDK_TELEMETRY_VERSION
               value: latest
             - name: OTEL_RESOURCE_ATTRIBUTES
@@ -3621,7 +3621,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3741,7 +3741,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3896,7 +3896,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -3998,7 +3998,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -4128,7 +4128,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -4228,7 +4228,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -4236,7 +4236,7 @@ spec:
             - name: RECOMMENDATION_PORT
               value: "8080"
             - name: PRODUCT_CATALOG_ADDR
-              value: product-catalog:8080
+              value: product-catalog.opentelemetry-demo.svc.cluster.local:8080
             - name: OTEL_PYTHON_LOG_CORRELATION
               value: "true"
             - name: PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION
@@ -4244,7 +4244,7 @@ spec:
             - name: OTEL_PYTHON_SDK_INTERNAL_METRICS_ENABLED
               value: "true"
             - name: FLAGD_HOST
-              value: flagd
+              value: flagd.opentelemetry-demo.svc.cluster.local
             - name: FLAGD_PORT
               value: "8013"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -4330,7 +4330,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
@@ -4443,7 +4443,7 @@ spec:
             - name: OTEL_CLUSTER_NAME
               value: opentelemetry-demo
             - name: OTEL_COLLECTOR_NAME
-              value: nr-k8s-otel-collector-gateway
+              value: nr-k8s-otel-collector-gateway.opentelemetry-demo.svc.cluster.local
             - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
