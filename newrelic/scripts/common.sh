@@ -9,8 +9,8 @@ TS=$(date +"%Y%m%d_%H%M%S")
 TS_FULL=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Kubernetes variables
-OTEL_DEMO_CHART_VERSION="0.42.2"
-NR_K8S_CHART_VERSION="0.14.3"
+OTEL_DEMO_CHART_VERSION="0.42.4"
+NR_K8S_CHART_VERSION="0.14.4"
 OTEL_DEMO_RELEASE_NAME=otel-demo
 NR_K8S_RELEASE_NAME=nr-k8s-otel-collector
 OTEL_DEMO_NAMESPACE=opentelemetry-demo
@@ -36,7 +36,6 @@ DOCKER_COMPOSE_SOURCE_PATHS=(
   "$SCRIPT_DIR/../../compose.agent.yaml"
 )
 NR_DOCKER_COMPOSE_PATH=${NR_DOCKER_COMPOSE_PATH:-"$SCRIPT_DIR/../docker/docker-compose.yml"}
-ENV_PATH=${ENV_PATH:-"$SCRIPT_DIR/../../.env"}
 
 # Tracks the last upstream tag merge-upstream.sh successfully synced with.
 # This repo only allows squash merges, which drop the second parent of a

@@ -140,8 +140,8 @@ if [ "$CONTRIB_VERSION" != "$CURR_CONTRIB_VERSION" ]; then
   # (rather than `yq -i`) keeps the diff surgical and preserves the file's comments
   # and formatting.
   sed_i '/repository: otel\/opentelemetry-collector-contrib/{n;s/tag: .*/tag: "'"$CONTRIB_VERSION"'"/;}' "$NR_K8S_VALUES_PATH"
-  sed_i "s#\(COLLECTOR_CONTRIB_IMAGE=.*opentelemetry-collector-contrib:\).*#\1$CONTRIB_VERSION#" "$ENV_PATH"
-  echo "Updated images.collector.tag in $NR_K8S_VALUES_PATH and COLLECTOR_CONTRIB_IMAGE in $ENV_PATH"
+  sed_i "s#\(image: .*opentelemetry-collector-contrib:\).*#\1$CONTRIB_VERSION#" "$NR_DOCKER_COMPOSE_PATH"
+  echo "Updated images.collector.tag in $NR_K8S_VALUES_PATH and otel-collector image in $NR_DOCKER_COMPOSE_PATH"
   CONTRIB_UPDATED=true
 else
   echo "opentelemetry-collector-contrib version is already in sync."
