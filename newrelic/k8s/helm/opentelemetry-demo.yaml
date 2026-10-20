@@ -147,10 +147,10 @@ components:
     # v3.1.0+ Locust load generator: Python-based with Playwright browser automation
     # Uses upstream defaults for LOCUST_* and FLAGD_* vars
     # NewRelic customizations:
-    # - OTEL_EXPORTER_OTLP_ENDPOINT: gRPC endpoint for Locust (Python) traces/metrics export
+    # - OTEL_EXPORTER_OTLP_ENDPOINT: Locust (Python) uses OTLP gRPC exporters, so this must be the gRPC port (4317), not HTTP (4318)
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: http://$(OTEL_COLLECTOR_NAME):4318
+        value: http://$(OTEL_COLLECTOR_NAME):4317
 
 opensearch:
   enabled: false
