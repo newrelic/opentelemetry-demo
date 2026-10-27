@@ -137,6 +137,36 @@ resource "newrelic_nrql_alert_condition" "k8s_readiness_probe_failing" {
   title_template     = "[{{conditionName}}] {{priority}}"
 }
 
+## Node CPU High
+## system.cpu.utilization is reported per CPU state, so busy percent is
+## 100 - idle percent. Faceting by entity.guid binds the incident to the node's
+## host entity, which is what the Kubernetes UI shows alerts against.
+resource "newrelic_nrql_alert_condition" "k8s_node_cpu_high" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.k8s_alert_policy.id
+  type                         = "static"
+  name                         = "Node CPU High"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT 100 - 100 * filter(average(system.cpu.utilization), WHERE state = 'idle') FROM Metric WHERE metricName = 'system.cpu.utilization' AND k8s.cluster.name IS NOT NULL FACET entity.guid, host.name, k8s.cluster.name"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.node_cpu_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "all"
+  }
+  fill_option        = "last_value"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
 ##
 ## Tags for Kubernetes Alert Conditions
 ##
@@ -190,5 +220,18 @@ resource "newrelic_entity_tags" "tag_k8s_readiness_probe_failing" {
   tag {
     key    = "golden-signal"
     values = ["availability"]
+  }
+}
+
+resource "newrelic_entity_tags" "tag_k8s_node_cpu_high" {
+  guid = newrelic_nrql_alert_condition.k8s_node_cpu_high.entity_guid
+
+  tag {
+    key    = "data-type"
+    values = ["metric"]
+  }
+  tag {
+    key    = "golden-signal"
+    values = ["saturation"]
   }
 }
