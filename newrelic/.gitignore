@@ -17,6 +17,7 @@ docker/config/monkey-patch-injected.js
 
 # Terraform local state and provider cache
 terraform/**/.terraform/
+terraform/**/.terraform.lock.hcl
 terraform/**/*.tfstate
 terraform/**/*.tfstate.*
 terraform/**/*.tfvars
