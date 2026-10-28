@@ -791,7 +791,7 @@ services:
   # compose.full.yaml, the Kafka/PostgreSQL receivers in the full config are harmless —
   # they will simply fail to scrape since those services are not running.
   otel-collector:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.159.0
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.164.0
     container_name: otel-collector
     deploy:
       resources:
