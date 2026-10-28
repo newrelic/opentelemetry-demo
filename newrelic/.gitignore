@@ -14,3 +14,17 @@ docker/config/monkey-patch-injected.js
 
 # Ruff linter cache (created when running ruff check from within newrelic/)
 .ruff_cache/
+
+# Terraform local state and provider cache
+terraform/**/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/*.tfvars
+terraform/**/*.tfvars.json
+terraform/**/crash.log
+terraform/**/crash.*.log
+terraform/**/*.tfplan
+terraform/**/override.tf
+terraform/**/override.tf.json
+terraform/**/*_override.tf
+terraform/**/*_override.tf.json
