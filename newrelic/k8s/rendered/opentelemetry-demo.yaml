@@ -1897,9 +1897,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
+              cpu: 200m
               memory: 300Mi
             requests:
-              memory: 200Mi
+              cpu: 30m
+              memory: 160Mi
           volumeMounts:
       initContainers:
         - command:
@@ -2008,7 +2010,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=medium
           resources:
             limits:
-              memory: 300Mi
+              cpu: 750m
+              memory: 450Mi
+            requests:
+              cpu: 20m
+              memory: 280Mi
           volumeMounts:
       volumes:
 
@@ -2132,7 +2138,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
-              memory: 500Mi
+              cpu: 1000m
+              memory: 1536Mi
+            requests:
+              cpu: 700m
+              memory: 1250Mi
           volumeMounts:
             - mountPath: /app/fixtures/vcr_cassettes
               name: agent-fixtures
@@ -2229,9 +2239,11 @@ spec:
               value: changeit
           resources:
             limits:
+              cpu: 400m
               memory: 384Mi
             requests:
-              memory: 100Mi
+              cpu: 15m
+              memory: 90Mi
           volumeMounts:
             - mountPath: /dev/shm
               name: dshm
@@ -2351,7 +2363,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=high
           resources:
             limits:
+              cpu: 500m
               memory: 160Mi
+            requests:
+              cpu: 35m
+              memory: 75Mi
           volumeMounts:
       initContainers:
         - command:
@@ -2463,7 +2479,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
+              cpu: 1000m
               memory: 500Mi
+            requests:
+              cpu: 110m
+              memory: 175Mi
           volumeMounts:
       volumes:
 
@@ -2579,9 +2599,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=critical
           resources:
             limits:
+              cpu: 300m
               memory: 100Mi
             requests:
-              memory: 50Mi
+              cpu: 14m
+              memory: 16Mi
           securityContext:
             readOnlyRootFilesystem: true
           volumeMounts:
@@ -2688,7 +2710,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=high
           resources:
             limits:
-              memory: 20Mi
+              cpu: 200m
+              memory: 40Mi
+            requests:
+              cpu: 10m
+              memory: 15Mi
           volumeMounts:
       volumes:
 
@@ -2784,7 +2810,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=medium
           resources:
             limits:
+              cpu: 200m
               memory: 100Mi
+            requests:
+              cpu: 12m
+              memory: 70Mi
           volumeMounts:
       volumes:
 
@@ -2887,7 +2917,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
+              cpu: 300m
               memory: 75Mi
+            requests:
+              cpu: 30m
+              memory: 55Mi
           volumeMounts:
             - name: config-rw
               mountPath: /etc/flagd
@@ -3061,6 +3095,10 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
+              cpu: 1000m
+              memory: 384Mi
+            requests:
+              cpu: 30m
               memory: 300Mi
           volumeMounts:
       initContainers:
@@ -3188,7 +3226,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=critical
           resources:
             limits:
+              cpu: 1000m
               memory: 250Mi
+            requests:
+              cpu: 75m
+              memory: 170Mi
           securityContext:
             runAsGroup: 1001
             runAsNonRoot: true
@@ -3339,7 +3381,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=critical
           resources:
             limits:
+              cpu: 300m
               memory: 90Mi
+            requests:
+              cpu: 60m
+              memory: 32Mi
           securityContext:
             runAsGroup: 101
             runAsNonRoot: true
@@ -3441,7 +3487,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
+              cpu: 200m
               memory: 50Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
           volumeMounts:
       volumes:
 
@@ -3543,7 +3593,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
-              memory: 700Mi
+              cpu: 1000m
+              memory: 1200Mi
+            requests:
+              cpu: 60m
+              memory: 950Mi
           securityContext:
             runAsGroup: 1000
             runAsNonRoot: true
@@ -3667,7 +3721,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
-              memory: 1500Mi
+              cpu: 4000m
+              memory: 4Gi
+            requests:
+              cpu: 1000m
+              memory: 700Mi
           volumeMounts:
       volumes:
 
@@ -3765,7 +3823,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
+              cpu: 300m
               memory: 500Mi
+            requests:
+              cpu: 10m
+              memory: 165Mi
           volumeMounts:
       volumes:
 
@@ -3822,7 +3884,11 @@ spec:
             []
           resources:
             limits:
+              cpu: 100m
               memory: 65Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
           volumeMounts:
       volumes:
 
@@ -3920,7 +3986,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=critical
           resources:
             limits:
+              cpu: 200m
               memory: 140Mi
+            requests:
+              cpu: 18m
+              memory: 85Mi
           securityContext:
             runAsGroup: 1000
             runAsNonRoot: true
@@ -4032,9 +4102,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=high
           resources:
             limits:
+              cpu: 400m
               memory: 100Mi
             requests:
-              memory: 50Mi
+              cpu: 55m
+              memory: 24Mi
           securityContext:
             readOnlyRootFilesystem: true
           volumeMounts:
@@ -4150,7 +4222,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=low
           resources:
             limits:
-              memory: 40Mi
+              cpu: 200m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 28Mi
           securityContext:
             runAsGroup: 33
             runAsNonRoot: true
@@ -4256,7 +4332,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=medium
           resources:
             limits:
+              cpu: 750m
               memory: 500Mi
+            requests:
+              cpu: 60m
+              memory: 60Mi
           volumeMounts:
       volumes:
 
@@ -4356,7 +4436,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),service.criticality=high
           resources:
             limits:
-              memory: 20Mi
+              cpu: 200m
+              memory: 40Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
           securityContext:
             readOnlyRootFilesystem: true
           volumeMounts:
@@ -4461,7 +4545,11 @@ spec:
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME)
           resources:
             limits:
+              cpu: 100m
               memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 10Mi
           securityContext:
             runAsGroup: 101
             runAsNonRoot: true
@@ -4522,7 +4610,11 @@ spec:
             []
           resources:
             limits:
-              memory: 20Mi
+              cpu: 100m
+              memory: 40Mi
+            requests:
+              cpu: 10m
+              memory: 15Mi
           securityContext:
             runAsGroup: 1000
             runAsNonRoot: true
