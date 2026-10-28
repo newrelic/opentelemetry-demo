@@ -181,6 +181,33 @@ resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   title_template     = "[{{conditionName}}] {{priority}}"
 }
 
+## Alert when any Kafka consumer group has no active members.
+resource "newrelic_nrql_alert_condition" "kafka_dead_consumer_group" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "Kafka Dead Consumer Group (orders)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT latest(kafka.consumer_group.members) FROM Metric WHERE kafka.cluster.name = 'otel-demo-kafka' FACET `group`"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "below"
+    threshold             = var.kafka_dead_consumer_members_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option        = "last_value"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
 ##
 ## Tags for Metric Alert Conditions
 ##
