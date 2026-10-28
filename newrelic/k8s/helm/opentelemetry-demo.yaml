@@ -25,8 +25,10 @@ default:
           fieldPath: metadata.namespace
     - name: OTEL_CLUSTER_NAME
       value: opentelemetry-demo
+    # Service hosts below are FQDNs: musl (Alpine images) ignores a resolv.conf
+    # search line of 256+ bytes, which sandbox host domains can cause.
     - name: OTEL_COLLECTOR_NAME
-      value: nr-k8s-otel-collector-gateway
+      value: nr-k8s-otel-collector-gateway.{{ .Release.Namespace }}.svc.cluster.local
     - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       value: delta
     - name: OTEL_RESOURCE_ATTRIBUTES
@@ -56,6 +58,30 @@ components:
         memory: 100Mi
       requests:
         memory: 50Mi
+  kafka:
+    envOverrides:
+      - name: KAFKA_ADVERTISED_LISTENERS
+        value: PLAINTEXT://kafka.{{ .Release.Namespace }}.svc.cluster.local:9092
+      - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+        value: 1@kafka.{{ .Release.Namespace }}.svc.cluster.local:9093
+  cart:
+    envOverrides:
+      - name: VALKEY_ADDR
+        value: valkey-cart.{{ .Release.Namespace }}.svc.cluster.local:6379
+      - name: FLAGD_HOST
+        value: flagd.{{ .Release.Namespace }}.svc.cluster.local
+      - name: OPAMP_SERVER_ENDPOINT
+        value: ws://opamp-server.{{ .Release.Namespace }}.svc.cluster.local:4320/v1/opamp
+  email:
+    envOverrides:
+      - name: FLAGD_HOST
+        value: flagd.{{ .Release.Namespace }}.svc.cluster.local
+  recommendation:
+    envOverrides:
+      - name: FLAGD_HOST
+        value: flagd.{{ .Release.Namespace }}.svc.cluster.local
+      - name: PRODUCT_CATALOG_ADDR
+        value: product-catalog.{{ .Release.Namespace }}.svc.cluster.local:8080
   product-catalog:
     resources:
       limits:
