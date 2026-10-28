@@ -89,8 +89,8 @@ update_go_const() {
 
 contrib_image_tag_exists() {
     local code
-    code=$(curl -s -o /dev/null -w '%{http_code}' \
-      "https://hub.docker.com/v2/repositories/otel/opentelemetry-collector-contrib/tags/$1")
+    code=$(curl -s --max-time 30 -o /dev/null -w '%{http_code}' \
+      "https://hub.docker.com/v2/repositories/otel/opentelemetry-collector-contrib/tags/$1" || true)
     case "$code" in
       200) return 0 ;;
       404) return 1 ;;
@@ -144,7 +144,7 @@ else
 fi
 
 # Sync the opentelemetry-collector-contrib version used by the NR K8s collector and
-# the Docker Compose setup to the latest upstream contrib release.
+# the Docker Compose setup to the latest upstream contrib release published on Docker Hub.
 CONTRIB_UPDATED=false
 CONTRIB_VERSION=$(get_latest_contrib_version)
 if [ -z "$CONTRIB_VERSION" ]; then
