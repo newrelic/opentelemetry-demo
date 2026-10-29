@@ -2,8 +2,8 @@ cluster: "opentelemetry-demo"
 customSecretName: "newrelic-license-key"
 customSecretLicenseKey: "license-key"
 
-# NRDOT K8s OTel Collector image does not ship with the spanmetrics connector. Using contrib instead.
-# Will remove if/when spanmetrics is added to NRDOT.
+# NRDOT K8s OTel Collector image does not ship with the span_metrics connector. Using contrib instead.
+# Will remove if/when span_metrics is added to NRDOT.
 images:
   collector:
     registry: ""
@@ -132,6 +132,14 @@ deployment:
   configMap:
     extraConfig:
       receivers:
+        http_check/frontend-proxy:
+          targets:
+            - endpoint: http://frontend-proxy:8080
+
+        redis:
+          collection_interval: 30s
+          endpoint: valkey-cart:6379
+
         # Demo: scrape a Prometheus /metrics endpoint exposed by the ad
         # service using the Prometheus Java client library, bridging
         # existing Prometheus-client instrumentation into the OTel pipeline.
@@ -194,10 +202,6 @@ deployment:
             postgresql.temp_files:
               enabled: true
 
-        # Kafka broker metrics for the kafkaQueueProblems scenario, scraped since
-        # telemetry is pushed to this collector on k8s and consumer lag can't be.
-        # This image (contrib 0.153.0) renamed the receiver to `kafka_metrics`; the
-        # Docker path runs 0.142.0 and still uses `kafkametrics`.
         kafka_metrics:
           brokers:
             - kafka:9092
@@ -213,7 +217,7 @@ deployment:
           collection_interval: 15s
 
       connectors:
-        spanmetrics:
+        span_metrics:
           metrics_flush_interval: 30s
           aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
           dimensions:
@@ -283,8 +287,10 @@ deployment:
               key: newrelic.spanmetrics.enabled
               value: true
 
-        resourcedetection/otel-demo:
+        resource_detection/otel-demo:
           detectors: [env]
+
+        cumulative_to_delta: {}
 
         # Converts Traceloop/OpenLLMetry telemetry from agent/mcp/chatbot into
         # official gen_ai.* semconv attributes.
@@ -308,6 +314,19 @@ deployment:
             - key: service.instance.id
               value: "otel-demo-astronomy-db"
               action: upsert
+
+        transform/otel-demo:
+          error_mode: ignore
+          log_statements:
+            - context: log
+              statements:
+                - truncate_all(attributes, 4095)
+                - truncate_all(resource.attributes, 4095)
+          trace_statements:
+            - context: span
+              statements:
+                - truncate_all(attributes, 4095)
+                - truncate_all(resource.attributes, 4095)
 
         # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
         # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
@@ -336,7 +355,7 @@ deployment:
             - resource/newrelic_spanmetrics_flag
             - batch
           receivers:
-            - spanmetrics
+            - span_metrics
 
         metrics/postgres:
           exporters:
@@ -369,28 +388,31 @@ deployment:
             - otlp
             - prometheus/ad
             - kafka_metrics
+            - redis
+            - http_check/frontend-proxy
           processors:
             - memory_limiter
             - filter/python-system-metrics
-            - resourcedetection/otel-demo
+            - resource_detection/otel-demo
             - resource/otel-demo
             - transform/kafka_cluster_name
             - k8s_attributes/ksm
             - transform/strip_ad_metric_metadata
-            - cumulativetodelta
+            - cumulative_to_delta
             - batch
           exporters:
             - otlp_http/newrelic
 
         traces/otel-demo:
           exporters:
-            - spanmetrics
+            - span_metrics
             - otlp_http/newrelic
           processors:
             - memory_limiter
-            - resourcedetection/otel-demo
+            - resource_detection/otel-demo
             - resource/otel-demo
             - k8s_attributes/ksm
+            - transform/otel-demo
             - gen_ai_normalizer
             - batch
           receivers:
@@ -401,8 +423,9 @@ deployment:
             - otlp
           processors:
             - memory_limiter
-            - resourcedetection/otel-demo
+            - resource_detection/otel-demo
             - resource/otel-demo
+            - transform/otel-demo
             - batch
           exporters:
             - otlp_http/newrelic

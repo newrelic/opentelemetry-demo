@@ -45,14 +45,13 @@ yq eval -i 'del(.services.otel-collector.depends_on)' "$NR_DOCKER_COMPOSE_PATH"
 # shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.environment += [ "NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}" ]' "$NR_DOCKER_COMPOSE_PATH"
 
-# KAFKA_ADDR is needed by the kafkametrics receiver in otel-config-docker.yaml,
-# so add it to the collector's environment like the other services.
-# shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.environment += [ "KAFKA_ADDR" ]' "$NR_DOCKER_COMPOSE_PATH"
+yq eval -i '.services.otel-collector.environment += [ "OTEL_COLLECTOR_HOST", "OTEL_COLLECTOR_PORT_HTTP", "AD_PROMETHEUS_PORT" ]' "$NR_DOCKER_COMPOSE_PATH"
 
 # update the command used to launch the collector to point to the NR-specific config
 yq eval -i '.services.otel-collector.command[0] = "--config=/etc/otelcol-config.yml" ' "$NR_DOCKER_COMPOSE_PATH"
-yq eval -i 'del(.services.otel-collector.command[1])' "$NR_DOCKER_COMPOSE_PATH"
+# Regex: drops the upstream observability and extras config args, whose files are not mounted in this setup.
+yq eval -i 'del(.services.otel-collector.command[] | select(test("otelcol-config-(observability|extras)")))' "$NR_DOCKER_COMPOSE_PATH"
 
 # shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.volumes = [ "${HOST_FILESYSTEM}:/hostfs:ro", "${DOCKER_SOCK}:/var/run/docker.sock:ro", "../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml", "./logs:/logs", "./checkpoint:/checkpoint" ]' "$NR_DOCKER_COMPOSE_PATH"
