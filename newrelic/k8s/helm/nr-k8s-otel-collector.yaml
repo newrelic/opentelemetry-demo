@@ -298,20 +298,13 @@ deployment:
               from_attribute: k8s.pod.uid
               action: insert
 
-        # NR's PostgreSQL entity synthesis names the entity after
-        # service.instance.id (host:port by default), which renders as the
-        # unreadable internal cluster DNS name in the UI. Override it to a
-        # human-readable name; server.address/server.port tags still carry
-        # the real endpoint for anyone who needs it.
+        # Short postgres host so the instance entity links to the uninstrumented DB spans.
         resource/postgres_friendly_name:
           attributes:
             - key: service.instance.id
               value: "astronomy-db:5432"
               action: upsert
-            # Apps connect with the short host "astronomy-db". NR links the
-            # uninstrumented DATABASE node to this instance by exact match of
-            # the span endpoint against the endpoint tag (derived from
-            # server.address), so both must use the same host.
+            # Must equal the host apps use; NR matches span endpoint to the endpoint tag.
             - key: server.address
               value: "astronomy-db"
               action: upsert
