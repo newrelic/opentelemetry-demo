@@ -269,12 +269,12 @@ deployment:
             metric:
               - 'instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"'
 
-        # Drop spanmetrics metrics for services that DO publish metrics by default
+        # Keep spanmetrics only for services that do NOT publish server metrics by default
         filter/drop-spanmetrics-services:
           metrics:
             datapoint:
-              - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
-              - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+              - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|recommendation)")
+              - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|recommendation)")
 
         # Required to enable spanmetrics in the New Relic summary UI
         resource/newrelic_spanmetrics_flag:
