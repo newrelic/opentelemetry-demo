@@ -145,6 +145,53 @@ processors:
       statements:
       - replace_pattern(name, "\\?.*", "")
       - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+  # Rewrites the messages emitted by flagd failure scenarios into what a real incident would
+  # look like. Best effort: error_mode ignore and per-group conditions mean unmatched or
+  # failing statements leave the telemetry untouched.
+  transform/flag_scenarios:
+    error_mode: ignore
+    log_statements:
+    - context: log
+      conditions:
+      - 'resource.attributes["service.name"] == "ad" and IsMatch(body.string, "adManualGc")'
+      statements:
+      - 'set(body, "[gc] Pause Full (System.gc()) 1843M->412M(2048M) 1312.447ms")'
+    - context: log
+      conditions:
+      - 'resource.attributes["service.name"] == "ad" and IsMatch(body.string, "High CPU-Load problempattern")'
+      statements:
+      - 'set(body, "Request processing time exceeded threshold: thread pool saturated, active=200 queued=1312 cpu=98%")'
+    - context: log
+      conditions:
+      - 'resource.attributes["service.name"] == "checkout" and IsMatch(body.string, "kafkaQueueProblems")'
+      statements:
+      - 'set(body, "kafka: producer queue full: local queue saturated, delivery to topic \"orders\" delayed (queue.buffering.max.messages reached)")'
+    - context: log
+      conditions:
+      - 'resource.attributes["service.name"] == "fraud-detection" and IsMatch(body.string, "kafkaQueueProblems")'
+      statements:
+      - 'set(body, "Consumer group \"frauddetection\" lag increasing on topic \"orders\": poll() loop exceeded expected interval, processing 1000ms per record")'
+    - context: log
+      conditions:
+      - 'resource.attributes["service.name"] == "product-catalog" and IsMatch(body.string, "^lock contention scenario active")'
+      statements:
+      - 'set(body, "pq: canceling statement due to lock timeout: relation \"catalog.products\" is locked in ACCESS EXCLUSIVE mode by another transaction")'
+    - context: log
+      conditions:
+      - 'resource.attributes["service.name"] == "shipping" and IsMatch(body.string, "intlShippingSlowdown")'
+      statements:
+      - 'set(body, "Carrier rate API timeout for international shipment, falling back to slow path")'
+    trace_statements:
+    - context: span
+      conditions:
+      - 'resource.attributes["service.name"] == "product-catalog" and IsMatch(status.message, "Product Catalog Fail Feature Flag Enabled")'
+      statements:
+      - 'set(status.message, "rpc error: code = Internal desc = failed to query product: pq: could not read block in file \"base/16384/24576\": Input/output error")'
+    - context: spanevent
+      conditions:
+      - 'resource.attributes["service.name"] == "product-catalog" and IsMatch(name, "Product Catalog Fail Feature Flag Enabled")'
+      statements:
+      - 'set(name, "rpc error: code = Internal desc = failed to query product: pq: could not read block in file \"base/16384/24576\": Input/output error")'
   # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
   # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
   #
@@ -179,6 +226,7 @@ service:
       - memory_limiter
       - resource
       - transform
+      - transform/flag_scenarios
       - batch
       receivers:
       - otlp
@@ -209,6 +257,7 @@ service:
       - resource
       - resourcedetection/env
       - transform
+      - transform/flag_scenarios
       - gen_ai_normalizer
       - batch
       receivers:
