@@ -306,7 +306,14 @@ deployment:
         resource/postgres_friendly_name:
           attributes:
             - key: service.instance.id
-              value: "otel-demo-astronomy-db"
+              value: "astronomy-db:5432"
+              action: upsert
+            # Apps connect with the short host "astronomy-db". NR links the
+            # uninstrumented DATABASE node to this instance by exact match of
+            # the span endpoint against the endpoint tag (derived from
+            # server.address), so both must use the same host.
+            - key: server.address
+              value: "astronomy-db"
               action: upsert
 
         # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
