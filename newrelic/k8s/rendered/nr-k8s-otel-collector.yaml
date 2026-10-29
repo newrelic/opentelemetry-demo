@@ -1171,6 +1171,9 @@ data:
                 - action: replace
                   target_label: job_label
                   replacement: scheduler
+      http_check/frontend-proxy:
+        targets:
+        - endpoint: http://frontend-proxy:8080
       kafka_metrics:
         brokers:
         - kafka:9092
@@ -1230,6 +1233,9 @@ data:
             static_configs:
             - targets:
               - ad:9465
+      redis:
+        collection_interval: 30s
+        endpoint: valkey-cart:6379
 
     processors:
       transform/promote_job_label:
@@ -1763,6 +1769,7 @@ data:
         send_batch_max_size: 1000
         timeout: 30s
         send_batch_size : 800
+      cumulative_to_delta: {}
       filter/drop-spanmetrics-services:
         metrics:
           datapoint:
@@ -1793,7 +1800,7 @@ data:
         - action: upsert
           key: service.instance.id
           value: otel-demo-astronomy-db
-      resourcedetection/otel-demo:
+      resource_detection/otel-demo:
         detectors:
         - env
       transform/kafka_cluster_name:
@@ -1804,6 +1811,18 @@ data:
           context: datapoint
           statements:
           - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+      transform/otel-demo:
+        error_mode: ignore
+        log_statements:
+        - context: log
+          statements:
+          - truncate_all(attributes, 4095)
+          - truncate_all(resource.attributes, 4095)
+        trace_statements:
+        - context: span
+          statements:
+          - truncate_all(attributes, 4095)
+          - truncate_all(resource.attributes, 4095)
       transform/strip_ad_metric_metadata:
         metric_statements:
         - conditions:
@@ -1860,7 +1879,7 @@ data:
           - context: metric
             condition: instrumentation_scope.attributes["job_label"] == "scheduler"
             pipelines: [metrics/nr_controlplane]
-      spanmetrics:
+      span_metrics:
         aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
         dimensions:
         - name: http.method
@@ -1899,8 +1918,9 @@ data:
           - otlp_http/newrelic
           processors:
           - memory_limiter
-          - resourcedetection/otel-demo
+          - resource_detection/otel-demo
           - resource/otel-demo
+          - transform/otel-demo
           - batch
           receivers:
           - otlp
@@ -1920,17 +1940,19 @@ data:
           processors:
           - memory_limiter
           - filter/python-system-metrics
-          - resourcedetection/otel-demo
+          - resource_detection/otel-demo
           - resource/otel-demo
           - transform/kafka_cluster_name
           - k8s_attributes/ksm
           - transform/strip_ad_metric_metadata
-          - cumulativetodelta
+          - cumulative_to_delta
           - batch
           receivers:
           - otlp
           - prometheus/ad
           - kafka_metrics
+          - redis
+          - http_check/frontend-proxy
         metrics/postgres:
           exporters:
           - otlp_http/newrelic
@@ -1950,16 +1972,17 @@ data:
           - resource/newrelic_spanmetrics_flag
           - batch
           receivers:
-          - spanmetrics
+          - span_metrics
         traces/otel-demo:
           exporters:
-          - spanmetrics
+          - span_metrics
           - otlp_http/newrelic
           processors:
           - memory_limiter
-          - resourcedetection/otel-demo
+          - resource_detection/otel-demo
           - resource/otel-demo
           - k8s_attributes/ksm
+          - transform/otel-demo
           - gen_ai_normalizer
           - batch
           receivers:
@@ -2717,7 +2740,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 013f7d4418f1655d68d815a191534af569ca66003fa608e9c0bb6a8eb2bc9ca1
+        checksum/config: c70d8fdab01d7932c66752449d96d78a74736c91eacf78111bf2f0f1b59d1f05
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:

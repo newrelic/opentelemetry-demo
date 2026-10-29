@@ -5,7 +5,7 @@ extensions:
 receivers:
   docker_stats:
     endpoint: unix:///var/run/docker.sock
-  hostmetrics:
+  host_metrics:
     collection_interval: 30s
     root_path: /hostfs
     scrapers:
@@ -51,12 +51,12 @@ receivers:
       load: null
       memory: null
       network: null
-  httpcheck/frontend-proxy:
+  http_check/frontend-proxy:
     targets:
     - endpoint: http://frontend-proxy:8080
   # Kafka broker metrics, including kafka.consumer_group.lag for the
   # kafkaQueueProblems scenario.
-  kafkametrics:
+  kafka_metrics:
     brokers:
     - ${env:KAFKA_ADDR}
     protocol_version: 2.0.0
@@ -104,7 +104,7 @@ receivers:
 
 processors:
   batch: {}
-  cumulativetodelta: {}
+  cumulative_to_delta: {}
   gen_ai_normalizer:
     sources:
     - name: openllmetry
@@ -118,7 +118,7 @@ processors:
       # Setting to host.name for now.
       from_attribute: host.name
       key: service.instance.id
-  resourcedetection/env:
+  resource_detection/env:
     detectors:
     - env
     - system
@@ -141,10 +141,6 @@ processors:
       statements:
       - truncate_all(attributes, 4095)
       - truncate_all(resource.attributes, 4095)
-    - context: span
-      statements:
-      - replace_pattern(name, "\\?.*", "")
-      - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
   # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
   # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
   #
@@ -162,7 +158,7 @@ processors:
 
 exporters:
   debug: {}
-  otlphttp/newrelic:
+  otlp_http/newrelic:
     endpoint: https://otlp.nr-data.net:4318
     headers:
       api-key: ${env:NEW_RELIC_LICENSE_KEY}
@@ -173,7 +169,7 @@ service:
   pipelines:
     logs:
       exporters:
-      - otlphttp/newrelic
+      - otlp_http/newrelic
       - debug
       processors:
       - memory_limiter
@@ -184,30 +180,30 @@ service:
       - otlp
     metrics:
       exporters:
-      - otlphttp/newrelic
+      - otlp_http/newrelic
       - debug
       processors:
       - memory_limiter
       - resource
-      - resourcedetection/env
+      - resource_detection/env
       - transform/kafka_cluster_name
-      - cumulativetodelta
+      - cumulative_to_delta
       - batch
       receivers:
-      - hostmetrics
+      - host_metrics
       - docker_stats
-      - kafkametrics
+      - kafka_metrics
       - redis
       - otlp
       - prometheus/ad
     traces:
       exporters:
-      - otlphttp/newrelic
+      - otlp_http/newrelic
       - debug
       processors:
       - memory_limiter
       - resource
-      - resourcedetection/env
+      - resource_detection/env
       - transform
       - gen_ai_normalizer
       - batch
@@ -220,7 +216,7 @@ service:
       - periodic:
           exporter:
             otlp:
-              endpoint: ${env:OTEL_COLLECTOR_HOST}:${env:OTEL_COLLECTOR_PORT_HTTP}
+              endpoint: http://${env:OTEL_COLLECTOR_HOST}:${env:OTEL_COLLECTOR_PORT_HTTP}
               protocol: http/protobuf
           interval: 30000
           timeout: 5000
