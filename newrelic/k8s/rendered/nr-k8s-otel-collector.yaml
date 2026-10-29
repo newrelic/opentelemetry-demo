@@ -2720,7 +2720,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 013f7d4418f1655d68d815a191534af569ca66003fa608e9c0bb6a8eb2bc9ca1
+        checksum/config: 707da48283a0f04c0bd2e2730d1b73e88d636e78531856eb7bd7fd9adb1cd41e
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
