@@ -56,6 +56,12 @@ variable "node_cpu_threshold" {
   default     = 85
 }
 
+variable "kafka_dead_consumer_members_threshold" {
+  description = "Member count below which the Kafka dead-consumer alert fires"
+  type        = number
+  default     = 1
+}
+
 
 ##
 ## Maps services to thresholds for alerts are defined using metric values.

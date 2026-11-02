@@ -817,6 +817,7 @@ services:
     environment:
       - KAFKA_ADDR
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - NEW_RELIC_OTLP_ENDPOINT=${NEW_RELIC_OTLP_ENDPOINT:-https://otlp.nr-data.net:4318}
       - KAFKA_ADDR
       - OTEL_COLLECTOR_HOST
       - OTEL_COLLECTOR_PORT_HTTP
