@@ -1778,9 +1778,9 @@ data:
         metrics:
           datapoint:
           - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"],
-            "(currency|quote|payment|product-reviews|recommendation)")
+            "(currency|quote|payment|recommendation)")
           - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"],
-            "(currency|quote|payment|product-reviews|recommendation)")
+            "(currency|quote|payment|recommendation)")
       filter/python-system-metrics:
         error_mode: ignore
         metrics:
@@ -2802,7 +2802,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: cc2d43ed321feab018fca88d1deee5ed6ac735bb19ce235f453405b48fd06aee
+        checksum/config: 87b61b547efc1a33f35e12840689f40e9ae3ffb0aca9b7a7bf8ada2df0575543
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
