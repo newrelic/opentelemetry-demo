@@ -40,7 +40,11 @@ resource "newrelic_nrql_alert_condition" "k8s_pod_not_ready" {
     threshold_duration    = local.threshold_duration
     threshold_occurrences = "all"
   }
-  fill_option        = "last_value"
+  fill_option = "none"
+
+  expiration_duration            = 300
+  close_violations_on_expiration = true
+
   aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
@@ -67,7 +71,11 @@ resource "newrelic_nrql_alert_condition" "k8s_deployment_replicas_unavailable" {
     threshold_duration    = local.threshold_duration
     threshold_occurrences = "all"
   }
-  fill_option        = "last_value"
+  fill_option = "none"
+
+  expiration_duration            = 300
+  close_violations_on_expiration = true
+
   aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
@@ -88,7 +96,7 @@ resource "newrelic_nrql_alert_condition" "k8s_container_oom_killed" {
   type                         = "static"
   name                         = "Container OOMKilled"
   enabled                      = true
-  violation_time_limit_seconds = 259200
+  violation_time_limit_seconds = 3600
 
   nrql {
     query           = "SELECT if((latest(timestamp)/1000 - latest(kube_pod_container_status_last_terminated_timestamp)) < ${local.threshold_duration * 2}, 1, 0) FROM Metric WHERE (metricName = 'kube_pod_container_status_last_terminated_timestamp' OR (metricName = 'kube_pod_container_status_last_terminated_reason' AND reason = 'OOMKilled' AND kube_pod_container_status_last_terminated_reason['latest'] = 1.0)) AND k8s.namespace.name = 'opentelemetry-demo' FACET k8s.pod.name, k8s.container.name, k8s.namespace.name, k8s.cluster.name"
@@ -101,7 +109,11 @@ resource "newrelic_nrql_alert_condition" "k8s_container_oom_killed" {
     threshold_duration    = local.threshold_duration
     threshold_occurrences = "at_least_once"
   }
-  fill_option        = "none"
+  fill_option = "none"
+
+  expiration_duration            = 300
+  close_violations_on_expiration = true
+
   aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
@@ -127,6 +139,40 @@ resource "newrelic_nrql_alert_condition" "k8s_readiness_probe_failing" {
   critical {
     operator              = "below"
     threshold             = 1
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "all"
+  }
+  fill_option = "none"
+
+  expiration_duration            = 300
+  close_violations_on_expiration = true
+
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
+## Node CPU High
+## system.cpu.utilization is reported per CPU state, so busy percent is
+## 100 - idle percent. Faceting by entity.guid binds the incident to the node's
+## host entity, which is what the Kubernetes UI shows alerts against.
+resource "newrelic_nrql_alert_condition" "k8s_node_cpu_high" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.k8s_alert_policy.id
+  type                         = "static"
+  name                         = "Node CPU High"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT 100 - 100 * filter(average(system.cpu.utilization), WHERE state = 'idle') FROM Metric WHERE metricName = 'system.cpu.utilization' AND k8s.cluster.name IS NOT NULL FACET entity.guid, host.name, k8s.cluster.name"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.node_cpu_threshold
     threshold_duration    = local.threshold_duration
     threshold_occurrences = "all"
   }
@@ -190,5 +236,18 @@ resource "newrelic_entity_tags" "tag_k8s_readiness_probe_failing" {
   tag {
     key    = "golden-signal"
     values = ["availability"]
+  }
+}
+
+resource "newrelic_entity_tags" "tag_k8s_node_cpu_high" {
+  guid = newrelic_nrql_alert_condition.k8s_node_cpu_high.entity_guid
+
+  tag {
+    key    = "data-type"
+    values = ["metric"]
+  }
+  tag {
+    key    = "golden-signal"
+    values = ["saturation"]
   }
 }

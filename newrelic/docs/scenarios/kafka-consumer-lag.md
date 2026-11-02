@@ -21,7 +21,7 @@ Overloads the Kafka `orders` topic while slowing one consumer, producing a consu
 
 ## What to look for in New Relic
 
-Broker-side Kafka metrics (notably `kafka.consumer_group.lag`) are collected by the `kafkametrics`/`kafka_metrics` receiver added to the collector, faceted by `group` and `topic`.
+Broker-side Kafka metrics (notably `kafka.consumer_group.lag`) are collected by the `kafka_metrics` receiver added to the collector, faceted by `group` and `topic`.
 
 - **Dashboard** — the _Kafka_ section of the **Astronomy Services Baselines** dashboard: the _Consumer Group Lag_ tile shows `fraud-detection` climbing (to ~1000–1500+ at demo volume) while `accounting` stays flat near 0. Producer rate and consumer throughput tiles show the flood.
 - **Alerts** — two conditions on the _Astronomy Service Metric Health_ policy open critical incidents:
@@ -53,7 +53,7 @@ The broker-metrics receiver lives in a different place per deployment path (they
 
 | Path | Collector config |
 | :--- | :--- |
-| Kubernetes (`nr-otel-cli install k8s`, used for Gamedays/Instruqt) | [`newrelic/k8s/helm/nr-k8s-otel-collector.yaml`](../../k8s/helm/nr-k8s-otel-collector.yaml) — receiver id `kafka_metrics` (contrib 0.153.0) |
-| Docker (`nr-otel-cli install docker`) | [`newrelic/docker/config/otel-config-docker.yaml`](../../docker/config/otel-config-docker.yaml) — receiver id `kafkametrics` (contrib 0.142.0) |
+| Kubernetes (`nr-otel-cli install k8s`, used for Gamedays/Instruqt) | [`newrelic/k8s/helm/nr-k8s-otel-collector.yaml`](../../k8s/helm/nr-k8s-otel-collector.yaml) — receiver id `kafka_metrics` |
+| Docker (`nr-otel-cli install docker`) | [`newrelic/docker/config/otel-config-docker.yaml`](../../docker/config/otel-config-docker.yaml) — receiver id `kafka_metrics` |
 
 The alerts and SLO are defined in [`newrelic/terraform/nr_resources`](../../terraform/nr_resources) (`metric_alerts.tf`, `slos.tf`) and apply the same on both paths.

@@ -1,2 +1,4 @@
 kubernetes/opentelemetry-demo.yaml
 src/agent/fixtures/vcr_cassettes/
+newrelic/k8s/rendered/
+newrelic/docker/docker-compose.yml

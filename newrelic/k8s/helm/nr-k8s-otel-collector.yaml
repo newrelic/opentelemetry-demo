@@ -2,13 +2,13 @@ cluster: "opentelemetry-demo"
 customSecretName: "newrelic-license-key"
 customSecretLicenseKey: "license-key"
 
-# NRDOT K8s OTel Collector image does not ship with the spanmetrics connector. Using contrib instead.
-# Will remove if/when spanmetrics is added to NRDOT.
+# NRDOT K8s OTel Collector image does not ship with the span_metrics connector. Using contrib instead.
+# Will remove if/when span_metrics is added to NRDOT.
 images:
   collector:
     registry: ""
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.163.1"
+    tag: "0.164.0"
     pullPolicy: IfNotPresent
 
 # Second --config merges in internal telemetry for New Relic's Collector Observability UI.
@@ -132,6 +132,14 @@ deployment:
   configMap:
     extraConfig:
       receivers:
+        http_check/frontend-proxy:
+          targets:
+            - endpoint: http://frontend-proxy:8080
+
+        redis:
+          collection_interval: 30s
+          endpoint: valkey-cart:6379
+
         # Demo: scrape a Prometheus /metrics endpoint exposed by the ad
         # service using the Prometheus Java client library, bridging
         # existing Prometheus-client instrumentation into the OTel pipeline.
@@ -194,10 +202,6 @@ deployment:
             postgresql.temp_files:
               enabled: true
 
-        # Kafka broker metrics for the kafkaQueueProblems scenario, scraped since
-        # telemetry is pushed to this collector on k8s and consumer lag can't be.
-        # This image (contrib 0.153.0) renamed the receiver to `kafka_metrics`; the
-        # Docker path runs 0.142.0 and still uses `kafkametrics`.
         kafka_metrics:
           brokers:
             - kafka:9092
@@ -213,7 +217,7 @@ deployment:
           collection_interval: 15s
 
       connectors:
-        spanmetrics:
+        span_metrics:
           metrics_flush_interval: 30s
           aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
           dimensions:
@@ -269,12 +273,12 @@ deployment:
             metric:
               - 'instrumentation_scope.name == "opentelemetry.instrumentation.system_metrics"'
 
-        # Drop spanmetrics metrics for services that DO publish metrics by default
+        # Keep spanmetrics only for services that do NOT publish server metrics by default
         filter/drop-spanmetrics-services:
           metrics:
             datapoint:
-              - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
-              - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|product-reviews|recommendation)")
+              - metric.name == "traces.span.metrics.calls" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|recommendation)")
+              - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"], "(currency|quote|payment|recommendation)")
 
         # Required to enable spanmetrics in the New Relic summary UI
         resource/newrelic_spanmetrics_flag:
@@ -283,8 +287,14 @@ deployment:
               key: newrelic.spanmetrics.enabled
               value: true
 
-        resourcedetection/otel-demo:
+        resource_detection/otel-demo:
           detectors: [env]
+
+        cumulative_to_delta:
+          exclude:
+            metrics:
+              - 'kube_pod_container_status_restarts_total'
+            match_type: strict
 
         # Converts Traceloop/OpenLLMetry telemetry from agent/mcp/chatbot into
         # official gen_ai.* semconv attributes.
@@ -298,16 +308,75 @@ deployment:
               from_attribute: k8s.pod.uid
               action: insert
 
-        # NR's PostgreSQL entity synthesis names the entity after
-        # service.instance.id (host:port by default), which renders as the
-        # unreadable internal cluster DNS name in the UI. Override it to a
-        # human-readable name; server.address/server.port tags still carry
-        # the real endpoint for anyone who needs it.
+        # Short postgres host so the instance entity links to the uninstrumented DB spans.
         resource/postgres_friendly_name:
           attributes:
             - key: service.instance.id
-              value: "otel-demo-astronomy-db"
+              value: "astronomy-db:5432"
               action: upsert
+            # Must equal the host apps use; NR matches span endpoint to the endpoint tag.
+            - key: server.address
+              value: "astronomy-db"
+              action: upsert
+
+        transform/otel-demo:
+          error_mode: ignore
+          log_statements:
+            - context: log
+              statements:
+                - truncate_all(attributes, 4095)
+                - truncate_all(resource.attributes, 4095)
+          trace_statements:
+            - context: span
+              statements:
+                - truncate_all(attributes, 4095)
+                - truncate_all(resource.attributes, 4095)
+        # Rewrites flagd failure scenario messages into realistic production-style errors.
+        # Best effort: error_mode ignore + per-group conditions leave non-matching data untouched.
+        transform/flag_scenarios:
+          error_mode: ignore
+          log_statements:
+            - context: log
+              conditions:
+                - 'resource.attributes["service.name"] == "ad" and IsMatch(body.string, "adManualGc")'
+              statements:
+                - 'set(body, "[gc] Pause Full (System.gc()) 1843M->412M(2048M) 1312.447ms")'
+            - context: log
+              conditions:
+                - 'resource.attributes["service.name"] == "ad" and IsMatch(body.string, "High CPU-Load problempattern")'
+              statements:
+                - 'set(body, "Request processing time exceeded threshold: thread pool saturated, active=200 queued=1312 cpu=98%")'
+            - context: log
+              conditions:
+                - 'resource.attributes["service.name"] == "checkout" and IsMatch(body.string, "kafkaQueueProblems")'
+              statements:
+                - 'set(body, "kafka: producer queue full: local queue saturated, delivery to topic \"orders\" delayed (queue.buffering.max.messages reached)")'
+            - context: log
+              conditions:
+                - 'resource.attributes["service.name"] == "fraud-detection" and IsMatch(body.string, "kafkaQueueProblems")'
+              statements:
+                - 'set(body, "Consumer group \"frauddetection\" lag increasing on topic \"orders\": poll() loop exceeded expected interval, processing 1000ms per record")'
+            - context: log
+              conditions:
+                - 'resource.attributes["service.name"] == "product-catalog" and IsMatch(body.string, "^lock contention scenario active")'
+              statements:
+                - 'set(body, "pq: canceling statement due to lock timeout: relation \"catalog.products\" is locked in ACCESS EXCLUSIVE mode by another transaction")'
+            - context: log
+              conditions:
+                - 'resource.attributes["service.name"] == "shipping" and IsMatch(body.string, "intlShippingSlowdown")'
+              statements:
+                - 'set(body, "Carrier rate API timeout for international shipment, falling back to slow path")'
+          trace_statements:
+            - context: span
+              conditions:
+                - 'resource.attributes["service.name"] == "product-catalog" and IsMatch(status.message, "Product Catalog Fail Feature Flag Enabled")'
+              statements:
+                - 'set(status.message, "rpc error: code = Internal desc = failed to query product: pq: could not read block in file \"base/16384/24576\": Input/output error")'
+            - context: spanevent
+              conditions:
+                - 'resource.attributes["service.name"] == "product-catalog" and IsMatch(name, "Product Catalog Fail Feature Flag Enabled")'
+              statements:
+                - 'set(name, "rpc error: code = Internal desc = failed to query product: pq: could not read block in file \"base/16384/24576\": Input/output error")'
 
         # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
         # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
@@ -336,7 +405,7 @@ deployment:
             - resource/newrelic_spanmetrics_flag
             - batch
           receivers:
-            - spanmetrics
+            - span_metrics
 
         metrics/postgres:
           exporters:
@@ -369,28 +438,32 @@ deployment:
             - otlp
             - prometheus/ad
             - kafka_metrics
+            - redis
+            - http_check/frontend-proxy
           processors:
             - memory_limiter
             - filter/python-system-metrics
-            - resourcedetection/otel-demo
+            - resource_detection/otel-demo
             - resource/otel-demo
             - transform/kafka_cluster_name
             - k8s_attributes/ksm
             - transform/strip_ad_metric_metadata
-            - cumulativetodelta
+            - cumulative_to_delta
             - batch
           exporters:
             - otlp_http/newrelic
 
         traces/otel-demo:
           exporters:
-            - spanmetrics
+            - span_metrics
             - otlp_http/newrelic
           processors:
             - memory_limiter
-            - resourcedetection/otel-demo
+            - resource_detection/otel-demo
             - resource/otel-demo
             - k8s_attributes/ksm
+            - transform/otel-demo
+            - transform/flag_scenarios
             - gen_ai_normalizer
             - batch
           receivers:
@@ -401,8 +474,10 @@ deployment:
             - otlp
           processors:
             - memory_limiter
-            - resourcedetection/otel-demo
+            - resource_detection/otel-demo
             - resource/otel-demo
+            - transform/otel-demo
+            - transform/flag_scenarios
             - batch
           exporters:
             - otlp_http/newrelic

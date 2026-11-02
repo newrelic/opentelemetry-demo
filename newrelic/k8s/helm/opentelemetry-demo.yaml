@@ -50,20 +50,31 @@ components:
     resources:
       limits:
         memory: 300Mi
+        cpu: 200m
       requests:
-        memory: 200Mi
+        memory: 160Mi
+        cpu: 30m
   checkout:
     resources:
       limits:
         memory: 100Mi
+        cpu: 300m
       requests:
-        memory: 50Mi
+        memory: 16Mi
+        cpu: 14m
   kafka:
     envOverrides:
       - name: KAFKA_ADVERTISED_LISTENERS
         value: PLAINTEXT://kafka.{{ .Release.Namespace }}.svc.cluster.local:9092
       - name: KAFKA_CONTROLLER_QUORUM_VOTERS
         value: 1@kafka.{{ .Release.Namespace }}.svc.cluster.local:9093
+    resources:
+      requests:
+        cpu: 60m
+        memory: 950Mi
+      limits:
+        cpu: 1000m
+        memory: 1200Mi
   cart:
     envOverrides:
       - name: VALKEY_ADDR
@@ -72,22 +83,42 @@ components:
         value: flagd.{{ .Release.Namespace }}.svc.cluster.local
       - name: OPAMP_SERVER_ENDPOINT
         value: ws://opamp-server.{{ .Release.Namespace }}.svc.cluster.local:4320/v1/opamp
+    resources:
+      requests:
+        cpu: 35m
+        memory: 75Mi
+      limits:
+        cpu: 500m
   email:
     envOverrides:
       - name: FLAGD_HOST
         value: flagd.{{ .Release.Namespace }}.svc.cluster.local
+    resources:
+      requests:
+        cpu: 12m
+        memory: 70Mi
+      limits:
+        cpu: 200m
   recommendation:
     envOverrides:
       - name: FLAGD_HOST
         value: flagd.{{ .Release.Namespace }}.svc.cluster.local
       - name: PRODUCT_CATALOG_ADDR
         value: product-catalog.{{ .Release.Namespace }}.svc.cluster.local:8080
+    resources:
+      requests:
+        cpu: 60m
+        memory: 60Mi
+      limits:
+        cpu: 750m
   product-catalog:
     resources:
       limits:
         memory: 100Mi
+        cpu: 400m
       requests:
-        memory: 50Mi
+        memory: 24Mi
+        cpu: 55m
     useDefault:
       env: true
     envOverrides:
@@ -102,6 +133,13 @@ components:
       # LLM, set this to "False" and provide LLM_BASE_URL/API_KEY.
       - name: USE_VCR
         value: "True"
+    resources:
+      requests:
+        cpu: 700m
+        memory: 1250Mi
+      limits:
+        cpu: 1000m
+        memory: 1536Mi
   astronomy-db:
     # Preload pg_stat_statements so the NR collector's postgresql receiver can
     # read db.server.top_query; must be set at server start (not via CREATE
@@ -170,8 +208,10 @@ components:
     resources:
       limits:
         memory: 384Mi
+        cpu: 400m
       requests:
-        memory: 100Mi
+        memory: 90Mi
+        cpu: 15m
   load-generator:
     # v3.1.0+ Locust load generator: Python-based with Playwright browser automation
     # Uses upstream defaults for LOCUST_* and FLAGD_* vars
@@ -180,7 +220,124 @@ components:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://$(OTEL_COLLECTOR_NAME):4317
-
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 700Mi
+      limits:
+        cpu: 4000m
+        memory: 4Gi
+  ad:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 280Mi
+      limits:
+        cpu: 750m
+        memory: 450Mi
+  chatbot:
+    resources:
+      requests:
+        cpu: 110m
+        memory: 175Mi
+      limits:
+        cpu: 1000m
+  currency:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 15Mi
+      limits:
+        cpu: 200m
+        memory: 40Mi
+  fraud-detection:
+    resources:
+      requests:
+        cpu: 30m
+        memory: 300Mi
+      limits:
+        cpu: 1000m
+        memory: 384Mi
+  frontend:
+    resources:
+      requests:
+        cpu: 75m
+        memory: 170Mi
+      limits:
+        cpu: 1000m
+  frontend-proxy:
+    resources:
+      requests:
+        cpu: 60m
+        memory: 32Mi
+      limits:
+        cpu: 300m
+  image-provider:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 10Mi
+      limits:
+        cpu: 200m
+  mcp:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 165Mi
+      limits:
+        cpu: 300m
+  opamp-server:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 10Mi
+      limits:
+        cpu: 100m
+  payment:
+    resources:
+      requests:
+        cpu: 18m
+        memory: 85Mi
+      limits:
+        cpu: 200m
+  quote:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 28Mi
+      limits:
+        cpu: 200m
+        memory: 64Mi
+  shipping:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 10Mi
+      limits:
+        cpu: 200m
+        memory: 40Mi
+  telemetry-docs:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 10Mi
+      limits:
+        cpu: 100m
+  valkey-cart:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 15Mi
+      limits:
+        cpu: 100m
+        memory: 40Mi
+  flagd:
+    resources:
+      requests:
+        cpu: 30m
+        memory: 55Mi
+      limits:
+        cpu: 300m
 opensearch:
   enabled: false
 grafana:

@@ -791,7 +791,7 @@ services:
   # compose.full.yaml, the Kafka/PostgreSQL receivers in the full config are harmless —
   # they will simply fail to scrape since those services are not running.
   otel-collector:
-    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.159.0
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.164.0
     container_name: otel-collector
     deploy:
       resources:
@@ -800,8 +800,6 @@ services:
     restart: unless-stopped
     command:
       - "--config=/etc/otelcol-config.yml"
-      - "--config=/etc/otelcol-config-observability.yml"
-      - "--config=/etc/otelcol-config-extras.yml"
       - "--feature-gates=service.profilesSupport"
     user: 0:0
     volumes:
@@ -821,6 +819,9 @@ services:
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
       - NEW_RELIC_OTLP_ENDPOINT=${NEW_RELIC_OTLP_ENDPOINT:-https://otlp.nr-data.net:4318}
       - KAFKA_ADDR
+      - OTEL_COLLECTOR_HOST
+      - OTEL_COLLECTOR_PORT_HTTP
+      - AD_PROMETHEUS_PORT
   # Accounting service (Kafka consumer)
   accounting:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-accounting

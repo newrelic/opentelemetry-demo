@@ -427,6 +427,12 @@ After setting up port forwarding, you can access the Flagd UI at [http://localho
 
 ![flagdui](./images/flagdui.png)
 
+## Failure scenario messages
+
+The collector `transform/flag_scenarios` processor (`newrelic/docker/config/otel-config-docker.yaml` and `newrelic/k8s/helm/nr-k8s-otel-collector.yaml`) rewrites the log bodies emitted by flagd failure scenarios (`adManualGc`, `adHighCpu`, `kafkaQueueProblems`, `productCatalogLockContention`, `intlShippingSlowdown`) into production-style errors. For `productCatalogFailure` it rewrites the span status message and span event name instead.
+
+The processor uses `error_mode: ignore` and matches on `service.name` plus the original message text, so telemetry that does not match, or a statement that fails, passes through unchanged. To cover another scenario, add a statement group to the processor. A statement that fails to parse stops the collector at startup, so run the collector `validate` command on the config before deploying.
+
 ## Troubleshooting
 
 In some cases, the `flagd` pod may consistently be OOMKilled regardless of how much memory you provide it.  We have found that reverting to version `2.0.0` of the `flagd-ui` container resolves the issue.  Run the following patch command in your cluster to do so:

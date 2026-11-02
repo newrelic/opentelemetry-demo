@@ -50,6 +50,12 @@ variable "kafka_producer_rate_threshold" {
   default     = 60
 }
 
+variable "node_cpu_threshold" {
+  description = "Node CPU busy percent (100 minus idle, from host metrics) above which the node CPU alert fires"
+  type        = number
+  default     = 85
+}
+
 variable "kafka_dead_consumer_members_threshold" {
   description = "Member count below which the Kafka dead-consumer alert fires"
   type        = number
