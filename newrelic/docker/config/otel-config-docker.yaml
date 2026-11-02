@@ -141,6 +141,10 @@ processors:
       statements:
       - truncate_all(attributes, 4095)
       - truncate_all(resource.attributes, 4095)
+    - context: span
+      statements:
+      - replace_pattern(name, "\\?.*", "")
+      - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
   # Rewrites the messages emitted by flagd failure scenarios into what a real incident would
   # look like. Best effort: error_mode ignore and per-group conditions mean unmatched or
   # failing statements leave the telemetry untouched.

@@ -290,7 +290,11 @@ deployment:
         resource_detection/otel-demo:
           detectors: [env]
 
-        cumulative_to_delta: {}
+        cumulative_to_delta:
+          exclude:
+            metrics:
+              - 'kube_pod_container_status_restarts_total'
+            match_type: strict
 
         # Converts Traceloop/OpenLLMetry telemetry from agent/mcp/chatbot into
         # official gen_ai.* semconv attributes.
