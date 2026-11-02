@@ -27,6 +27,8 @@ check_tool_installed yq
 yq eval-all 'select(fileIndex==0) * select(fileIndex==1) * select(fileIndex==2) * select(fileIndex==3)' \
   "${DOCKER_COMPOSE_SOURCE_PATHS[@]}" > "$NR_DOCKER_COMPOSE_PATH"
 
+yq eval -i '(.services[] | select(.build.context == "./") | .build.context) = "../../"' "$NR_DOCKER_COMPOSE_PATH"
+
 # yq's deep merge replaces lists, so overlay files drop the base environment lists; union them by variable name, later files win.
 # shellcheck disable=SC2016
 F0="${DOCKER_COMPOSE_SOURCE_PATHS[0]}" F1="${DOCKER_COMPOSE_SOURCE_PATHS[1]}" F2="${DOCKER_COMPOSE_SOURCE_PATHS[2]}" F3="${DOCKER_COMPOSE_SOURCE_PATHS[3]}" \
@@ -62,7 +64,9 @@ yq eval -i 'del(.services.otel-collector.command[] | select(test("otelcol-config
 
 # shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.volumes = [ "${HOST_FILESYSTEM:-/}:/hostfs:ro", "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro", "../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml", "./logs:/logs", "./checkpoint:/checkpoint" ]' "$NR_DOCKER_COMPOSE_PATH"
+# shellcheck disable=SC2016
 yq eval -i '.services.flagd.volumes = [ "${SRC_DIR}/flagd:/etc/flagd" ]' "$NR_DOCKER_COMPOSE_PATH"
+# shellcheck disable=SC2016
 yq eval -i '.services.flagd-ui.volumes = [ "${SRC_DIR}/flagd:/app/data" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.product-catalog.volumes = [ "../../otel-config.yml:/otel-config.yml" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.astronomy-db.volumes = [ "../../src/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql" ]' "$NR_DOCKER_COMPOSE_PATH"
