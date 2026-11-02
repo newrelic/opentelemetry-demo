@@ -50,6 +50,8 @@ yq eval -i 'del(.services.otel-collector.depends_on)' "$NR_DOCKER_COMPOSE_PATH"
 # shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.environment += [ "NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}" ]' "$NR_DOCKER_COMPOSE_PATH"
 
+yq eval -i '.services.otel-collector.image = "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.164.0"' "$NR_DOCKER_COMPOSE_PATH"
+
 yq eval -i '.services.otel-collector.environment += [ "KAFKA_ADDR" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.otel-collector.environment += [ "OTEL_COLLECTOR_HOST", "OTEL_COLLECTOR_PORT_HTTP", "AD_PROMETHEUS_PORT" ]' "$NR_DOCKER_COMPOSE_PATH"
 
