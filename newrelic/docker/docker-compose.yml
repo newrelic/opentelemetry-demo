@@ -803,8 +803,8 @@ services:
       - "--feature-gates=service.profilesSupport"
     user: 0:0
     volumes:
-      - ${HOST_FILESYSTEM}:/hostfs:ro
-      - ${DOCKER_SOCK}:/var/run/docker.sock:ro
+      - ${HOST_FILESYSTEM:-/}:/hostfs:ro
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - ../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml
       - ./logs:/logs
       - ./checkpoint:/checkpoint

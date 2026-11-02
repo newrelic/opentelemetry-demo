@@ -54,7 +54,7 @@ yq eval -i '.services.otel-collector.command[0] = "--config=/etc/otelcol-config.
 yq eval -i 'del(.services.otel-collector.command[] | select(test("otelcol-config-(observability|extras)")))' "$NR_DOCKER_COMPOSE_PATH"
 
 # shellcheck disable=SC2016
-yq eval -i '.services.otel-collector.volumes = [ "${HOST_FILESYSTEM}:/hostfs:ro", "${DOCKER_SOCK}:/var/run/docker.sock:ro", "../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml", "./logs:/logs", "./checkpoint:/checkpoint" ]' "$NR_DOCKER_COMPOSE_PATH"
+yq eval -i '.services.otel-collector.volumes = [ "${HOST_FILESYSTEM:-/}:/hostfs:ro", "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro", "../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml", "./logs:/logs", "./checkpoint:/checkpoint" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.flagd.volumes = [ "${SRC_DIR}/flagd:/etc/flagd" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.flagd-ui.volumes = [ "${SRC_DIR}/flagd:/app/data" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.product-catalog.volumes = [ "${SRC_DIR}/product-catalog/products:/usr/src/app/products" ]' "$NR_DOCKER_COMPOSE_PATH"
