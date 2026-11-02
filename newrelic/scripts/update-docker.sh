@@ -27,6 +27,11 @@ check_tool_installed yq
 yq eval-all 'select(fileIndex==0) * select(fileIndex==1) * select(fileIndex==2) * select(fileIndex==3)' \
   "${DOCKER_COMPOSE_SOURCE_PATHS[@]}" > "$NR_DOCKER_COMPOSE_PATH"
 
+# yq's deep merge replaces lists, so overlay files drop the base environment lists; union them by variable name, later files win.
+# shellcheck disable=SC2016
+F0="${DOCKER_COMPOSE_SOURCE_PATHS[0]}" F1="${DOCKER_COMPOSE_SOURCE_PATHS[1]}" F2="${DOCKER_COMPOSE_SOURCE_PATHS[2]}" F3="${DOCKER_COMPOSE_SOURCE_PATHS[3]}" \
+  yq eval -i '[load(strenv(F0)), load(strenv(F1)), load(strenv(F2)), load(strenv(F3))] as $d | .services |= with_entries(.key as $s | ([$d[].services[$s].environment // []] | flatten | reverse | unique_by(split("=")[0]) | reverse) as $e | if ($e | length) > 0 then .value.environment = $e else . end)' "$NR_DOCKER_COMPOSE_PATH"
+
 # delete containers that are not required
 yq eval -i 'del(.services.grafana)' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i 'del(.services.jaeger)' "$NR_DOCKER_COMPOSE_PATH"
@@ -50,14 +55,16 @@ yq eval -i '.services.otel-collector.environment += [ "OTEL_COLLECTOR_HOST", "OT
 
 # update the command used to launch the collector to point to the NR-specific config
 yq eval -i '.services.otel-collector.command[0] = "--config=/etc/otelcol-config.yml" ' "$NR_DOCKER_COMPOSE_PATH"
-# Regex: drops the upstream observability and extras config args, whose files are not mounted in this setup.
-yq eval -i 'del(.services.otel-collector.command[] | select(test("otelcol-config-(observability|extras)")))' "$NR_DOCKER_COMPOSE_PATH"
+# Regex: drops the upstream full, observability and extras config args, whose files are not mounted in this setup.
+yq eval -i 'del(.services.otel-collector.command[] | select(test("otelcol-config-(full|observability|extras)")))' "$NR_DOCKER_COMPOSE_PATH"
 
 # shellcheck disable=SC2016
 yq eval -i '.services.otel-collector.volumes = [ "${HOST_FILESYSTEM:-/}:/hostfs:ro", "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro", "../docker/config/otel-config-docker.yaml:/etc/otelcol-config.yml", "./logs:/logs", "./checkpoint:/checkpoint" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.flagd.volumes = [ "${SRC_DIR}/flagd:/etc/flagd" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.flagd-ui.volumes = [ "${SRC_DIR}/flagd:/app/data" ]' "$NR_DOCKER_COMPOSE_PATH"
-yq eval -i '.services.product-catalog.volumes = [ "${SRC_DIR}/product-catalog/products:/usr/src/app/products" ]' "$NR_DOCKER_COMPOSE_PATH"
+yq eval -i '.services.product-catalog.volumes = [ "../../otel-config.yml:/otel-config.yml" ]' "$NR_DOCKER_COMPOSE_PATH"
+yq eval -i '.services.astronomy-db.volumes = [ "../../src/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql" ]' "$NR_DOCKER_COMPOSE_PATH"
+yq eval -i '.services.agent.volumes = [ "../../src/agent/fixtures:/app/fixtures" ]' "$NR_DOCKER_COMPOSE_PATH"
 
 # add ports used by the OpenTelemetry Collector
 yq eval -i '.services.otel-collector.ports += [ "8888" ]' "$NR_DOCKER_COMPOSE_PATH"

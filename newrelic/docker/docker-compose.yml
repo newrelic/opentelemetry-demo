@@ -63,6 +63,7 @@ services:
       - FLAGD_PORT
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=medium
       - OTEL_LOGS_EXPORTER=otlp
       - OTEL_SERVICE_NAME=ad
@@ -106,9 +107,12 @@ services:
       - VALKEY_ADDR
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=high
       - OTEL_SERVICE_NAME=cart
       - ASPNETCORE_URLS=http://*:${CART_PORT}
+      - OPAMP_SERVER_ENDPOINT=wss://${OPAMP_SERVER_HOST}:4320/v1/opamp
+      - OPAMP_SERVER_TLS_INSECURE_SKIP_VERIFY=true
     depends_on:
       valkey-cart:
         condition: service_healthy
@@ -116,6 +120,8 @@ services:
         condition: service_started
       flagd:
         condition: service_started
+      opamp-server:
+        condition: service_healthy
     logging: *logging
   # Patch checkout to add Kafka dependency in full mode
   checkout:
@@ -134,6 +140,23 @@ services:
     ports:
       - "${CHECKOUT_PORT}"
     environment:
+      - FLAGD_HOST
+      - FLAGD_PORT
+      - CHECKOUT_PORT
+      - CART_ADDR
+      - CURRENCY_ADDR
+      - EMAIL_ADDR
+      - PAYMENT_ADDR
+      - PRODUCT_CATALOG_ADDR
+      - SHIPPING_ADDR
+      - GOMEMLIMIT=16MiB
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
+      - OTEL_GO_X_OBSERVABILITY=true
+      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=critical
+      - OTEL_SERVICE_NAME=checkout
       - KAFKA_ADDR
       - KAFKA_TOPIC
     healthcheck:
@@ -189,6 +212,7 @@ services:
       - VERSION=${IMAGE_VERSION}
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=high
       - OTEL_SERVICE_NAME=currency
     healthcheck:
@@ -224,6 +248,7 @@ services:
       - FLAGD_PORT
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=medium
       - OTEL_SERVICE_NAME=email
     healthcheck:
@@ -268,6 +293,7 @@ services:
       - OTEL_SERVICE_NAME=frontend
       - PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - WEB_OTEL_SERVICE_NAME=frontend-web
       - OTEL_COLLECTOR_HOST
       - FLAGD_HOST
@@ -322,6 +348,8 @@ services:
     environment:
       - FRONTEND_PORT
       - FRONTEND_HOST
+      - LOCUST_WEB_HOST
+      - LOCUST_WEB_PORT
       - GRAFANA_PORT
       - GRAFANA_HOST
       - JAEGER_UI_PORT
@@ -358,6 +386,8 @@ services:
     depends_on:
       frontend:
         condition: service_healthy
+      load-generator:
+        condition: service_started
       flagd-ui:
         condition: service_healthy
       telemetry-docs:
@@ -399,7 +429,7 @@ services:
       otel-collector:
         condition: service_started
     logging: *logging
-  # Load Generator
+  # Patch load-generator to also exercise the agent's /prompt endpoint
   load-generator:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-load-generator
     container_name: load-generator
@@ -411,36 +441,44 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1500M
     restart: unless-stopped
+    ports:
+      - "${LOCUST_WEB_PORT}"
     environment:
-      - LOAD_GENERATOR_VUS
-      - K6_TARGET_URL
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
-      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - LOCUST_WEB_PORT
+      - LOCUST_USERS
+      - LOCUST_HOST
+      - LOCUST_HEADLESS
+      - LOCUST_AUTOSTART
+      - LOCUST_BROWSER_TRAFFIC_ENABLED=true
+      - LOCUST_HTTP_USER_WEIGHT
+      - LOCUST_BROWSER_USER_WEIGHT
+      - OTEL_EXPORTER_OTLP_ENDPOINT
+      - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
       - OTEL_SERVICE_NAME=load-generator
+      - OTEL_PYTHON_SDK_INTERNAL_METRICS_ENABLED=true
+      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+      - LOCUST_WEB_HOST=0.0.0.0
       - FLAGD_HOST
       - FLAGD_PORT
       - FLAGD_OFREP_PORT
-      - K6_OTEL_EXPORTER_PROTOCOL=http/protobuf
-      - K6_OTEL_HTTP_EXPORTER_ENDPOINT=${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
-      - K6_OTEL_HTTP_EXPORTER_INSECURE=true
-      - K6_BROWSER_ENABLED=true
-      - K6_BROWSER_ARGS=no-sandbox,disable-dev-shm-usage
-      - K6_OTEL_METRIC_PREFIX=k6.
+      - AGENT_ENDPOINT
+      - AGENT_PORT
     healthcheck:
-      test: ["CMD-SHELL", "pgrep k6"]
-      start_period: 10s
+      test: ["CMD", "python3", "-c", "import socket; s=socket.create_connection(('localhost',${LOCUST_WEB_PORT}),2); s.close()"]
+      start_period: 30s
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 20
     depends_on:
       frontend:
         condition: service_healthy
-      frontend-proxy:
-        condition: service_healthy
       flagd:
+        condition: service_started
+      agent:
         condition: service_started
     logging: *logging
   # Payment service
@@ -464,9 +502,9 @@ services:
       - PAYMENT_PORT
       - FLAGD_HOST
       - FLAGD_PORT
-      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=critical
       - OTEL_SERVICE_NAME=payment
@@ -510,11 +548,15 @@ services:
       - GOMEMLIMIT=16MiB
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
+      - OTEL_GO_X_OBSERVABILITY=true
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=high
       - OTEL_SERVICE_NAME=product-catalog
       - OTEL_CONFIG_FILE=/otel-config.yml
       - OTEL_SEMCONV_STABILITY_OPT_IN=database
       - DB_CONNECTION_STRING=postgres://astronomy_user:${POSTGRES_ASTRONOMY_PASSWORD}@${POSTGRES_HOST}/astronomy_db?sslmode=disable
+      - OPAMP_SERVER_ENDPOINT=wss://${OPAMP_SERVER_HOST}:4320/v1/opamp
+      - OPAMP_SERVER_TLS_INSECURE_SKIP_VERIFY=true
     healthcheck:
       test: ["CMD", "/bin/grpc_health_probe", "-addr=:${PRODUCT_CATALOG_PORT}"]
       start_period: 10s
@@ -528,8 +570,10 @@ services:
         condition: service_started
       astronomy-db:
         condition: service_healthy
+      opamp-server:
+        condition: service_healthy
     volumes:
-      - ${SRC_DIR}/product-catalog/products:/usr/src/app/products
+      - ../../otel-config.yml:/otel-config.yml
     read_only: true
     tmpfs:
       - /tmp
@@ -554,6 +598,7 @@ services:
       - IPV6_ENABLED
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_PHP_AUTOLOAD_ENABLED=true
       - QUOTE_PORT
       - OTEL_PHP_INTERNAL_METRICS_ENABLED=true
@@ -593,8 +638,10 @@ services:
       - OTEL_PYTHON_LOG_CORRELATION=true
       - OTEL_EXPORTER_OTLP_ENDPOINT
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=medium
       - OTEL_SERVICE_NAME=recommendation
+      - OTEL_PYTHON_SDK_INTERNAL_METRICS_ENABLED=true
       - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost ${RECOMMENDATION_PORT}"]
@@ -637,6 +684,7 @@ services:
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=high
       - OTEL_SERVICE_NAME=shipping
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
     healthcheck:
       test: ["CMD", "/app/healthcheck"]
       start_period: 10s
@@ -696,6 +744,7 @@ services:
       - FLAGD_UI_PORT
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
       - OTEL_SERVICE_NAME=flagd-ui
       - SECRET_KEY_BASE=yYrECL4qbNwleYInGJYvVnSkwJuSQJ4ijPTx5tirGUXrbznFIBFVJdPl5t6O9ASw
@@ -764,7 +813,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - ./src/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../../src/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
     logging: *logging
   # Valkey used by Cart service
   valkey-cart:
@@ -815,6 +864,18 @@ services:
       - "13133"
     logging: *logging
     environment:
+      - AD_PROMETHEUS_PORT
+      - FRONTEND_PROXY_ADDR
+      - HOST_FILESYSTEM
+      - IMAGE_PROVIDER_HOST
+      - IMAGE_PROVIDER_PORT
+      - OTEL_COLLECTOR_HOST
+      - OTEL_COLLECTOR_PORT_GRPC
+      - OTEL_COLLECTOR_PORT_HTTP
+      - POSTGRES_HOST
+      - POSTGRES_PORT
+      - POSTGRES_MONITORING_PASSWORD
+      - GOMEMLIMIT=160MiB
       - KAFKA_ADDR
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
       - KAFKA_ADDR
@@ -840,6 +901,7 @@ services:
       - KAFKA_TOPIC
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
       - OTEL_SERVICE_NAME=accounting
       - DB_CONNECTION_STRING=Host=${POSTGRES_HOST};Username=astronomy_user;Password=${POSTGRES_ASTRONOMY_PASSWORD};Database=astronomy_db
@@ -877,6 +939,7 @@ services:
       - KAFKA_TOPIC
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_INSTRUMENTATION_KAFKA_EXPERIMENTAL_SPAN_ATTRIBUTES=true
       - OTEL_INSTRUMENTATION_MESSAGING_EXPERIMENTAL_RECEIVE_TELEMETRY_ENABLED=true
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
@@ -916,6 +979,7 @@ services:
       - KAFKA_CONTROLLER_QUORUM_VOTERS=1@${KAFKA_HOST}:9093
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+      - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
       - OTEL_SERVICE_NAME=kafka
       - OTEL_EXPERIMENTAL_SDK_TELEMETRY_VERSION=latest
@@ -977,7 +1041,7 @@ services:
     ports:
       - "${AGENT_PORT}"
     volumes:
-      - ./src/agent/fixtures:/app/fixtures
+      - ../../src/agent/fixtures:/app/fixtures
     environment:
       - TRACELOOP_BASE_URL
       - GRAPH_RECURSION_LIMIT
@@ -997,12 +1061,17 @@ services:
       - OTEL_EXPORTER_OTLP_INSECURE=true
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
       - OTEL_SERVICE_NAME=agent
+      - FLAGD_HOST
+      - FLAGD_PORT
+      - OTEL_PYTHON_SDK_INTERNAL_METRICS_ENABLED=true
     depends_on:
       otel-collector:
         condition: service_started
       product-catalog:
         condition: service_started
       mcp:
+        condition: service_started
+      flagd:
         condition: service_started
     logging:
       driver: "json-file"
@@ -1031,6 +1100,7 @@ services:
       - APPLICATION_ENDPOINT
       - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
       - OTEL_SERVICE_NAME=mcp
+      - OTEL_PYTHON_SDK_INTERNAL_METRICS_ENABLED=true
     depends_on:
       frontend:
         condition: service_started
@@ -1062,9 +1132,14 @@ services:
       - OTEL_SERVICE_NAME=chatbot
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_INSECURE=true
+      - OTEL_PYTHON_SDK_INTERNAL_METRICS_ENABLED=true
+      - OPAMP_SERVER_ENDPOINT=https://${OPAMP_SERVER_HOST}:4320/v1/opamp
+      - OPAMP_SERVER_TLS_INSECURE_SKIP_VERIFY=true
     depends_on:
       agent:
         condition: service_started
+      opamp-server:
+        condition: service_healthy
     logging:
       driver: "json-file"
       options:
