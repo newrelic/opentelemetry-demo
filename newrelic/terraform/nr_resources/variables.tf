@@ -50,6 +50,12 @@ variable "kafka_producer_rate_threshold" {
   default     = 60
 }
 
+variable "node_cpu_threshold" {
+  description = "Node CPU busy percent (100 minus idle, from host metrics) above which the node CPU alert fires"
+  type        = number
+  default     = 85
+}
+
 
 ##
 ## Maps services to thresholds for alerts are defined using metric values.

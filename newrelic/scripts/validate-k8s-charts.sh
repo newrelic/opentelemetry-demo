@@ -14,7 +14,7 @@ NR_K8S_RENDERED_PATH="${NR_K8S_RENDERED_PATH:-newrelic/k8s/rendered/nr-k8s-otel-
 # should always fail CI, not routine additions. Update it when a listed
 # item is deliberately renamed or retired, or when a new component becomes
 # similarly load-bearing (e.g. it backs a shipped dashboard).
-REQUIRED_CONNECTORS=("spanmetrics")
+REQUIRED_CONNECTORS=("span_metrics")
 REQUIRED_RECEIVERS=("prometheus/ad" "postgresql" "kafka_metrics")
 REQUIRED_PROCESSORS=()
 REQUIRED_PIPELINES=("metrics/spanmetrics" "metrics/postgres" "logs/postgres")
