@@ -19,10 +19,10 @@ This is the demo counterpart to the SRE Agent's `detect_consumer_liveness` detec
 
 ## What to look for in New Relic
 
-The same broker-side Kafka metrics collected by the `kafkametrics`/`kafka_metrics` receiver drive this scenario — here the key signal is `kafka.consumer_group.members`, faceted by `group`.
+The same broker-side Kafka metrics collected by the `kafka_metrics` receiver drive this scenario — here the key signal is `kafka.consumer_group.members`, faceted by `group`.
 
 - **Dashboard** — the _Kafka — Dead Consumer Group Scenario_ section of the **Astronomy Services Baselines** dashboard: the _Consumer Group Members_ tile shows `fraud-detection` dropping from 1 to 0 while `accounting` stays at 1. The _Consumer Group Lag_ tile in the section above shows `fraud-detection` lag climbing at the same time — together they are the `members == 0 AND lag_present` signature.
-- **Alert** — the **Kafka Dead Consumer Group (orders)** condition on the _Astronomy Service Metric Health_ policy opens a critical incident when any group's `members` drops below `var.kafka_dead_consumer_members_threshold` (default 1, i.e. fires at 0 members).
+- **Alert** — the **Kafka Dead Consumer Group** condition on the _Astronomy Service Metric Health_ policy opens a critical incident when any group's `members` drops below `var.kafka_dead_consumer_members_threshold` (default 1, i.e. fires at 0 members).
 
 Quick NRQL check:
 

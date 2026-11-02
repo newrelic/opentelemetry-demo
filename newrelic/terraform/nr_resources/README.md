@@ -46,6 +46,7 @@ terraform apply
 | newrelic_region | New Relic region (US or EU) | `string` | `"US"` | no |
 | newrelic_account_id | The New Relic account ID where the demo is deployed | `string` | n/a | yes |
 | checkout_service_name | Name of the checkout service entity | `string` | `"checkout"` | no |
+| kafka_dead_consumer_members_threshold | Member count below which the Kafka dead-consumer alert fires | `number` | `1` | no |
 
 Set variables using environment variables (recommended):
 
@@ -91,6 +92,12 @@ Covers Alerts for services where only span data is available.
 - **Error rate threshold** - Faceted by service name, for now.
 
 Source: span_alerts.tf
+
+#### Kafka
+
+- **Kafka Dead Consumer Group** - Fires when any consumer group's `members` drops below `kafka_dead_consumer_members_threshold` (default 1)
+
+Source: metric_alerts.tf
 
 ### Service Level Objectives (SLOs)
 

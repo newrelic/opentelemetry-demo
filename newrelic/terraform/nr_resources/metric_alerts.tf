@@ -186,7 +186,7 @@ resource "newrelic_nrql_alert_condition" "kafka_dead_consumer_group" {
   account_id                   = var.newrelic_account_id
   policy_id                    = newrelic_alert_policy.metric_alert_policy.id
   type                         = "static"
-  name                         = "Kafka Dead Consumer Group (orders)"
+  name                         = "Kafka Dead Consumer Group"
   enabled                      = true
   violation_time_limit_seconds = 259200
 
