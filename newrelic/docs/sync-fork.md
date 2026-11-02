@@ -86,7 +86,7 @@ You will need to resolve these conflicts manually, stage the resolved files (`gi
 There may be underlying changes to the official OpenTelemetry Demo that conflict with the code under `/newrelic`.
 After syncing the fork, you can validate that New Relic's demo works as expected, and make changes as required.
 
-The `scripts/update-docker.sh` script can help you update the synced `docker-compose.yml` to contain aspects needed for best integration with New Relic.
+The `scripts/update-docker.sh` script can help you update the synced `docker-compose.yml` to contain aspects needed for best integration with New Relic. It pins the `otel-collector` image to a fixed collector-contrib version, which `scripts/update-k8s.sh` keeps in sync, and points the build contexts at the repository root relative to the compose file. When running `docker compose build` from `newrelic/docker`, pass `--env-file ../../.env` so the Dockerfile variables are interpolated.
 The `scripts/update-k8s.sh` script will change installation scripts to use the latest chart version and the newest collector-contrib release whose image is published on Docker Hub, which may be needed when updating to the latest demo version. Run with `--dry-run` to validate changes locally without creating a PR.
 
 You can commit any changes and include them in same PR in Step 6, so that user's of this demo get a working environment.
