@@ -1796,6 +1796,62 @@ data:
       resourcedetection/otel-demo:
         detectors:
         - env
+      transform/flag_scenarios:
+        error_mode: ignore
+        log_statements:
+        - conditions:
+          - resource.attributes["service.name"] == "ad" and IsMatch(body.string, "adManualGc")
+          context: log
+          statements:
+          - set(body, "[gc] Pause Full (System.gc()) 1843M->412M(2048M) 1312.447ms")
+        - conditions:
+          - resource.attributes["service.name"] == "ad" and IsMatch(body.string, "High CPU-Load
+            problempattern")
+          context: log
+          statements:
+          - 'set(body, "Request processing time exceeded threshold: thread pool saturated,
+            active=200 queued=1312 cpu=98%")'
+        - conditions:
+          - resource.attributes["service.name"] == "checkout" and IsMatch(body.string, "kafkaQueueProblems")
+          context: log
+          statements:
+          - 'set(body, "kafka: producer queue full: local queue saturated, delivery to topic
+            \"orders\" delayed (queue.buffering.max.messages reached)")'
+        - conditions:
+          - resource.attributes["service.name"] == "fraud-detection" and IsMatch(body.string,
+            "kafkaQueueProblems")
+          context: log
+          statements:
+          - 'set(body, "Consumer group \"frauddetection\" lag increasing on topic \"orders\":
+            poll() loop exceeded expected interval, processing 1000ms per record")'
+        - conditions:
+          - resource.attributes["service.name"] == "product-catalog" and IsMatch(body.string,
+            "^lock contention scenario active")
+          context: log
+          statements:
+          - 'set(body, "pq: canceling statement due to lock timeout: relation \"catalog.products\"
+            is locked in ACCESS EXCLUSIVE mode by another transaction")'
+        - conditions:
+          - resource.attributes["service.name"] == "shipping" and IsMatch(body.string, "intlShippingSlowdown")
+          context: log
+          statements:
+          - set(body, "Carrier rate API timeout for international shipment, falling back
+            to slow path")
+        trace_statements:
+        - conditions:
+          - resource.attributes["service.name"] == "product-catalog" and IsMatch(status.message,
+            "Product Catalog Fail Feature Flag Enabled")
+          context: span
+          statements:
+          - 'set(status.message, "rpc error: code = Internal desc = failed to query product:
+            pq: could not read block in file \"base/16384/24576\": Input/output error")'
+        - conditions:
+          - resource.attributes["service.name"] == "product-catalog" and IsMatch(name, "Product
+            Catalog Fail Feature Flag Enabled")
+          context: spanevent
+          statements:
+          - 'set(name, "rpc error: code = Internal desc = failed to query product: pq: could
+            not read block in file \"base/16384/24576\": Input/output error")'
       transform/kafka_cluster_name:
         error_mode: ignore
         metric_statements:
@@ -1901,6 +1957,7 @@ data:
           - memory_limiter
           - resourcedetection/otel-demo
           - resource/otel-demo
+          - transform/flag_scenarios
           - batch
           receivers:
           - otlp
@@ -1960,6 +2017,7 @@ data:
           - resourcedetection/otel-demo
           - resource/otel-demo
           - k8s_attributes/ksm
+          - transform/flag_scenarios
           - gen_ai_normalizer
           - batch
           receivers:
@@ -2717,7 +2775,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 013f7d4418f1655d68d815a191534af569ca66003fa608e9c0bb6a8eb2bc9ca1
+        checksum/config: 1801a8e5738745b86770feac2745013f89c36a33beb68313e91c64f38cfba9c0
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
