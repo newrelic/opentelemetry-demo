@@ -46,6 +46,7 @@ terraform apply
 | newrelic_region | New Relic region (US or EU) | `string` | `"US"` | no |
 | newrelic_account_id | The New Relic account ID where the demo is deployed | `string` | n/a | yes |
 | checkout_service_name | Name of the checkout service entity | `string` | `"checkout"` | no |
+| node_cpu_threshold | Node CPU busy percent (100 minus idle, from host metrics) above which the node CPU alert fires | `number` | `85` | no |
 
 Set variables using environment variables (recommended):
 
@@ -91,6 +92,18 @@ Covers Alerts for services where only span data is available.
 - **Error rate threshold** - Faceted by service name, for now.
 
 Source: span_alerts.tf
+
+#### Kubernetes
+
+Alerts in the _Astronomy Shop Kubernetes Health_ policy.
+
+- **Pod Not Ready**
+- **Deployment Replicas Unavailable**
+- **Container OOMKilled**
+- **Readiness Probe Failing**
+- **Node CPU High** - Fires when node CPU busy percent exceeds `node_cpu_threshold` (default 85)
+
+Source: k8s_alerts.tf
 
 ### Service Level Objectives (SLOs)
 
