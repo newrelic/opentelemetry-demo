@@ -724,7 +724,7 @@ services:
       - "${FLAGD_PORT}"
       - "${FLAGD_OFREP_PORT}"
     volumes:
-      - ${SRC_DIR}/flagd:/etc/flagd
+      - ${SRC_DIR:-../../src}/flagd:/etc/flagd
     logging: *logging
   # Flagd UI for configuring the feature flag service
   flagd-ui:
@@ -763,7 +763,7 @@ services:
       flagd:
         condition: service_started
     volumes:
-      - ${SRC_DIR}/flagd:/app/data
+      - ${SRC_DIR:-../../src}/flagd:/app/data
   # Telemetry Documentation service
   telemetry-docs:
     image: ${IMAGE_NAME}:${DEMO_VERSION}-telemetry-docs
