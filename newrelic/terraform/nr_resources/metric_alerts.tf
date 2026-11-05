@@ -32,7 +32,7 @@ resource "newrelic_nrql_alert_condition" "service_error_rate" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "none"
-  aggregation_window = local.aggregation_window
+  aggregation_window = local.metric_aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
@@ -60,7 +60,7 @@ resource "newrelic_nrql_alert_condition" "service_latency" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "last_value"
-  aggregation_window = local.aggregation_window
+  aggregation_window = local.metric_aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
@@ -88,7 +88,7 @@ resource "newrelic_nrql_alert_condition" "service_low_throughput" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "none"
-  aggregation_window = local.aggregation_window
+  aggregation_window = local.metric_aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
@@ -116,7 +116,7 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "none"
-  aggregation_window = local.aggregation_window
+  aggregation_window = local.metric_aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
