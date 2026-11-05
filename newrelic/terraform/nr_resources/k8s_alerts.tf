@@ -40,7 +40,7 @@ resource "newrelic_nrql_alert_condition" "k8s_pod_not_ready" {
     threshold_duration    = local.threshold_duration
     threshold_occurrences = "all"
   }
-  fill_option = "none"
+  fill_option = "last_value"
 
   expiration_duration            = 300
   close_violations_on_expiration = true
@@ -71,7 +71,7 @@ resource "newrelic_nrql_alert_condition" "k8s_deployment_replicas_unavailable" {
     threshold_duration    = local.threshold_duration
     threshold_occurrences = "all"
   }
-  fill_option = "none"
+  fill_option = "last_value"
 
   expiration_duration            = 300
   close_violations_on_expiration = true
