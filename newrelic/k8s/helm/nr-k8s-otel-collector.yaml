@@ -385,6 +385,25 @@ deployment:
               statements:
                 - 'set(name, "rpc error: code = Internal desc = failed to query product: pq: could not read block in file \"base/16384/24576\": Input/output error")'
 
+        # Per-topic totals the New Relic Kafka UI reads; runs before transform/kafka_cluster_name
+        # because aggregating drops datapoint attributes other than topic.
+        metricstransform/kafka_topic_sum_aggregation:
+          transforms:
+            - include: kafka.partition.replicas_in_sync
+              action: insert
+              new_name: kafka.partition.replicas_in_sync.total
+              operations:
+                - action: aggregate_labels
+                  label_set: [topic]
+                  aggregation_type: sum
+            - include: kafka.partition.replicas
+              action: insert
+              new_name: kafka.partition.replicas.total
+              operations:
+                - action: aggregate_labels
+                  label_set: [topic]
+                  aggregation_type: sum
+
         # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
         # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.
         #
@@ -399,15 +418,6 @@ deployment:
                 - IsMatch(metric.name, "^kafka\\.")
               statements:
                 - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
-
-        transform/kafka_broker_id:
-          error_mode: ignore
-          metric_statements:
-            - context: resource
-              conditions:
-                - resource.attributes["service.name"] == "kafka"
-              statements:
-                - set(resource.attributes["broker.id"], "1")
 
       pipelines:
 
@@ -461,8 +471,8 @@ deployment:
             - filter/python-system-metrics
             - resource_detection/otel-demo
             - resource/otel-demo
+            - metricstransform/kafka_topic_sum_aggregation
             - transform/kafka_cluster_name
-            - transform/kafka_broker_id
             - k8s_attributes/ksm
             - transform/strip_ad_metric_metadata
             - cumulative_to_delta
