@@ -153,7 +153,7 @@ resource "newrelic_nrql_alert_condition" "kafka_consumer_lag" {
 }
 
 ## Producer-rate-spike alert: checkout floods the orders topic when the flag is on.
-## current_offset is a monotonic gauge, so the production rate is its derivative;
+## kafka.prod.msg.count is the broker's per-topic message counter (from the Kafka JMX rules);
 ## baseline is a few msgs/min, the scenario bursts ~100 messages per checkout.
 resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   account_id                   = var.newrelic_account_id
@@ -164,7 +164,7 @@ resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT derivative(kafka.partition.current_offset, 1 minute) FROM Metric WHERE topic = 'orders' FACET topic"
+    query           = "SELECT rate(sum(kafka.prod.msg.count), 1 minute) FROM Metric WHERE topic = 'orders' FACET topic"
     data_account_id = var.newrelic_account_id
   }
 
