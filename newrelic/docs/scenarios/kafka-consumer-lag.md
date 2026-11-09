@@ -23,6 +23,7 @@ Overloads the Kafka `orders` topic while slowing one consumer, producing a consu
 
 Broker-side Kafka metrics (notably `kafka.consumer_group.lag`) are collected by the `kafka_metrics` receiver added to the collector, faceted by `group` and `topic`.
 
+- **Topics and broker** — the receiver skips internal topics (names starting with `_`, such as `__consumer_offsets`) and also emits `kafka.topic.min_insync_replicas` and `kafka.topic.replication_factor` per topic. On Kubernetes only, broker metrics (`service.name = kafka`) carry a fixed `broker.id` of `1`, which lets New Relic create the Kafka broker entity; it is a constant for the demo's single broker, not a discovered id.
 - **Alerts** — two conditions on the _Astronomy Service Metric Health_ policy open critical incidents:
   - **Kafka Consumer Lag (fraud-detection / orders)** — lag above `var.kafka_consumer_lag_threshold` (default 100).
   - **Kafka Producer Rate Spike (orders topic)** — production rate above `var.kafka_producer_rate_threshold` (default 60/min).
@@ -54,5 +55,7 @@ The broker-metrics receiver lives in a different place per deployment path (they
 | :--- | :--- |
 | Kubernetes (`nr-otel-cli install k8s`, used for Gamedays/Instruqt) | [`newrelic/k8s/helm/nr-k8s-otel-collector.yaml`](../../k8s/helm/nr-k8s-otel-collector.yaml) — receiver id `kafka_metrics` |
 | Docker (`nr-otel-cli install docker`) | [`newrelic/docker/config/otel-config-docker.yaml`](../../docker/config/otel-config-docker.yaml) — receiver id `kafka_metrics` |
+
+The internal-topic filter, the two topic metrics and the `broker.id` processor are configured on the Kubernetes path only.
 
 The alerts and SLO are defined in [`newrelic/terraform/nr_resources`](../../terraform/nr_resources) (`metric_alerts.tf`, `slos.tf`) and apply the same on both paths.

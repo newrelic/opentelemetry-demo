@@ -215,6 +215,13 @@ deployment:
             - topics
             - consumers
           collection_interval: 15s
+          # Exclude internal topics (names starting with _)
+          topic_match: "^[^_].*$"
+          metrics:
+            kafka.topic.min_insync_replicas:
+              enabled: true
+            kafka.topic.replication_factor:
+              enabled: true
 
       connectors:
         span_metrics:
@@ -393,6 +400,15 @@ deployment:
               statements:
                 - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
 
+        transform/kafka_broker_id:
+          error_mode: ignore
+          metric_statements:
+            - context: resource
+              conditions:
+                - resource.attributes["service.name"] == "kafka"
+              statements:
+                - set(resource.attributes["broker.id"], "1")
+
       pipelines:
 
         # Spanmetrics are being used to populate the Summary UIs for services that do not publish metrics by default
@@ -446,6 +462,7 @@ deployment:
             - resource_detection/otel-demo
             - resource/otel-demo
             - transform/kafka_cluster_name
+            - transform/kafka_broker_id
             - k8s_attributes/ksm
             - transform/strip_ad_metric_metadata
             - cumulative_to_delta
