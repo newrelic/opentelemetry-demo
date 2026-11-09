@@ -2332,6 +2332,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: KAFKA_ADDR
               value: kafka:9092
             - name: KAFKA_TOPIC
@@ -2441,6 +2443,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: AD_PORT
               value: "8080"
             - name: AD_PROMETHEUS_PORT
@@ -2545,6 +2549,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: AGENT_PORT
               value: "8010"
             - name: AGENT_ENDPOINT
@@ -2792,6 +2798,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: CART_PORT
               value: "8080"
             - name: ASPNETCORE_URLS
@@ -2906,6 +2914,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: CHATBOT_PORT
               value: "7860"
             - name: CHATBOT_ROOT_PATH
@@ -3014,6 +3024,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: CHECKOUT_PORT
               value: "8080"
             - name: CART_ADDR
@@ -3147,6 +3159,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: CURRENCY_PORT
               value: "8080"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -3245,6 +3259,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: EMAIL_PORT
               value: "8080"
             - name: APP_ENV
@@ -3356,6 +3372,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://$(OTEL_COLLECTOR_NAME):4318
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
@@ -3415,6 +3433,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://$(OTEL_COLLECTOR_NAME):4318
             - name: FLAGD_UI_PORT
@@ -3524,6 +3544,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: KAFKA_ADDR
               value: kafka:9092
             - name: KAFKA_TOPIC
@@ -3542,12 +3564,14 @@ spec:
               value: latest
             - name: OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED
               value: "true"
+            - name: OTEL_INSTRUMENTATION_RUNTIME_TELEMETRY_ENABLED
+              value: "false"
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: service.name=$(OTEL_SERVICE_NAME), service.namespace=opentelemetry-demo,
                 service.version=3.1.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),
-                service.criticality=low, kafka.cluster.name=otel-demo-kafka
+                service.criticality=low, kafka.cluster.name=$(KAFKA_CLUSTER_NAME)
           resources:
             limits:
               cpu: 1000m
@@ -3640,6 +3664,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: FRONTEND_PORT
               value: "8080"
             - name: PORT
@@ -3773,6 +3799,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: ENVOY_PORT
               value: "8080"
             - name: ENVOY_ADDR
@@ -3929,6 +3957,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: IMAGE_PROVIDER_PORT
               value: "8081"
             - name: OTEL_COLLECTOR_PORT_GRPC
@@ -4027,6 +4057,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: KAFKA_ADVERTISED_LISTENERS
               value: PLAINTEXT://kafka.opentelemetry-demo.svc.cluster.local:9092
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -4051,7 +4083,7 @@ spec:
                 service.version=3.1.0, service.instance.id=$(OTEL_POD_NAME),
                 k8s.container.name=$(OTEL_K8S_CONTAINER_NAME), k8s.pod.name=$(OTEL_POD_NAME),
                 k8s.pod.uid=$(OTEL_POD_UID), k8s.namespace.name=$(OTEL_NAMESPACE_NAME), k8s.cluster.name=$(OTEL_CLUSTER_NAME),
-                service.criticality=low, kafka.cluster.name=otel-demo-kafka, broker.id=$(KAFKA_NODE_ID)
+                service.criticality=low, kafka.cluster.name=$(KAFKA_CLUSTER_NAME), broker.id=$(KAFKA_NODE_ID)
           resources:
             limits:
               cpu: 1000m
@@ -4147,6 +4179,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: LOCUST_WEB_HOST
               value: 0.0.0.0
             - name: LOCUST_WEB_PORT
@@ -4271,6 +4305,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: MCP_PORT
               value: "8011"
             - name: MCP_ENDPOINT
@@ -4434,6 +4470,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: PAYMENT_PORT
               value: "8080"
             - name: FLAGD_HOST
@@ -4540,6 +4578,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: PRODUCT_CATALOG_PORT
               value: "8080"
             - name: FLAGD_HOST
@@ -4672,6 +4712,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: QUOTE_PORT
               value: "8080"
             - name: OTEL_PHP_AUTOLOAD_ENABLED
@@ -4776,6 +4818,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: RECOMMENDATION_PORT
               value: "8080"
             - name: PRODUCT_CATALOG_ADDR
@@ -4882,6 +4926,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: SHIPPING_PORT
               value: "8080"
             - name: QUOTE_ADDR
@@ -4999,6 +5045,8 @@ spec:
               value: delta
             - name: OTEL_METRIC_EXPORT_INTERVAL
               value: "10000"
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
             - name: TELEMETRY_DOCS_PORT
               value: "8000"
             - name: OTEL_COLLECTOR_HOST

@@ -76,6 +76,8 @@ deployment:
     # Update to match otlp_http/newrelic's endpoint if global.region is EU/JP.
     - name: INTERNAL_TELEMETRY_OTLP_ENDPOINT
       value: https://otlp.nr-data.net
+    - name: KAFKA_CLUSTER_NAME
+      value: otel-demo-kafka
   # service.name differs from the daemonset's so both show up as separate APM entities.
   extraArgs:
     - |-
@@ -209,7 +211,7 @@ deployment:
           # cluster_alias should emit the kafka.cluster.alias resource attribute, but
           # this image's contrib version never emits it (see transform/kafka_cluster_name
           # below). Kept as future-proofing for when the fix lands upstream.
-          cluster_alias: otel-demo-kafka
+          cluster_alias: ${env:KAFKA_CLUSTER_NAME}
           scrapers:
             - brokers
             - topics
@@ -501,7 +503,7 @@ deployment:
               conditions:
                 - IsMatch(metric.name, "^kafka\\.")
               statements:
-                - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+                - set(attributes["kafka.cluster.name"], "${env:KAFKA_CLUSTER_NAME}")
 
       pipelines:
 

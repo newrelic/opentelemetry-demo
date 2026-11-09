@@ -44,6 +44,8 @@ default:
         k8s.cluster.name=$(OTEL_CLUSTER_NAME)
     - name: OTEL_METRIC_EXPORT_INTERVAL
       value: "10000"
+    - name: KAFKA_CLUSTER_NAME
+      value: otel-demo-kafka
 
 components:
   accounting:
@@ -82,7 +84,7 @@ components:
           k8s.namespace.name=$(OTEL_NAMESPACE_NAME),
           k8s.cluster.name=$(OTEL_CLUSTER_NAME),
           service.criticality=low,
-          kafka.cluster.name=otel-demo-kafka,
+          kafka.cluster.name=$(KAFKA_CLUSTER_NAME),
           broker.id=$(KAFKA_NODE_ID)
       - name: KAFKA_OPTS
         value: >-
@@ -716,6 +718,8 @@ components:
     envOverrides:
       - name: OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED
         value: "true"
+      - name: OTEL_INSTRUMENTATION_RUNTIME_TELEMETRY_ENABLED
+        value: "false"
       - name: OTEL_RESOURCE_ATTRIBUTES
         value: >-
           service.name=$(OTEL_SERVICE_NAME),
@@ -728,7 +732,7 @@ components:
           k8s.namespace.name=$(OTEL_NAMESPACE_NAME),
           k8s.cluster.name=$(OTEL_CLUSTER_NAME),
           service.criticality=low,
-          kafka.cluster.name=otel-demo-kafka
+          kafka.cluster.name=$(KAFKA_CLUSTER_NAME)
     resources:
       requests:
         cpu: 30m
