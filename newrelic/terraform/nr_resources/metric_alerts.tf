@@ -181,6 +181,36 @@ resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   title_template     = "[{{conditionName}}] {{priority}}"
 }
 
+##############################
+## PostgreSQL Alerts
+##
+
+resource "newrelic_nrql_alert_condition" "postgres_lock_contention" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "PostgreSQL Lock Contention (astronomy-db)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT max(postgresql.database.locks) FROM Metric WHERE mode = 'AccessShareLock' AND postgresql.database.name = 'astronomy_db' FACET entity.guid"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.postgres_lock_waiters_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option        = "last_value"
+  aggregation_window = local.aggregation_window
+  aggregation_method = "event_flow"
+  aggregation_delay  = local.aggregation_delay
+  title_template     = "[{{conditionName}}] {{priority}}"
+}
+
 ##
 ## Tags for Metric Alert Conditions
 ##
