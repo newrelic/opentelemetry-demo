@@ -879,6 +879,7 @@ services:
       - KAFKA_ADDR
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
       - KAFKA_ADDR
+      - KAFKA_CLUSTER_NAME=${KAFKA_CLUSTER_NAME:-otel-demo-kafka}
       - OTEL_COLLECTOR_HOST
       - OTEL_COLLECTOR_PORT_HTTP
       - AD_PROMETHEUS_PORT
@@ -942,11 +943,12 @@ services:
       - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
       - OTEL_INSTRUMENTATION_KAFKA_EXPERIMENTAL_SPAN_ATTRIBUTES=true
       - OTEL_INSTRUMENTATION_MESSAGING_EXPERIMENTAL_RECEIVE_TELEMETRY_ENABLED=true
-      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
+      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low,kafka.cluster.name=${KAFKA_CLUSTER_NAME:-otel-demo-kafka}
       - OTEL_SERVICE_NAME=fraud-detection
       - OTEL_EXPERIMENTAL_SDK_TELEMETRY_VERSION=latest
       # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
       - _JAVA_OPTIONS
+      - OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED=true
     depends_on:
       otel-collector:
         condition: service_started
@@ -980,12 +982,14 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://${OTEL_COLLECTOR_HOST}:${OTEL_COLLECTOR_PORT_HTTP}
       - OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
       - OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION
-      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low
+      - OTEL_RESOURCE_ATTRIBUTES=${OTEL_RESOURCE_ATTRIBUTES},service.criticality=low,kafka.cluster.name=${KAFKA_CLUSTER_NAME:-otel-demo-kafka},broker.id=${KAFKA_NODE_ID:-1}
       - OTEL_SERVICE_NAME=kafka
       - OTEL_EXPERIMENTAL_SDK_TELEMETRY_VERSION=latest
       - KAFKA_HEAP_OPTS=-Xmx400m -Xms400m
       # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
       - _JAVA_OPTIONS
+      - KAFKA_NODE_ID=${KAFKA_NODE_ID:-1}
+      - KAFKA_OPTS=-javaagent:/tmp/opentelemetry-javaagent.jar -XX:+UseG1GC -Dotel.jmx.enabled=true -Dotel.jmx.config=/etc/kafka/jmx-custom-config.yaml -Dotel.instrumentation.runtime-telemetry.enabled=false
     healthcheck:
       test: nc -z kafka 9092
       start_period: 10s
@@ -997,6 +1001,8 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+    volumes:
+      - ../docker/config/kafka-jmx-custom-config.yaml:/etc/kafka/jmx-custom-config.yaml:ro
   # OpAMP Server
   # The collector connects to this control plane and reports status through the
   # opampextension.
