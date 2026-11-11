@@ -221,5 +221,13 @@ variable "span_alert_map" {
       latency_threshold          = 20
       error_percent_threshold    = 1
     }
+    key11 = {
+      service_name               = "agent"
+      service_title_name         = "Agent Service"
+      throughput_lower_threshold = 0
+      throughput_upper_threshold = 200
+      latency_threshold          = 5000
+      error_percent_threshold    = 5
+    }
   }
 } 
