@@ -87,8 +87,8 @@ yq eval -i '.services.kafka.environment += [ "KAFKA_NODE_ID=${KAFKA_NODE_ID:-1}"
 yq eval -i 'with(.services.kafka.environment[] | select(test("^OTEL_RESOURCE_ATTRIBUTES=")); . += ",kafka.cluster.name=${KAFKA_CLUSTER_NAME:-otel-demo-kafka},broker.id=${KAFKA_NODE_ID:-1}")' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.kafka.volumes = [ "../docker/config/kafka-jmx-custom-config.yaml:/etc/kafka/jmx-custom-config.yaml:ro" ]' "$NR_DOCKER_COMPOSE_PATH"
 
-# Kafka consumer: kafka.cluster.name resource attribute, producer propagation and no runtime telemetry, as in the docs' Java app setup
-yq eval -i '.services.fraud-detection.environment += [ "OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED=true", "OTEL_INSTRUMENTATION_RUNTIME_TELEMETRY_ENABLED=false" ]' "$NR_DOCKER_COMPOSE_PATH"
+# Kafka consumer: kafka.cluster.name resource attribute and producer propagation, as in the docs' Java app setup
+yq eval -i '.services.fraud-detection.environment += [ "OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED=true" ]' "$NR_DOCKER_COMPOSE_PATH"
 # shellcheck disable=SC2016
 yq eval -i 'with(.services.fraud-detection.environment[] | select(test("^OTEL_RESOURCE_ATTRIBUTES=")); . += ",kafka.cluster.name=${KAFKA_CLUSTER_NAME:-otel-demo-kafka}")' "$NR_DOCKER_COMPOSE_PATH"
 

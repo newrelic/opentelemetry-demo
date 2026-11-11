@@ -267,13 +267,6 @@ processors:
       - action: aggregate_labels
         label_set: [topic]
         aggregation_type: sum
-    - include: kafka.partition.replicas
-      action: insert
-      new_name: kafka.partition.replicas.total
-      operations:
-      - action: aggregate_labels
-        label_set: [topic]
-        aggregation_type: sum
   transform/kafka_remove_broker_id:
     error_mode: ignore
     metric_statements:

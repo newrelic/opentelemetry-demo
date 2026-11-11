@@ -482,13 +482,6 @@ deployment:
                 - action: aggregate_labels
                   label_set: [topic]
                   aggregation_type: sum
-            - include: kafka.partition.replicas
-              action: insert
-              new_name: kafka.partition.replicas.total
-              operations:
-                - action: aggregate_labels
-                  label_set: [topic]
-                  aggregation_type: sum
 
         # Sets kafka.cluster.name as a datapoint attribute on Kafka metrics only, since a
         # resource attribute would leak onto sibling non-Kafka metrics sharing the resource.

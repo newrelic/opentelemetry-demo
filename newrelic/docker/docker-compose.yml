@@ -949,7 +949,6 @@ services:
       # Workaround on OSX for https://bugs.openjdk.org/browse/JDK-8345296
       - _JAVA_OPTIONS
       - OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED=true
-      - OTEL_INSTRUMENTATION_RUNTIME_TELEMETRY_ENABLED=false
     depends_on:
       otel-collector:
         condition: service_started
