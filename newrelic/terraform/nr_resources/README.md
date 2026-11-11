@@ -46,7 +46,7 @@ terraform apply
 | newrelic_region | New Relic region (US or EU) | `string` | `"US"` | no |
 | newrelic_account_id | The New Relic account ID where the demo is deployed | `string` | n/a | yes |
 | checkout_service_name | Name of the checkout service entity | `string` | `"checkout"` | no |
-| postgres_lock_waiters_threshold | Number of AccessShareLock holders on astronomy_db above which the PostgreSQL lock-contention alert fires | `number` | `10` | no |
+| postgres_exclusive_lock_threshold | Number of AccessExclusiveLock locks on astronomy_db above which the PostgreSQL lock-contention alert fires | `number` | `0` | no |
 | node_cpu_threshold | Node CPU busy percent (100 minus idle, from host metrics) above which the node CPU alert fires | `number` | `85` | no |
 
 Set variables using environment variables (recommended):

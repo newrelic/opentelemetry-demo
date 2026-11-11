@@ -194,21 +194,23 @@ resource "newrelic_nrql_alert_condition" "postgres_lock_contention" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT max(postgresql.database.locks) FROM Metric WHERE mode = 'AccessShareLock' AND postgresql.database.name = 'astronomy_db' FACET entity.guid"
+    query           = "SELECT max(postgresql.database.locks) FROM Metric WHERE mode = 'AccessExclusiveLock' AND postgresql.database.name = 'astronomy_db' FACET entity.guid"
     data_account_id = var.newrelic_account_id
   }
 
   critical {
     operator              = "above"
-    threshold             = var.postgres_lock_waiters_threshold
+    threshold             = var.postgres_exclusive_lock_threshold
     threshold_duration    = local.threshold_duration
     threshold_occurrences = "at_least_once"
   }
-  fill_option        = "last_value"
-  aggregation_window = local.aggregation_window
-  aggregation_method = "event_flow"
-  aggregation_delay  = local.aggregation_delay
-  title_template     = "[{{conditionName}}] {{priority}}"
+  fill_option                    = "none"
+  expiration_duration            = 300
+  close_violations_on_expiration = true
+  aggregation_window             = local.aggregation_window
+  aggregation_method             = "event_flow"
+  aggregation_delay              = local.aggregation_delay
+  title_template                 = "[{{conditionName}}] {{priority}}"
 }
 
 ##

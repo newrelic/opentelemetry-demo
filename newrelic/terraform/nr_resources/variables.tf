@@ -50,10 +50,10 @@ variable "kafka_producer_rate_threshold" {
   default     = 60
 }
 
-variable "postgres_lock_waiters_threshold" {
-  description = "Number of AccessShareLock holders on astronomy_db above which the PostgreSQL lock-contention alert fires"
+variable "postgres_exclusive_lock_threshold" {
+  description = "Number of AccessExclusiveLock locks on astronomy_db above which the PostgreSQL lock-contention alert fires"
   type        = number
-  default     = 10
+  default     = 0
 }
 
 variable "node_cpu_threshold" {
