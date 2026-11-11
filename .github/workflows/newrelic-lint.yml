@@ -94,8 +94,7 @@ jobs:
 
       - name: Install yq and otelcol
         run: |
-          sudo apt-get update
-          sudo apt-get install -y yq
+          pipx install yq==3.4.3
           # Extract collector version from values file
           COLLECTOR_VERSION=$(yq -r '.images.collector.tag' newrelic/k8s/helm/nr-k8s-otel-collector.yaml)
           echo "Using otelcol version: $COLLECTOR_VERSION"
