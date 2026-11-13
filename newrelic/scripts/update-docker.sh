@@ -55,6 +55,8 @@ yq eval -i '.services.otel-collector.environment += [ "NEW_RELIC_LICENSE_KEY=${N
 yq eval -i '.services.otel-collector.image = "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.164.0"' "$NR_DOCKER_COMPOSE_PATH"
 
 yq eval -i '.services.otel-collector.environment += [ "KAFKA_ADDR" ]' "$NR_DOCKER_COMPOSE_PATH"
+# shellcheck disable=SC2016
+yq eval -i '.services.otel-collector.environment += [ "KAFKA_CLUSTER_NAME=${KAFKA_CLUSTER_NAME:-otel-demo-kafka}" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.otel-collector.environment += [ "OTEL_COLLECTOR_HOST", "OTEL_COLLECTOR_PORT_HTTP", "AD_PROMETHEUS_PORT" ]' "$NR_DOCKER_COMPOSE_PATH"
 
 # update the command used to launch the collector to point to the NR-specific config
@@ -75,5 +77,19 @@ yq eval -i '.services.agent.volumes = [ "../../src/agent/fixtures:/app/fixtures"
 # add ports used by the OpenTelemetry Collector
 yq eval -i '.services.otel-collector.ports += [ "8888" ]' "$NR_DOCKER_COMPOSE_PATH"
 yq eval -i '.services.otel-collector.ports += [ "13133" ]' "$NR_DOCKER_COMPOSE_PATH"
+
+# Kafka broker: custom JMX rules and G1 collector from the New Relic self-hosted Kafka docs, plus the
+# broker.id and kafka.cluster.name resource attributes that create the Kafka broker entity.
+# Single quotes required below: ${...} are yq template variables, not shell variables.
+# shellcheck disable=SC2016
+yq eval -i '.services.kafka.environment += [ "KAFKA_NODE_ID=${KAFKA_NODE_ID:-1}", "KAFKA_OPTS=-javaagent:/tmp/opentelemetry-javaagent.jar -XX:+UseG1GC -Dotel.jmx.enabled=true -Dotel.jmx.config=/etc/kafka/jmx-custom-config.yaml -Dotel.instrumentation.runtime-telemetry.enabled=false" ]' "$NR_DOCKER_COMPOSE_PATH"
+# shellcheck disable=SC2016
+yq eval -i 'with(.services.kafka.environment[] | select(test("^OTEL_RESOURCE_ATTRIBUTES=")); . += ",kafka.cluster.name=${KAFKA_CLUSTER_NAME:-otel-demo-kafka},broker.id=${KAFKA_NODE_ID:-1}")' "$NR_DOCKER_COMPOSE_PATH"
+yq eval -i '.services.kafka.volumes = [ "../docker/config/kafka-jmx-custom-config.yaml:/etc/kafka/jmx-custom-config.yaml:ro" ]' "$NR_DOCKER_COMPOSE_PATH"
+
+# Kafka consumer: kafka.cluster.name resource attribute and producer propagation, as in the docs' Java app setup
+yq eval -i '.services.fraud-detection.environment += [ "OTEL_INSTRUMENTATION_KAFKA_PRODUCER_PROPAGATION_ENABLED=true" ]' "$NR_DOCKER_COMPOSE_PATH"
+# shellcheck disable=SC2016
+yq eval -i 'with(.services.fraud-detection.environment[] | select(test("^OTEL_RESOURCE_ATTRIBUTES=")); . += ",kafka.cluster.name=${KAFKA_CLUSTER_NAME:-otel-demo-kafka}")' "$NR_DOCKER_COMPOSE_PATH"
 
 echo "Completed updating ./docker/docker-compose.yml for the OpenTelemetry demo app!"

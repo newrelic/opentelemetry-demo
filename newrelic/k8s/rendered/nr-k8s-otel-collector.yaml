@@ -1177,13 +1177,25 @@ data:
       kafka_metrics:
         brokers:
         - kafka:9092
-        cluster_alias: otel-demo-kafka
+        cluster_alias: ${env:KAFKA_CLUSTER_NAME}
         collection_interval: 15s
+        metrics:
+          kafka.partition.current_offset:
+            enabled: false
+          kafka.partition.oldest_offset:
+            enabled: false
+          kafka.partition.replicas:
+            enabled: false
+          kafka.topic.min_insync_replicas:
+            enabled: true
+          kafka.topic.replication_factor:
+            enabled: true
         protocol_version: 2.0.0
         scrapers:
         - brokers
         - topics
         - consumers
+        topic_match: ^[^_].*$
       postgresql:
         collection_interval: 15s
         connection_pool:
@@ -1781,6 +1793,26 @@ data:
             "(currency|quote|payment|recommendation)")
           - metric.name == "traces.span.metrics.duration" and not IsMatch(resource.attributes["service.name"],
             "(currency|quote|payment|recommendation)")
+      filter/kafka_exclude_cluster_metrics:
+        error_mode: ignore
+        metrics:
+          metric:
+          - IsMatch(name, "^kafka\\.(partition\\.offline|(leader|unclean)\\.election\\.rate|partition\\.non_preferred_leader|broker\\.fenced\\.count|cluster\\.(partition|topic)\\.count)$")
+      filter/kafka_internal_topics:
+        error_mode: ignore
+        metrics:
+          datapoint:
+          - attributes["topic"] != nil and IsMatch(attributes["topic"], "^__.*")
+      filter/kafka_only_cluster_metrics:
+        error_mode: ignore
+        metrics:
+          metric:
+          - not IsMatch(name, "^kafka\\.(partition\\.offline|(leader|unclean)\\.election\\.rate|partition\\.non_preferred_leader|broker\\.fenced\\.count|cluster\\.(partition|topic)\\.count)$")
+      filter/kafka_remove_partition_level_replicas:
+        error_mode: ignore
+        metrics:
+          metric:
+          - name == "kafka.partition.replicas_in_sync"
       filter/python-system-metrics:
         error_mode: ignore
         metrics:
@@ -1789,6 +1821,28 @@ data:
       gen_ai_normalizer:
         sources:
         - name: openllmetry
+      groupbyattrs/kafka_cluster:
+        keys:
+        - kafka.cluster.name
+      metricstransform/kafka_cluster_max:
+        transforms:
+        - action: update
+          include: ^kafka\.(partition\.offline|(leader|unclean)\.election\.rate|partition\.non_preferred_leader|broker\.fenced\.count|cluster\.(partition|topic)\.count)$
+          match_type: regexp
+          operations:
+          - action: aggregate_labels
+            aggregation_type: max
+            label_set: []
+      metricstransform/kafka_topic_sum_aggregation:
+        transforms:
+        - action: insert
+          include: kafka.partition.replicas_in_sync
+          new_name: kafka.partition.replicas_in_sync.total
+          operations:
+          - action: aggregate_labels
+            aggregation_type: sum
+            label_set:
+            - topic
       resource/newrelic_spanmetrics_flag:
         attributes:
         - action: upsert
@@ -1866,6 +1920,15 @@ data:
           statements:
           - 'set(name, "rpc error: code = Internal desc = failed to query product: pq: could
             not read block in file \"base/16384/24576\": Input/output error")'
+      transform/kafka_clear_units:
+        error_mode: ignore
+        metric_statements:
+        - conditions:
+          - IsMatch(name, "^kafka\\.")
+          context: metric
+          statements:
+          - set(description, "") where description != ""
+          - set(unit, "") where unit != ""
       transform/kafka_cluster_name:
         error_mode: ignore
         metric_statements:
@@ -1873,7 +1936,29 @@ data:
           - IsMatch(metric.name, "^kafka\\.")
           context: datapoint
           statements:
-          - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+          - set(attributes["kafka.cluster.name"], "${env:KAFKA_CLUSTER_NAME}")
+      transform/kafka_remove_broker_id:
+        error_mode: ignore
+        metric_statements:
+        - conditions:
+          - resource.attributes["service.name"] == "kafka"
+          context: resource
+          statements:
+          - delete_key(resource.attributes, "broker.id")
+      transform/kafka_remove_extra_attributes:
+        error_mode: ignore
+        metric_statements:
+        - conditions:
+          - resource.attributes["service.name"] == "kafka"
+          context: resource
+          statements:
+          - delete_matching_keys(resource.attributes, "^process\\..*")
+          - delete_matching_keys(resource.attributes, "^telemetry\\..*")
+          - delete_matching_keys(resource.attributes, "^cloud\\..*")
+          - delete_key(resource.attributes, "host.arch")
+          - delete_key(resource.attributes, "os.description")
+          - delete_key(resource.attributes, "host.image.id")
+          - delete_key(resource.attributes, "host.type")
       transform/otel-demo:
         error_mode: ignore
         log_statements:
@@ -1998,6 +2083,24 @@ data:
           - batch
           receivers:
           - postgresql
+        metrics/kafka-cluster:
+          exporters:
+          - otlp_http/newrelic
+          processors:
+          - memory_limiter
+          - resource_detection/otel-demo
+          - resource/otel-demo
+          - filter/kafka_only_cluster_metrics
+          - transform/kafka_remove_broker_id
+          - transform/kafka_remove_extra_attributes
+          - transform/kafka_cluster_name
+          - transform/kafka_clear_units
+          - groupbyattrs/kafka_cluster
+          - metricstransform/kafka_cluster_max
+          - cumulative_to_delta
+          - batch
+          receivers:
+          - otlp
         metrics/otel-demo:
           exporters:
           - otlp_http/newrelic
@@ -2006,7 +2109,13 @@ data:
           - filter/python-system-metrics
           - resource_detection/otel-demo
           - resource/otel-demo
+          - filter/kafka_exclude_cluster_metrics
+          - filter/kafka_internal_topics
+          - transform/kafka_remove_extra_attributes
+          - metricstransform/kafka_topic_sum_aggregation
+          - filter/kafka_remove_partition_level_replicas
           - transform/kafka_cluster_name
+          - transform/kafka_clear_units
           - k8s_attributes/ksm
           - transform/strip_ad_metric_metadata
           - cumulative_to_delta
@@ -2805,7 +2914,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 275a758629aef3927368529d15cb14d88cc1fd85436a7365214d322fe26cfa3e
+        checksum/config: ca4c42d7991ffdf65d2eb5b1eb2ea8518eda30849060bf059404f5c1050d79c0
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2899,6 +3008,8 @@ spec:
               value: monitoring_password
             - name: INTERNAL_TELEMETRY_OTLP_ENDPOINT
               value: https://otlp.nr-data.net
+            - name: KAFKA_CLUSTER_NAME
+              value: otel-demo-kafka
           ports:
             - name: http
               containerPort: 4318

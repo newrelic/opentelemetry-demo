@@ -63,12 +63,25 @@ receivers:
     # cluster_alias should emit the kafka.cluster.alias resource attribute, but this
     # image's contrib version never emits it (see transform/kafka_cluster_name below).
     # Kept as future-proofing for when the fix lands upstream.
-    cluster_alias: otel-demo-kafka
+    cluster_alias: ${env:KAFKA_CLUSTER_NAME}
     scrapers:
     - brokers
     - topics
     - consumers
     collection_interval: 15s
+    # Exclude internal topics (names starting with _)
+    topic_match: ^[^_].*$
+    metrics:
+      kafka.topic.min_insync_replicas:
+        enabled: true
+      kafka.topic.replication_factor:
+        enabled: true
+      kafka.partition.replicas:
+        enabled: false
+      kafka.partition.oldest_offset:
+        enabled: false
+      kafka.partition.current_offset:
+        enabled: false
   otlp:
     protocols:
       grpc:
@@ -205,7 +218,87 @@ processors:
       conditions:
       - IsMatch(metric.name, "^kafka\\.")
       statements:
-      - set(attributes["kafka.cluster.name"], "otel-demo-kafka")
+      - set(attributes["kafka.cluster.name"], "${env:KAFKA_CLUSTER_NAME}")
+  # Drop Kafka internal topics (names starting with __) that the broker JMX metrics also report
+  filter/kafka_internal_topics:
+    error_mode: ignore
+    metrics:
+      datapoint:
+      # topic starts with two underscores, e.g. __consumer_offsets
+      - 'attributes["topic"] != nil and IsMatch(attributes["topic"], "^__.*")'
+  # Cluster-wide broker metrics are routed to their own pipeline, as in the New Relic
+  # self-hosted Kafka docs, so they are reported once per cluster instead of per broker.
+  filter/kafka_exclude_cluster_metrics:
+    error_mode: ignore
+    metrics:
+      metric:
+      # kafka.partition.offline, leader and unclean election rate, non preferred leader, fenced brokers, cluster topic and partition counts
+      - 'IsMatch(name, "^kafka\\.(partition\\.offline|(leader|unclean)\\.election\\.rate|partition\\.non_preferred_leader|broker\\.fenced\\.count|cluster\\.(partition|topic)\\.count)$")'
+  filter/kafka_only_cluster_metrics:
+    error_mode: ignore
+    metrics:
+      metric:
+      - 'not IsMatch(name, "^kafka\\.(partition\\.offline|(leader|unclean)\\.election\\.rate|partition\\.non_preferred_leader|broker\\.fenced\\.count|cluster\\.(partition|topic)\\.count)$")'
+  filter/kafka_remove_partition_level_replicas:
+    error_mode: ignore
+    metrics:
+      metric:
+      - 'name == "kafka.partition.replicas_in_sync"'
+  groupbyattrs/kafka_cluster:
+    keys:
+    - kafka.cluster.name
+  metricstransform/kafka_cluster_max:
+    transforms:
+    - include: "^kafka\\.(partition\\.offline|(leader|unclean)\\.election\\.rate|partition\\.non_preferred_leader|broker\\.fenced\\.count|cluster\\.(partition|topic)\\.count)$"
+      match_type: regexp
+      action: update
+      operations:
+      - action: aggregate_labels
+        aggregation_type: max
+        label_set: []
+  # Per-topic totals the New Relic Kafka UI reads; runs before transform/kafka_cluster_name
+  # because aggregating drops datapoint attributes other than topic.
+  metricstransform/kafka_topic_sum_aggregation:
+    transforms:
+    - include: kafka.partition.replicas_in_sync
+      action: insert
+      new_name: kafka.partition.replicas_in_sync.total
+      operations:
+      - action: aggregate_labels
+        label_set: [topic]
+        aggregation_type: sum
+  transform/kafka_remove_broker_id:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      conditions:
+      - resource.attributes["service.name"] == "kafka"
+      statements:
+      - delete_key(resource.attributes, "broker.id")
+  # Same cleanup the docs apply to broker metrics
+  transform/kafka_remove_extra_attributes:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      conditions:
+      - resource.attributes["service.name"] == "kafka"
+      statements:
+      - delete_matching_keys(resource.attributes, "^process\\..*")
+      - delete_matching_keys(resource.attributes, "^telemetry\\..*")
+      - delete_matching_keys(resource.attributes, "^cloud\\..*")
+      - delete_key(resource.attributes, "host.arch")
+      - delete_key(resource.attributes, "os.description")
+      - delete_key(resource.attributes, "host.image.id")
+      - delete_key(resource.attributes, "host.type")
+  transform/kafka_clear_units:
+    error_mode: ignore
+    metric_statements:
+    - context: metric
+      conditions:
+      - IsMatch(name, "^kafka\\.")
+      statements:
+      - set(description, "") where description != ""
+      - set(unit, "") where unit != ""
 
 exporters:
   debug: {}
@@ -238,7 +331,13 @@ service:
       - memory_limiter
       - resource
       - resource_detection/env
+      - filter/kafka_exclude_cluster_metrics
+      - filter/kafka_internal_topics
+      - transform/kafka_remove_extra_attributes
+      - metricstransform/kafka_topic_sum_aggregation
+      - filter/kafka_remove_partition_level_replicas
       - transform/kafka_cluster_name
+      - transform/kafka_clear_units
       - cumulative_to_delta
       - batch
       receivers:
@@ -248,6 +347,25 @@ service:
       - redis
       - otlp
       - prometheus/ad
+    metrics/kafka-cluster:
+      exporters:
+      - otlp_http/newrelic
+      - debug
+      processors:
+      - memory_limiter
+      - resource
+      - resource_detection/env
+      - filter/kafka_only_cluster_metrics
+      - transform/kafka_remove_broker_id
+      - transform/kafka_remove_extra_attributes
+      - transform/kafka_cluster_name
+      - transform/kafka_clear_units
+      - groupbyattrs/kafka_cluster
+      - metricstransform/kafka_cluster_max
+      - cumulative_to_delta
+      - batch
+      receivers:
+      - otlp
     traces:
       exporters:
       - otlp_http/newrelic
