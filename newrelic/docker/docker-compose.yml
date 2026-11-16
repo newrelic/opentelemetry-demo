@@ -878,6 +878,7 @@ services:
       - GOMEMLIMIT=160MiB
       - KAFKA_ADDR
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - NEW_RELIC_OTLP_ENDPOINT=${NEW_RELIC_OTLP_ENDPOINT:-https://otlp.nr-data.net:4318}
       - KAFKA_ADDR
       - KAFKA_CLUSTER_NAME=${KAFKA_CLUSTER_NAME:-otel-demo-kafka}
       - OTEL_COLLECTOR_HOST
