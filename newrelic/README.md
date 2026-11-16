@@ -283,7 +283,7 @@ The Terraform modules demonstrate how to:
 
 ### What's Included
 
-Two independent Terraform modules are provided in the [`terraform/`](./terraform/) directory:
+Three independent Terraform modules are provided in the [`terraform/`](./terraform/) directory:
 
 1. **[`nr_account`](./terraform/nr_account/)** - Automates creation of New Relic sub-accounts and user management
    - Creates isolated sub-accounts for demos or testing
@@ -296,6 +296,9 @@ Two independent Terraform modules are provided in the [`terraform/`](./terraform
    - Currently includes Service Level Objectives (SLOs)
    - Future additions: alerts, dashboards, teams, scorecards, and more
    - Demonstrates programmatic resource management as code
+
+3. **[`nr_browser`](./terraform/nr_browser/)** - Creates the Browser application and its ingest key
+   - Enables Session Replay on the new application (recorded automatically, 10% of sessions and 100% of sessions with errors), since the provider cannot set it and the application would otherwise record nothing
 
 > [!WARNING]
 > The `nr_resources` module is a work in progress. Only SLOs are currently implemented. Additional resources (alerts, dashboards, teams, etc.) will be added in future releases.
