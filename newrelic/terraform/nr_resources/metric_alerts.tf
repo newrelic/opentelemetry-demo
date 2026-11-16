@@ -32,7 +32,7 @@ resource "newrelic_nrql_alert_condition" "service_error_rate" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "none"
-  aggregation_window = local.metric_aggregation_window
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
@@ -60,7 +60,7 @@ resource "newrelic_nrql_alert_condition" "service_latency" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "last_value"
-  aggregation_window = local.metric_aggregation_window
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
@@ -88,7 +88,7 @@ resource "newrelic_nrql_alert_condition" "service_low_throughput" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "none"
-  aggregation_window = local.metric_aggregation_window
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
@@ -116,7 +116,7 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
     threshold_occurrences = "at_least_once"
   }
   fill_option        = "none"
-  aggregation_window = local.metric_aggregation_window
+  aggregation_window = local.aggregation_window
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
@@ -153,7 +153,7 @@ resource "newrelic_nrql_alert_condition" "kafka_consumer_lag" {
 }
 
 ## Producer-rate-spike alert: checkout floods the orders topic when the flag is on.
-## current_offset is a monotonic gauge, so the production rate is its derivative;
+## kafka.prod.msg.count is the broker's per-topic message counter (from the Kafka JMX rules);
 ## baseline is a few msgs/min, the scenario bursts ~100 messages per checkout.
 resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   account_id                   = var.newrelic_account_id
@@ -164,7 +164,7 @@ resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   violation_time_limit_seconds = 259200
 
   nrql {
-    query           = "SELECT derivative(kafka.partition.current_offset, 1 minute) FROM Metric WHERE topic = 'orders' FACET topic"
+    query           = "SELECT rate(sum(kafka.prod.msg.count), 1 minute) FROM Metric WHERE topic = 'orders' FACET topic"
     data_account_id = var.newrelic_account_id
   }
 
@@ -179,6 +179,38 @@ resource "newrelic_nrql_alert_condition" "kafka_producer_rate_spike" {
   aggregation_method = "event_flow"
   aggregation_delay  = local.aggregation_delay
   title_template     = "[{{conditionName}}] {{priority}}"
+}
+
+##############################
+## PostgreSQL Alerts
+##
+
+resource "newrelic_nrql_alert_condition" "postgres_lock_contention" {
+  account_id                   = var.newrelic_account_id
+  policy_id                    = newrelic_alert_policy.metric_alert_policy.id
+  type                         = "static"
+  name                         = "PostgreSQL Lock Contention (astronomy-db)"
+  enabled                      = true
+  violation_time_limit_seconds = 259200
+
+  nrql {
+    query           = "SELECT max(postgresql.database.locks) FROM Metric WHERE mode = 'AccessExclusiveLock' AND postgresql.database.name = 'astronomy_db' FACET entity.guid"
+    data_account_id = var.newrelic_account_id
+  }
+
+  critical {
+    operator              = "above"
+    threshold             = var.postgres_exclusive_lock_threshold
+    threshold_duration    = local.threshold_duration
+    threshold_occurrences = "at_least_once"
+  }
+  fill_option                    = "none"
+  expiration_duration            = 300
+  close_violations_on_expiration = true
+  aggregation_window             = local.aggregation_window
+  aggregation_method             = "event_flow"
+  aggregation_delay              = local.aggregation_delay
+  title_template                 = "[{{conditionName}}] {{priority}}"
 }
 
 ## Alert when any Kafka consumer group has no active members.
