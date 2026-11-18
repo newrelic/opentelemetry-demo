@@ -1971,6 +1971,29 @@ data:
           statements:
           - truncate_all(attributes, 4095)
           - truncate_all(resource.attributes, 4095)
+      transform/postgres_span_endpoint:
+        error_mode: ignore
+        trace_statements:
+        - conditions:
+          - span.kind == SPAN_KIND_CLIENT
+          - span.attributes["db.system.name"] == "postgresql"
+          - span.attributes["server.address"] == "astronomy-db"
+          context: span
+          statements:
+          - set(span.attributes["server.port"], 5432) where span.attributes["server.port"]
+            == nil
+          - set(span.attributes["db.system"], span.attributes["db.system.name"]) where span.attributes["db.system"]
+            == nil
+          - set(span.attributes["db.operation"], ConvertCase(ExtractPatterns(span.attributes["db.query.text"],
+            "(?i)^\\s*(?P<op>[a-z]+)")["op"], "lower")) where span.attributes["db.operation"]
+            == nil
+          - set(span.attributes["db.sql.table"], ExtractPatterns(span.attributes["db.query.text"],
+            "(?i)\\bfrom\\s+(?P<tbl>[\\w.]+)")["tbl"]) where span.attributes["db.sql.table"]
+            == nil
+          - set(span.attributes["db.operation.name"], span.attributes["db.operation"]) where
+            span.attributes["db.operation.name"] == nil
+          - set(span.attributes["db.collection.name"], span.attributes["db.sql.table"])
+            where span.attributes["db.collection.name"] == nil
       transform/strip_ad_metric_metadata:
         metric_statements:
         - conditions:
@@ -2157,6 +2180,7 @@ data:
           - k8s_attributes/ksm
           - transform/otel-demo
           - transform/flag_scenarios
+          - transform/postgres_span_endpoint
           - gen_ai_normalizer
           - batch
           receivers:
@@ -2914,7 +2938,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: ca4c42d7991ffdf65d2eb5b1eb2ea8518eda30849060bf059404f5c1050d79c0
+        checksum/config: 208fefa2c2858aaf68f91d5f6c490091ebec30f22c05949f75a9bb0f8a7aad11
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:

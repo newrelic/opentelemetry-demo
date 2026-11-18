@@ -346,6 +346,26 @@ deployment:
               statements:
                 - truncate_all(attributes, 4095)
                 - truncate_all(resource.attributes, 4095)
+        # product-catalog DB spans carry db.system.name and server.address but no
+        # server.port or legacy db.system; New Relic needs address and port to
+        # link the span to the POSTGRESQLINSTANCE entity.
+        transform/postgres_span_endpoint:
+          error_mode: ignore
+          trace_statements:
+            - context: span
+              conditions:
+                - span.kind == SPAN_KIND_CLIENT
+                - span.attributes["db.system.name"] == "postgresql"
+                - span.attributes["server.address"] == "astronomy-db"
+              statements:
+                - set(span.attributes["server.port"], 5432) where span.attributes["server.port"] == nil
+                - set(span.attributes["db.system"], span.attributes["db.system.name"]) where span.attributes["db.system"] == nil
+                # New Relic's Databases view needs discrete db.operation and db.sql.table; it does not parse them from the query text.
+                # Operation regex: first word of the statement, for example SELECT. Table regex: the name after the first FROM, optionally schema-qualified, for example catalog.products.
+                - set(span.attributes["db.operation"], ConvertCase(ExtractPatterns(span.attributes["db.query.text"], "(?i)^\\s*(?P<op>[a-z]+)")["op"], "lower")) where span.attributes["db.operation"] == nil
+                - set(span.attributes["db.sql.table"], ExtractPatterns(span.attributes["db.query.text"], "(?i)\\bfrom\\s+(?P<tbl>[\\w.]+)")["tbl"]) where span.attributes["db.sql.table"] == nil
+                - set(span.attributes["db.operation.name"], span.attributes["db.operation"]) where span.attributes["db.operation.name"] == nil
+                - set(span.attributes["db.collection.name"], span.attributes["db.sql.table"]) where span.attributes["db.collection.name"] == nil
         # Rewrites flagd failure scenario messages into realistic production-style errors.
         # Best effort: error_mode ignore + per-group conditions leave non-matching data untouched.
         transform/flag_scenarios:
@@ -594,6 +614,7 @@ deployment:
             - k8s_attributes/ksm
             - transform/otel-demo
             - transform/flag_scenarios
+            - transform/postgres_span_endpoint
             - gen_ai_normalizer
             - batch
           receivers:
