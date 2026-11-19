@@ -26,7 +26,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
   annotations:
     
 ---
@@ -41,7 +41,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
 data:
   daemonset-config.yaml: |
     receivers:
@@ -750,7 +750,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.15.0
+            value: 0.16.0
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1039,7 +1039,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
 data:
   deployment-config.yaml: |
     receivers:
@@ -1207,6 +1207,8 @@ data:
         - astronomy_db
         endpoint: astronomy-db.opentelemetry-demo.svc.cluster.local:5432
         events:
+          db.server.query_plan:
+            enabled: true
           db.server.query_sample:
             enabled: true
           db.server.top_query:
@@ -1217,6 +1219,8 @@ data:
           postgresql.deadlocks:
             enabled: true
           postgresql.function.calls:
+            enabled: true
+          postgresql.query.conflicts:
             enabled: true
           postgresql.sequential_scans:
             enabled: true
@@ -1232,7 +1236,7 @@ data:
           insecure_skip_verify: true
         top_query_collection:
           collection_interval: 60s
-          max_explain_each_interval: 0
+          max_explain_each_interval: 50
           max_rows_per_query: 100
           top_n_query: 100
         transport: tcp
@@ -1611,7 +1615,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.15.0
+            value: 0.16.0
           - key: newrelic.entity.type
             action: upsert
             value: "k8s"
@@ -1629,7 +1633,7 @@ data:
             value: opentelemetry-demo
           - key: "newrelic.chart.version"
             action: upsert
-            value: 0.15.0
+            value: 0.16.0
 
       transform/events:
         log_statements:
@@ -1971,6 +1975,17 @@ data:
           statements:
           - truncate_all(attributes, 4095)
           - truncate_all(resource.attributes, 4095)
+      transform/postgres_session_duration:
+        error_mode: ignore
+        log_statements:
+        - conditions:
+          - attributes["postgresql.backend.connection.start"] != nil
+          - attributes["postgresql.backend.connection.start"] != ""
+          context: log
+          statements:
+          - set(attributes["postgresql.session.duration"], Int(Seconds(Now() - Time(attributes["postgresql.backend.connection.start"],
+            "%Y-%m-%dT%H:%M:%SZ")))) where attributes["postgresql.session.duration"] ==
+            nil
       transform/strip_ad_metric_metadata:
         metric_statements:
         - conditions:
@@ -2080,6 +2095,7 @@ data:
           - memory_limiter
           - k8s_attributes/ksm
           - resource/postgres_friendly_name
+          - transform/postgres_session_duration
           - batch
           receivers:
           - postgresql
@@ -2430,7 +2446,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
 rules:
   - apiGroups:
     - ""
@@ -2535,7 +2551,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
 subjects:
   - kind: ServiceAccount
     name: nr-k8s-otel-collector
@@ -2584,7 +2600,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
 spec:
   type: ClusterIP
   ports:
@@ -2614,7 +2630,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
 spec:
   selector:
     matchLabels:
@@ -2628,7 +2644,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: daemonset
       annotations:
-        checksum/config: e48a6ebfdb1db577ab17050d66e9a2637cccd8bc2a1cf53788a0b1b1a896b16f
+        checksum/config: 35b90548076b43d89dc6eff96be384374a4fb9a98808b570f8c8d62e27a81bb0
     spec:
       serviceAccountName: nr-k8s-otel-collector
       initContainers:
@@ -2898,7 +2914,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: nr-k8s-otel-collector
     app.kubernetes.io/version: 1.19.0
-    helm.sh/chart: nr-k8s-otel-collector-0.15.0
+    helm.sh/chart: nr-k8s-otel-collector-0.16.0
 spec:
   replicas: 1
   minReadySeconds: 5
@@ -2914,7 +2930,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: ca4c42d7991ffdf65d2eb5b1eb2ea8518eda30849060bf059404f5c1050d79c0
+        checksum/config: 944ed538fb9ed979f2bb9312b060dd817b00b8d4ac3aa3097056852a6d499e88
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:
@@ -2933,6 +2949,7 @@ spec:
           args:
             - --config
             - /config/deployment-config.yaml
+            - --feature-gates=receiver.postgresql.useOTelSemconv
             - |-
               --config=yaml:service:
                 telemetry:
