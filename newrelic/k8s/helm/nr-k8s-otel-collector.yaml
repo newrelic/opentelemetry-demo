@@ -355,7 +355,10 @@ deployment:
                 - attributes["postgresql.backend.connection.start"] != nil
                 - attributes["postgresql.backend.connection.start"] != ""
               statements:
-                - set(attributes["postgresql.session.duration"], Int(Seconds(Now() - Time(attributes["postgresql.backend.connection.start"], "%Y-%m-%dT%H:%M:%SZ")))) where attributes["postgresql.session.duration"] == nil
+                - >-
+                  set(attributes["postgresql.session.duration"],
+                  Int(Seconds(Now() - Time(attributes["postgresql.backend.connection.start"], "%Y-%m-%dT%H:%M:%SZ"))))
+                  where attributes["postgresql.session.duration"] == nil
         # Rewrites flagd failure scenario messages into realistic production-style errors.
         # Best effort: error_mode ignore + per-group conditions leave non-matching data untouched.
         transform/flag_scenarios:
