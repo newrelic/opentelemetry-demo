@@ -818,6 +818,12 @@ data:
     GRANT USAGE ON SCHEMA otel TO monitoring_user;
     GRANT USAGE ON SCHEMA public TO monitoring_user;
     GRANT SELECT ON ALL TABLES IN SCHEMA public TO monitoring_user;
+    -- REMOVE once https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/53352
+    -- is in the pinned collector: replace with an otel.explain_statement SECURITY DEFINER function.
+    -- Temporary: lets the postgresql receiver EXPLAIN INSERT statements and the FK check on
+    -- accounting."order". accounting.shipping stays excluded (customer addresses).
+    GRANT INSERT ON accounting."order", accounting.orderitem TO monitoring_user;
+    GRANT UPDATE ON accounting."order" TO monitoring_user;
 
 ---
 # Source: opentelemetry-demo/templates/component.yaml
