@@ -1979,8 +1979,8 @@ data:
         error_mode: ignore
         log_statements:
         - conditions:
-          - attributes["postgresql.backend.connection.start"] != nil
-          - attributes["postgresql.backend.connection.start"] != ""
+          - attributes["postgresql.backend.connection.start"] != nil and attributes["postgresql.backend.connection.start"]
+            != ""
           context: log
           statements:
           - set(attributes["postgresql.session.duration"], Int(Seconds(Now() - Time(attributes["postgresql.backend.connection.start"],
@@ -2930,7 +2930,7 @@ spec:
         app.kubernetes.io/name: nr-k8s-otel-collector
         component: deployment
       annotations:
-        checksum/config: 63677cf477b57f723adefcacc80fe2619bf59355dadcffbee396f8e77fec413e
+        checksum/config: 550bc10ad6a774455ef3c31cdb202aa304d47bf94cbaf9fddd126f94ad14bb43
     spec:
       serviceAccountName: nr-k8s-otel-collector
       containers:

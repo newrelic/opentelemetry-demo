@@ -352,8 +352,7 @@ deployment:
           log_statements:
             - context: log
               conditions:
-                - attributes["postgresql.backend.connection.start"] != nil
-                - attributes["postgresql.backend.connection.start"] != ""
+                - attributes["postgresql.backend.connection.start"] != nil and attributes["postgresql.backend.connection.start"] != ""
               statements:
                 - >-
                   set(attributes["postgresql.session.duration"],
