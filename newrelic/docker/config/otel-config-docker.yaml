@@ -131,6 +131,15 @@ processors:
       # Setting to host.name for now.
       from_attribute: host.name
       key: service.instance.id
+  # Use a stable host identity for Docker entity relationships.
+  resource/host_identity:
+    attributes:
+    - action: upsert
+      key: host.id
+      value: otel-demo-host
+    - action: upsert
+      key: host.name
+      value: otel-demo-host
   resource_detection/env:
     detectors:
     - env
@@ -318,6 +327,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - transform
       - transform/flag_scenarios
       - batch
@@ -330,6 +340,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - resource_detection/env
       - filter/kafka_exclude_cluster_metrics
       - filter/kafka_internal_topics
@@ -373,6 +384,7 @@ service:
       processors:
       - memory_limiter
       - resource
+      - resource/host_identity
       - resource_detection/env
       - transform
       - transform/flag_scenarios

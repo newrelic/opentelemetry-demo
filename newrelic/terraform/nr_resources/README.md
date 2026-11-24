@@ -48,6 +48,9 @@ terraform apply
 | checkout_service_name | Name of the checkout service entity | `string` | `"checkout"` | no |
 | postgres_exclusive_lock_threshold | Number of AccessExclusiveLock locks on astronomy_db above which the PostgreSQL lock-contention alert fires | `number` | `0` | no |
 | node_cpu_threshold | Node CPU busy percent (100 minus idle, from host metrics) above which the node CPU alert fires | `number` | `85` | no |
+| kafka_consumer_lag_threshold | Consumer lag (messages) above which the Kafka consumer-lag alert fires | `number` | `100` | no |
+| kafka_producer_rate_threshold | Orders-topic production rate (messages/min) above which the Kafka producer-spike alert fires | `number` | `60` | no |
+| kafka_dead_consumer_members_threshold | Member count below which the Kafka dead-consumer alert fires | `number` | `1` | no |
 
 Set variables using environment variables (recommended):
 
@@ -105,6 +108,20 @@ Alerts in the _Astronomy Shop Kubernetes Health_ policy.
 - **Node CPU High** - Fires when node CPU busy percent exceeds `node_cpu_threshold` (default 85)
 
 Source: k8s_alerts.tf
+
+#### PostgreSQL
+
+- **PostgreSQL Lock Contention (astronomy-db)** - Fires when the number of `AccessExclusiveLock` locks on `astronomy_db` exceeds `postgres_exclusive_lock_threshold` (default 0)
+
+Source: metric_alerts.tf
+
+#### Kafka
+
+- **Kafka Consumer Lag (fraud-detection / orders)** - Fires when `fraud-detection` lag on `orders` exceeds `kafka_consumer_lag_threshold` (default 100)
+- **Kafka Producer Rate Spike (orders topic)** - Fires when the `orders` production rate exceeds `kafka_producer_rate_threshold` messages per minute (default 60)
+- **Kafka Dead Consumer Group** - Fires when any consumer group's `members` drops below `kafka_dead_consumer_members_threshold` (default 1)
+
+Source: metric_alerts.tf
 
 ### Service Level Objectives (SLOs)
 
