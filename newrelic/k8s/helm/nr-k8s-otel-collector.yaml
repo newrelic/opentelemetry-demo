@@ -80,6 +80,7 @@ deployment:
       value: otel-demo-kafka
   # service.name differs from the daemonset's so both show up as separate APM entities.
   extraArgs:
+    - --feature-gates=receiver.postgresql.useOTelSemconv
     - |-
       --config=yaml:service:
         telemetry:
@@ -172,17 +173,15 @@ deployment:
               enabled: true
             db.server.top_query:
               enabled: true
+            db.server.query_plan:
+              enabled: true
           query_sample_collection:
             max_rows_per_query: 100
           top_query_collection:
             max_rows_per_query: 100
             top_n_query: 100
             collection_interval: 60s
-            # Disabled as a workaround for an upstream bug: the receiver tries
-            # to EXPLAIN its own query_sample query, which contains
-            # EXTRACT(field FROM ...), and that fails with a Postgres syntax
-            # error. See open-telemetry/opentelemetry-collector-contrib#50670.
-            max_explain_each_interval: 0
+            max_explain_each_interval: 50
           connection_pool:
             max_idle_time: 10m
             max_lifetime: 0
@@ -196,6 +195,8 @@ deployment:
             postgresql.deadlocks:
               enabled: true
             postgresql.function.calls:
+              enabled: true
+            postgresql.query.conflicts:
               enabled: true
             postgresql.sequential_scans:
               enabled: true
@@ -346,6 +347,17 @@ deployment:
               statements:
                 - truncate_all(attributes, 4095)
                 - truncate_all(resource.attributes, 4095)
+        transform/postgres_session_duration:
+          error_mode: ignore
+          log_statements:
+            - context: log
+              conditions:
+                - attributes["postgresql.backend.connection.start"] != nil and attributes["postgresql.backend.connection.start"] != ""
+              statements:
+                - >-
+                  set(attributes["postgresql.session.duration"],
+                  Int(Seconds(Now() - Time(attributes["postgresql.backend.connection.start"], "%Y-%m-%dT%H:%M:%S%z"))))
+                  where attributes["postgresql.session.duration"] == nil
         # Rewrites flagd failure scenario messages into realistic production-style errors.
         # Best effort: error_mode ignore + per-group conditions leave non-matching data untouched.
         transform/flag_scenarios:
@@ -534,6 +546,7 @@ deployment:
             - memory_limiter
             - k8s_attributes/ksm
             - resource/postgres_friendly_name
+            - transform/postgres_session_duration
             - batch
           receivers:
             - postgresql
