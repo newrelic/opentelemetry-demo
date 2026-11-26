@@ -89,14 +89,14 @@ variable "metric_alert_map" {
       service_title_name         = "Cart Service"
       throughput_lower_threshold = 300
       throughput_upper_threshold = 600
-      latency_threshold          = 10
+      latency_threshold          = 50
       error_rate_threshold       = 0.01
     }
     key3 = {
       service_name               = "checkout"
       service_title_name         = "Checkout Service"
       throughput_lower_threshold = 1
-      throughput_upper_threshold = 30
+      throughput_upper_threshold = 90
       latency_threshold          = 1000
       error_rate_threshold       = 0.55
     }
@@ -162,7 +162,7 @@ variable "span_alert_map" {
       service_title_name         = "Email Service"
       throughput_lower_threshold = 0
       throughput_upper_threshold = 100
-      latency_threshold          = 50
+      latency_threshold          = 250
       error_percent_threshold    = 0.1
     }
     key4 = {
@@ -178,7 +178,7 @@ variable "span_alert_map" {
       service_title_name         = "Frontend Proxy Service"
       throughput_lower_threshold = 4000
       throughput_upper_threshold = 10000
-      latency_threshold          = 50
+      latency_threshold          = 3000
       error_percent_threshold    = 5
     }
     key6 = {
