@@ -56,14 +56,16 @@ resource "newrelic_nrql_alert_condition" "service_latency" {
   critical {
     operator              = "above"
     threshold             = each.value.latency_threshold
-    threshold_duration    = local.threshold_duration
-    threshold_occurrences = "at_least_once"
+    threshold_duration    = local.service_threshold_duration
+    threshold_occurrences = "all"
   }
-  fill_option        = "last_value"
-  aggregation_window = local.aggregation_window
-  aggregation_method = "event_flow"
-  aggregation_delay  = local.aggregation_delay
-  title_template     = "[{{conditionName}}] {{priority}}"
+  fill_option                    = "none"
+  aggregation_window             = local.aggregation_window
+  aggregation_method             = "event_flow"
+  aggregation_delay              = local.aggregation_delay
+  title_template                 = "[{{conditionName}}] {{priority}}"
+  expiration_duration            = 600
+  close_violations_on_expiration = true
 }
 
 ## Low Throughput
@@ -112,14 +114,16 @@ resource "newrelic_nrql_alert_condition" "service_high_throughput" {
   critical {
     operator              = "above"
     threshold             = each.value.throughput_upper_threshold
-    threshold_duration    = local.threshold_duration
-    threshold_occurrences = "at_least_once"
+    threshold_duration    = local.service_threshold_duration
+    threshold_occurrences = "all"
   }
-  fill_option        = "none"
-  aggregation_window = local.aggregation_window
-  aggregation_method = "event_flow"
-  aggregation_delay  = local.aggregation_delay
-  title_template     = "[{{conditionName}}] {{priority}}"
+  fill_option                    = "none"
+  aggregation_window             = local.aggregation_window
+  aggregation_method             = "event_flow"
+  aggregation_delay              = local.aggregation_delay
+  title_template                 = "[{{conditionName}}] {{priority}}"
+  expiration_duration            = 600
+  close_violations_on_expiration = true
 }
 
 ##############################
